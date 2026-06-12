@@ -1,0 +1,23 @@
+name: Deploy
+on:
+  push:
+    branches: [ main ]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configurar SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p 2222 ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+      - name: Deploy via rsync
+        run: |
+          rsync -avz \
+            -e "ssh -p 2222 -i ~/.ssh/id_rsa" \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'config/database.php' \
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/public_html/
