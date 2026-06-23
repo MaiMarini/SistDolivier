@@ -1,0 +1,96 @@
+<?php
+/**
+ * Página de produto: /produto/{slug}
+ * Mostra imagem, nome, preço (se não personalizável), prazo de produção e
+ * descrição. Personalizável -> WhatsApp; senão -> form de carrinho + WhatsApp.
+ */
+$slug = isset($params[0]) ? $params[0] : '';
+
+$produto = null;
+if ($slug !== '') {
+    $stmt = db()->prepare(
+        'SELECT id, slug, nome, descricao, preco_centavos, imagem,
+                dias_producao, personalizavel
+           FROM products
+          WHERE slug = ? AND ativo = 1
+          LIMIT 1'
+    );
+    $stmt->execute([$slug]);
+    $produto = $stmt->fetch();
+}
+
+// Produto inexistente/inativo -> 404 estilizado.
+if (!$produto) {
+    http_response_code(404);
+    ob_start();
+    ?>
+    <h1>Produto não encontrado</h1>
+    <p>O produto que você procura não existe ou não está disponível.</p>
+    <p class="mt-1"><a class="btn" href="<?= e(url()) ?>">Voltar ao início</a></p>
+    <?php
+    view('layout', ['titulo' => 'Não encontrado', 'conteudo' => ob_get_clean()]);
+    return;
+}
+
+$personalizavel = !empty($produto['personalizavel']);
+
+ob_start();
+?>
+<div class="produto">
+    <div>
+        <?php if (!empty($produto['imagem'])): ?>
+            <img class="produto-img" src="<?= e(url('assets/uploads/' . $produto['imagem'])) ?>"
+                 alt="<?= e($produto['nome']) ?>">
+        <?php else: ?>
+            <div class="produto-img" style="aspect-ratio:1/1;"></div>
+        <?php endif; ?>
+    </div>
+
+    <div>
+        <?php if ($personalizavel): ?>
+            <span class="etiqueta">Personalizável</span>
+        <?php endif; ?>
+
+        <h1><?= e($produto['nome']) ?></h1>
+
+        <?php if (!$personalizavel): ?>
+            <div class="produto-preco"><?= e(money((int) $produto['preco_centavos'])) ?></div>
+        <?php endif; ?>
+
+        <?php if ((int) $produto['dias_producao'] > 0): ?>
+            <p>Tempo de produção: <strong><?= (int) $produto['dias_producao'] ?></strong>
+               dia(s) úteis.</p>
+        <?php endif; ?>
+
+        <?php if (!empty($produto['descricao'])): ?>
+            <div class="mt-1"><?= nl2br(e($produto['descricao'])) ?></div>
+        <?php endif; ?>
+
+        <div class="produto-acoes">
+            <?php if ($personalizavel): ?>
+                <a class="btn wpp" href="<?= e(whatsapp_link($produto)) ?>"
+                   target="_blank" rel="noopener">Pedir pelo WhatsApp</a>
+            <?php else: ?>
+                <form class="campo-inline" method="post" action="<?= e(url('carrinho')) ?>">
+                    <?= csrf_input() ?>
+                    <input type="hidden" name="acao" value="adicionar">
+                    <input type="hidden" name="produto_id" value="<?= (int) $produto['id'] ?>">
+                    <label for="quantidade">Qtd.</label>
+                    <input type="number" id="quantidade" name="quantidade"
+                           value="1" min="1" max="99" style="width:80px;">
+                    <button class="btn" type="submit">Adicionar ao carrinho</button>
+                </form>
+                <a class="btn wpp" href="<?= e(whatsapp_link($produto)) ?>"
+                   target="_blank" rel="noopener">Tirar dúvida no WhatsApp</a>
+            <?php endif; ?>
+        </div>
+
+        <p class="mt-1">
+            <button class="btn sec" type="button" data-abrir-modal="modal-regras">
+                Ver regras e prazos
+            </button>
+        </p>
+    </div>
+</div>
+<?php
+view('layout', ['titulo' => $produto['nome'], 'conteudo' => ob_get_clean()]);
