@@ -148,7 +148,7 @@ function exigir_admin(): void
     $usuario = usuario_atual();
     if ($usuario === null || empty($usuario['is_admin'])) {
         flash('erro', 'Acesso restrito.');
-        redirect('admin/login');
+        redirect('admin/entrar');
     }
 }
 

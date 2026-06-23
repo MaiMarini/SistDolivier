@@ -52,9 +52,9 @@ $rotas = [
 
 // rota admin (2º segmento) => arquivo em app/pages/admin/
 $rotas_admin = [
-    ''          => 'dashboard',
-    'login'     => 'login',
-    'dashboard' => 'dashboard',
+    ''       => 'index',   // /admin        -> painel
+    'entrar' => 'entrar',  // /admin/entrar -> login do admin
+    'sair'   => 'sair',    // /admin/sair   -> logout
 ];
 
 // --- 3. Resolver a rota ------------------------------------------------------

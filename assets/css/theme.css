@@ -369,6 +369,16 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 .pedido-cab .total { font-weight: 700; color: var(--cor-pop); }
 .pedido-cab .data { color: #777; font-size: .9rem; }
 
+/* --- Painel administrativo ----------------------------------------------- */
+.contador {
+    display: block;
+    font-family: var(--fonte-titulo);
+    font-size: 2.2rem;
+    line-height: 1;
+    color: var(--cor-primaria);
+}
+.pedido.em-breve { opacity: .65; }
+
 /* --- Mensagens flash ----------------------------------------------------- */
 .flash {
     border-radius: var(--raio);
