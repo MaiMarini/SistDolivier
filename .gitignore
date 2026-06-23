@@ -1,2 +1,9 @@
-config/database.php
+# Configuração local (cada loja tem a sua; nunca versionar)
+app/config.php
+
+# Uploads enviados pela loja (mantém só a pasta, não o conteúdo)
+assets/uploads/*
+!assets/uploads/.gitkeep
+
+# Logs
 *.log

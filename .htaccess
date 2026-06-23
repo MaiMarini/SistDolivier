@@ -1,0 +1,23 @@
+# Front controller: envia tudo que NÃO for arquivo/pasta real para o index.php.
+# Mantém URLs limpas (ex.: /produto/vela-aromatica -> index.php).
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Se preciso, ajuste a base quando o site rodar em subpasta (ex.: RewriteBase /loja/).
+    # RewriteBase /
+
+    # Não reescreve arquivos existentes (CSS, JS, imagens, uploads...).
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Todo o resto vai para o front controller.
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Página de erro 404 também passa pelo roteador.
+ErrorDocument 404 /index.php
+
+# Bloqueia listagem de diretórios.
+Options -Indexes

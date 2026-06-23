@@ -1,0 +1,12 @@
+# Nega todo acesso web a esta pasta (código interno da aplicação).
+# Sintaxe compatível com Apache 2.2 e 2.4.
+
+<IfModule mod_authz_core.c>
+    # Apache 2.4
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    # Apache 2.2
+    Order allow,deny
+    Deny from all
+</IfModule>
