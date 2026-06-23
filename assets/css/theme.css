@@ -369,6 +369,34 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 .pedido-cab .total { font-weight: 700; color: var(--cor-pop); }
 .pedido-cab .data { color: #777; font-size: .9rem; }
 
+/* Itens dentro do cartão de pedido */
+.item-pedido {
+    display: flex;
+    gap: .8rem;
+    padding: .7rem 0;
+    border-top: 1px solid #eee;
+}
+.item-pedido:first-child { border-top: 0; }
+.item-thumb {
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--cor-fundo);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: .7rem;
+    color: #999;
+    overflow: hidden;
+}
+.item-corpo { flex: 1; min-width: 0; }
+.item-corpo .item-nome { font-family: var(--fonte-titulo); margin: 0 0 .2rem; }
+.item-corpo .item-desc { font-size: .9rem; color: #666; margin: .2rem 0; }
+.item-corpo .qtd-preco { font-weight: 700; color: var(--cor-pop); }
+
 /* --- Painel administrativo ----------------------------------------------- */
 .contador {
     display: block;
