@@ -1,0 +1,391 @@
+/* =============================================================================
+   Tema base da loja — GENÉRICO. As cores vêm de variáveis CSS (--cor-*),
+   injetadas no <head> pelo layout.php a partir das configurações do banco.
+   Mobile-first: o estilo padrão é para celular; @media amplia para telas maiores.
+   ============================================================================= */
+
+/* Valores de reserva (caso o layout não injete as variáveis). */
+:root {
+    --cor-primaria:   #6B4A2C;
+    --cor-destaque:   #D4A53F;
+    --cor-acento:     #8C9A5E;
+    --cor-pop:        #BC5B38;
+    --cor-fundo:      #F6EEDD;
+    --cor-texto:      #4A3320;
+    --cor-superficie: #FFFFFF;
+
+    --fonte-titulo: 'Fraunces', Georgia, serif;
+    --fonte-texto:  'Nunito', system-ui, -apple-system, Arial, sans-serif;
+
+    --raio: 10px;
+    --sombra: 0 2px 10px rgba(0, 0, 0, .08);
+    --largura-max: 1100px;
+}
+
+/* --- Base ---------------------------------------------------------------- */
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+    margin: 0;
+    font-family: var(--fonte-texto);
+    color: var(--cor-texto);
+    background: var(--cor-fundo);
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+img { max-width: 100%; height: auto; display: block; }
+
+a { color: var(--cor-pop); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+h1, h2, h3, h4 {
+    font-family: var(--fonte-titulo);
+    color: var(--cor-primaria);
+    line-height: 1.2;
+    margin: 0 0 .6em;
+}
+h1 { font-size: 1.9rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.2rem; }
+
+main { flex: 1 0 auto; padding: 1.5rem 0; }
+
+.container {
+    width: 100%;
+    max-width: var(--largura-max);
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* --- Cabeçalho / menu ---------------------------------------------------- */
+.cabecalho {
+    background: var(--cor-primaria);
+    color: #fff;
+}
+.cabecalho-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding-top: .8rem;
+    padding-bottom: .8rem;
+}
+.logo {
+    font-family: var(--fonte-titulo);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #fff;
+}
+.logo:hover { text-decoration: none; }
+
+.menu-toggle {
+    background: none;
+    border: 0;
+    color: #fff;
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: .2rem .4rem;
+}
+
+.nav {
+    display: none;            /* escondido no celular até abrir */
+    flex-direction: column;
+    width: 100%;
+    gap: .2rem;
+    margin-top: .6rem;
+}
+.nav.aberto { display: flex; }
+.nav a {
+    color: #fff;
+    padding: .6rem .2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, .15);
+}
+.nav a:hover { color: var(--cor-destaque); text-decoration: none; }
+
+@media (min-width: 768px) {
+    .menu-toggle { display: none; }
+    .nav {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        width: auto;
+        margin-top: 0;
+        gap: 1.1rem;
+    }
+    .nav a { padding: .2rem 0; border-bottom: 0; }
+}
+
+/* --- Botões -------------------------------------------------------------- */
+.btn {
+    display: inline-block;
+    background: var(--cor-pop);
+    color: #fff;
+    font-family: var(--fonte-texto);
+    font-weight: 700;
+    font-size: 1rem;
+    border: 2px solid var(--cor-pop);
+    border-radius: var(--raio);
+    padding: .6rem 1.2rem;
+    cursor: pointer;
+    text-align: center;
+    transition: opacity .15s ease;
+}
+.btn:hover { opacity: .9; text-decoration: none; }
+.btn:disabled,
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+.btn.sec {
+    background: transparent;
+    color: var(--cor-primaria);
+    border-color: var(--cor-primaria);
+}
+.btn.wpp {
+    background: #25D366;
+    border-color: #25D366;
+    color: #fff;
+}
+
+/* --- Banner -------------------------------------------------------------- */
+.banner {
+    position: relative;
+    background: var(--cor-acento);
+    color: #fff;
+    border-radius: var(--raio);
+    padding: 2rem 1.2rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+.banner h1, .banner h2 { color: #fff; }
+.banner img { border-radius: var(--raio); margin: 0 auto; }
+
+/* --- Grade de produtos --------------------------------------------------- */
+.grade {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+@media (min-width: 768px) {
+    .grade { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 1000px) {
+    .grade { grid-template-columns: repeat(4, 1fr); }
+}
+
+.card {
+    background: var(--cor-superficie);
+    border-radius: var(--raio);
+    box-shadow: var(--sombra);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.card .card-img {
+    aspect-ratio: 1 / 1;
+    background: var(--cor-fundo);
+    object-fit: cover;
+    width: 100%;
+}
+.card .card-corpo {
+    padding: .8rem;
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+    flex: 1;
+}
+.card .card-nome { font-family: var(--fonte-titulo); font-size: 1.05rem; margin: 0; }
+.card .card-preco { font-weight: 700; color: var(--cor-pop); }
+.card .btn { margin-top: auto; }
+
+.etiqueta {
+    display: inline-block;
+    background: var(--cor-destaque);
+    color: var(--cor-texto);
+    font-size: .75rem;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: .15rem .6rem;
+}
+
+/* --- Página de produto --------------------------------------------------- */
+.produto {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+}
+@media (min-width: 768px) {
+    .produto { grid-template-columns: 1fr 1fr; align-items: start; }
+}
+.produto-img {
+    border-radius: var(--raio);
+    box-shadow: var(--sombra);
+    background: var(--cor-superficie);
+    width: 100%;
+}
+.produto-preco {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--cor-pop);
+    margin: .4rem 0;
+}
+.produto-acoes { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
+
+/* --- Formulários --------------------------------------------------------- */
+.formulario {
+    background: var(--cor-superficie);
+    border-radius: var(--raio);
+    box-shadow: var(--sombra);
+    padding: 1.2rem;
+    max-width: 480px;
+}
+.campo { margin-bottom: 1rem; }
+.campo label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: .3rem;
+}
+.campo input,
+.campo select,
+.campo textarea {
+    width: 100%;
+    font-family: var(--fonte-texto);
+    font-size: 1rem;
+    padding: .6rem .7rem;
+    border: 1px solid #ccc;
+    border-radius: var(--raio);
+    background: #fff;
+    color: var(--cor-texto);
+}
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus {
+    outline: 2px solid var(--cor-destaque);
+    border-color: var(--cor-destaque);
+}
+.campo-inline { display: flex; align-items: center; gap: .5rem; }
+.campo-inline input { width: auto; }
+
+/* --- Tabela simples ------------------------------------------------------ */
+.tabela {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--cor-superficie);
+    border-radius: var(--raio);
+    overflow: hidden;
+    box-shadow: var(--sombra);
+}
+.tabela th,
+.tabela td {
+    padding: .7rem .8rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+.tabela th {
+    background: var(--cor-primaria);
+    color: #fff;
+    font-family: var(--fonte-titulo);
+}
+.tabela tr:last-child td { border-bottom: 0; }
+
+/* --- Passos de acompanhamento do pedido ---------------------------------- */
+.passos {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    padding: 0;
+    margin: 1rem 0;
+}
+.passos li {
+    flex: 1 1 45%;
+    text-align: center;
+    background: var(--cor-superficie);
+    border: 2px solid #ddd;
+    border-radius: var(--raio);
+    padding: .6rem .4rem;
+    font-size: .9rem;
+    color: #999;
+}
+@media (min-width: 600px) {
+    .passos li { flex: 1; }
+}
+.passos li.concluido {
+    border-color: var(--cor-acento);
+    color: var(--cor-acento);
+}
+.passos li.ativo {
+    border-color: var(--cor-pop);
+    background: var(--cor-pop);
+    color: #fff;
+    font-weight: 700;
+}
+
+/* --- Mensagens flash ----------------------------------------------------- */
+.flash {
+    border-radius: var(--raio);
+    padding: .8rem 1rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+.flash.sucesso { background: #e3f1df; color: #2f6b2a; border: 1px solid #b7ddae; }
+.flash.erro    { background: #fbe3e0; color: #9a2a1a; border: 1px solid #f0bcb4; }
+
+/* --- Modal --------------------------------------------------------------- */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 1000;
+}
+.modal.aberto { display: flex; }
+.modal-conteudo {
+    background: var(--cor-superficie);
+    border-radius: var(--raio);
+    box-shadow: var(--sombra);
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 600px;
+    max-height: 85vh;
+    overflow: auto;
+    position: relative;
+}
+.modal-fechar {
+    position: absolute;
+    top: .6rem;
+    right: .8rem;
+    background: none;
+    border: 0;
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--cor-texto);
+}
+
+/* --- Rodapé -------------------------------------------------------------- */
+.rodape {
+    background: var(--cor-primaria);
+    color: #fff;
+    padding: 2rem 0;
+    margin-top: 2rem;
+}
+.rodape h3 { color: #fff; }
+.rodape a { color: var(--cor-destaque); }
+.rodape .copyright {
+    margin-top: 1rem;
+    font-size: .85rem;
+    opacity: .8;
+}
+
+/* --- Utilitários --------------------------------------------------------- */
+.texto-centro { text-align: center; }
+.mt-1 { margin-top: 1rem; }
+.mb-1 { margin-bottom: 1rem; }

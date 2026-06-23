@@ -163,10 +163,12 @@ function exigir_admin(): void
  */
 function whatsapp_link(?array $produto = null): string
 {
-    $numero = preg_replace('/\D+/', '', (string) cfg('whatsapp', ''));
+    $numero = preg_replace('/\D+/', '', (string) cfg('whatsapp_numero', ''));
 
     if ($produto !== null && !empty($produto['nome'])) {
-        $texto = 'Olá! Tenho interesse no produto: ' . $produto['nome'];
+        // Usa o modelo das configurações, trocando o marcador {produto}.
+        $modelo = (string) cfg('whatsapp_msg', 'Olá! Tenho interesse no produto: {produto}');
+        $texto  = str_replace('{produto}', $produto['nome'], $modelo);
     } else {
         $texto = 'Olá! Gostaria de mais informações.';
     }

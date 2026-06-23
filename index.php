@@ -7,6 +7,16 @@
  * Caminho desconhecido -> página 404.
  */
 
+// Apenas no servidor embutido do PHP (php -S): se a URL aponta para um arquivo
+// real (CSS, JS, imagem...), deixa o próprio servidor entregá-lo. Em produção
+// (Apache) isto é ignorado, pois quem trata arquivos reais é o .htaccess.
+if (php_sapi_name() === 'cli-server') {
+    $arquivo_real = __DIR__ . parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    if (is_file($arquivo_real)) {
+        return false;
+    }
+}
+
 require __DIR__ . '/app/bootstrap.php';
 
 // --- 1. Descobrir o caminho solicitado --------------------------------------
