@@ -44,8 +44,9 @@ $rotas = [
     'carrinho'     => 'carrinho',
     'sobre'        => 'sobre',
     'regras'       => 'regras',
-    'login'        => 'login',
-    'cadastro'     => 'cadastro',
+    'entrar'       => 'entrar',
+    'cadastrar'    => 'cadastrar',
+    'sair'         => 'sair',
     'meus-pedidos' => 'meus_pedidos',
 ];
 

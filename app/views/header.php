@@ -41,9 +41,10 @@ $qtd_carrinho = carrinho_quantidade();
 
             <?php if ($usuario !== null): ?>
                 <a href="<?= e(url('meus-pedidos')) ?>">Meus Pedidos</a>
-                <a href="<?= e(url('logout')) ?>">Sair</a>
+                <a href="<?= e(url('sair')) ?>">Sair</a>
             <?php else: ?>
-                <a href="<?= e(url('login')) ?>">Entrar</a>
+                <a href="<?= e(url('entrar')) ?>">Entrar</a>
+                <a href="<?= e(url('cadastrar')) ?>">Cadastrar</a>
             <?php endif; ?>
         </nav>
     </div>
