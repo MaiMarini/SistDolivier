@@ -44,7 +44,6 @@ $qtd_carrinho = carrinho_quantidade();
                 <a href="<?= e(url('sair')) ?>">Sair</a>
             <?php else: ?>
                 <a href="<?= e(url('entrar')) ?>">Entrar</a>
-                <a href="<?= e(url('cadastrar')) ?>">Cadastrar</a>
             <?php endif; ?>
         </nav>
     </div>

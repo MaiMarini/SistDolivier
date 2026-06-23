@@ -270,6 +270,32 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 .campo-inline { display: flex; align-items: center; gap: .5rem; }
 .campo-inline input { width: auto; }
 
+/* --- Abas (ex.: Entrar / Criar conta) ------------------------------------ */
+.abas {
+    display: flex;
+    gap: .3rem;
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 1.2rem;
+}
+.aba {
+    background: none;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    padding: .6rem 1rem;
+    font-family: var(--fonte-texto);
+    font-size: 1rem;
+    font-weight: 700;
+    color: #999;
+    cursor: pointer;
+}
+.aba.ativa {
+    color: var(--cor-primaria);
+    border-bottom-color: var(--cor-pop);
+}
+.painel { display: none; }
+.painel.ativo { display: block; }
+
 /* --- Tabela simples ------------------------------------------------------ */
 .tabela {
     width: 100%;

@@ -53,6 +53,23 @@
             }
         });
 
+        // --- Abas (ex.: Entrar / Criar conta) -------------------------------
+        // Botões com data-aba="X" mostram o painel com data-painel="X".
+        var botoesAba = document.querySelectorAll('[data-aba]');
+        if (botoesAba.length) {
+            botoesAba.forEach(function (botao) {
+                botao.addEventListener('click', function () {
+                    var alvo = botao.getAttribute('data-aba');
+                    document.querySelectorAll('[data-aba]').forEach(function (b) {
+                        b.classList.toggle('ativa', b.getAttribute('data-aba') === alvo);
+                    });
+                    document.querySelectorAll('[data-painel]').forEach(function (p) {
+                        p.classList.toggle('ativo', p.getAttribute('data-painel') === alvo);
+                    });
+                });
+            });
+        }
+
         // --- Aceite de termos habilita o botão de finalizar -----------------
         var aceite = document.getElementById('aceite');
         var btnFinalizar = document.getElementById('btn-finalizar');
