@@ -351,6 +351,24 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
     font-weight: 700;
 }
 
+/* --- Cartão de pedido (Meus pedidos) ------------------------------------- */
+.pedido {
+    background: var(--cor-superficie);
+    border-radius: var(--raio);
+    box-shadow: var(--sombra);
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+}
+.pedido-cab {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: .4rem;
+}
+.pedido-cab .total { font-weight: 700; color: var(--cor-pop); }
+.pedido-cab .data { color: #777; font-size: .9rem; }
+
 /* --- Mensagens flash ----------------------------------------------------- */
 .flash {
     border-radius: var(--raio);
