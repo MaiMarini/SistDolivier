@@ -60,17 +60,8 @@ $conteudo = isset($conteudo) ? $conteudo : '';
 
 <?php require __DIR__ . '/footer.php'; ?>
 
-<!-- Modal de regras (conteúdo vem das configurações) -->
-<div class="modal" id="modal-regras" role="dialog" aria-modal="true" aria-labelledby="modal-regras-titulo">
-    <div class="modal-conteudo">
-        <button class="modal-fechar" type="button" data-fechar-modal aria-label="Fechar">&times;</button>
-        <h2 id="modal-regras-titulo">Regras e informações</h2>
-        <div><?= nl2br(e(cfg('regras_texto', 'Em breve.'))) ?></div>
-        <p class="mt-1">
-            <button class="btn sec" type="button" data-fechar-modal>Fechar</button>
-        </p>
-    </div>
-</div>
+<!-- Modal de regras com aceite (conteúdo vem das configurações) -->
+<?php require __DIR__ . '/modal-regras.php'; ?>
 
 <script src="<?= e(url('assets/js/app.js')) ?>"></script>
 </body>
