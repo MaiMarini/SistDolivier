@@ -26,7 +26,7 @@ ob_start();
     <p><?= e(cfg('site_descricao', 'Produtos artesanais feitos com carinho.')) ?></p>
     <p class="mt-1">
         <a class="btn" href="<?= e(url('produto/exemplo')) ?>">Ver um produto</a>
-        <button class="btn sec" type="button" data-abrir-modal="modal-regras">Ver regras</button>
+        <a class="btn sec" href="<?= e(url('regras')) ?>">Ver regras</a>
     </p>
 </section>
 

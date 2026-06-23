@@ -67,6 +67,7 @@ CREATE TABLE products (
     slug           VARCHAR(150) NOT NULL,
     nome           VARCHAR(150) NOT NULL,
     descricao      TEXT NULL,
+    regras_produto TEXT NULL,
     preco_centavos INT UNSIGNED NOT NULL DEFAULT 0,
     category_id    INT UNSIGNED NULL,
     imagem         VARCHAR(255) NULL,

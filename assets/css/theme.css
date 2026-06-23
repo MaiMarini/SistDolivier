@@ -440,6 +440,13 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
     overflow: auto;
     position: relative;
 }
+.destaque-regras {
+    background: var(--cor-fundo);
+    border-left: 4px solid var(--cor-destaque);
+    border-radius: var(--raio);
+    padding: .7rem .9rem;
+    margin-bottom: 1rem;
+}
 .modal-fechar {
     position: absolute;
     top: .6rem;

@@ -9,7 +9,7 @@ $slug = isset($params[0]) ? $params[0] : '';
 $produto = null;
 if ($slug !== '') {
     $stmt = db()->prepare(
-        'SELECT id, slug, nome, descricao, preco_centavos, imagem,
+        'SELECT id, slug, nome, descricao, regras_produto, preco_centavos, imagem,
                 dias_producao, personalizavel
            FROM products
           WHERE slug = ? AND ativo = 1
@@ -86,11 +86,29 @@ ob_start();
         </div>
 
         <p class="mt-1">
-            <button class="btn sec" type="button" data-abrir-modal="modal-regras">
-                Ver regras e prazos
-            </button>
+            <button class="btn sec" type="button"
+                    data-abrir-modal="modal-produto-regras">Ver regras e prazos</button>
         </p>
     </div>
 </div>
+
+<?php
+// Conteúdo do modal informativo: regras específicas (se houver, em destaque) +
+// regras gerais da loja. Tudo escapado com e().
+$regras_html = '';
+if (!empty($produto['regras_produto'])) {
+    $regras_html .= '<h3>Sobre este produto</h3>';
+    $regras_html .= '<div class="destaque-regras">'
+                  . nl2br(e($produto['regras_produto'])) . '</div>';
+}
+$regras_html .= '<h3>Regras gerais</h3>';
+$regras_html .= '<div>' . nl2br(e(cfg('regras_texto', 'Em breve.'))) . '</div>';
+
+view('modal-info', [
+    'modal_id'       => 'modal-produto-regras',
+    'modal_titulo'   => 'Regras e prazos',
+    'modal_conteudo' => $regras_html,
+]);
+?>
 <?php
 view('layout', ['titulo' => $produto['nome'], 'conteudo' => ob_get_clean()]);
