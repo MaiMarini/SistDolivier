@@ -69,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $regras         = trim($_POST['regras_produto'] ?? '');
         $dias           = (int) ($_POST['dias_producao'] ?? 0);
         $personalizavel = isset($_POST['personalizavel']) ? 1 : 0;
+        $destaque       = isset($_POST['destaque']) ? 1 : 0;
         $ativo          = isset($_POST['ativo']) ? 1 : 0;
         $preco_centavos = reais_para_centavos($_POST['preco'] ?? '');
 
@@ -95,13 +96,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'UPDATE products
                     SET nome = ?, slug = ?, descricao = ?, regras_produto = ?,
                         preco_centavos = ?, category_id = ?, dias_producao = ?,
-                        personalizavel = ?, ativo = ?
+                        personalizavel = ?, destaque = ?, ativo = ?
                   WHERE id = ?'
             );
             $stmt->execute([
                 $nome, $slug, ($descricao !== '' ? $descricao : null),
                 ($regras !== '' ? $regras : null), $preco_centavos, $category_id,
-                $dias, $personalizavel, $ativo, $id,
+                $dias, $personalizavel, $destaque, $ativo, $id,
             ]);
             flash('sucesso', 'Produto atualizado.');
             redirect('admin/produtos/editar/' . $id);
@@ -110,13 +111,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = db()->prepare(
             'INSERT INTO products
                 (slug, nome, descricao, regras_produto, preco_centavos, category_id,
-                 dias_producao, personalizavel, ativo)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                 dias_producao, personalizavel, destaque, ativo)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $slug, $nome, ($descricao !== '' ? $descricao : null),
             ($regras !== '' ? $regras : null), $preco_centavos, $category_id,
-            $dias, $personalizavel, $ativo,
+            $dias, $personalizavel, $destaque, $ativo,
         ]);
         $novo_id = (int) db()->lastInsertId();
         flash('sucesso', 'Produto criado. Agora adicione as imagens.');
@@ -253,7 +254,7 @@ if ($acao === 'novo' || $acao === 'editar') {
     $produto = [
         'id' => 0, 'nome' => '', 'slug' => '', 'descricao' => '', 'regras_produto' => '',
         'preco_centavos' => 0, 'category_id' => null, 'dias_producao' => 0,
-        'personalizavel' => 0, 'ativo' => 1, 'imagem' => null,
+        'personalizavel' => 0, 'destaque' => 0, 'ativo' => 1, 'imagem' => null,
     ];
     $imagens = [];
 
@@ -261,7 +262,7 @@ if ($acao === 'novo' || $acao === 'editar') {
         $id = (int) ($params[1] ?? 0);
         $stmt = db()->prepare(
             'SELECT id, nome, slug, descricao, regras_produto, preco_centavos, category_id,
-                    dias_producao, personalizavel, ativo, imagem
+                    dias_producao, personalizavel, destaque, ativo, imagem
                FROM products WHERE id = ? LIMIT 1'
         );
         $stmt->execute([$id]);
@@ -331,6 +332,11 @@ if ($acao === 'novo' || $acao === 'editar') {
             <input type="checkbox" id="personalizavel" name="personalizavel" value="1"
                    <?= $produto['personalizavel'] ? 'checked' : '' ?>>
             <label for="personalizavel">Produto personalizável (venda via WhatsApp)</label>
+        </div>
+        <div class="campo campo-inline">
+            <input type="checkbox" id="destaque" name="destaque" value="1"
+                   <?= $produto['destaque'] ? 'checked' : '' ?>>
+            <label for="destaque">Destaque (aparece na home)</label>
         </div>
         <div class="campo">
             <label for="regras_produto">Regras/observações deste produto</label>
