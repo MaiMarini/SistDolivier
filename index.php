@@ -55,8 +55,9 @@ $rotas_admin = [
     ''           => 'index',       // /admin            -> painel
     'entrar'     => 'entrar',      // /admin/entrar     -> login do admin
     'sair'       => 'sair',        // /admin/sair       -> logout
-    'categorias' => 'categorias',  // /admin/categorias -> CRUD de categorias
-    'produtos'   => 'produtos',    // /admin/produtos   -> CRUD de produtos + galeria
+    'categorias'    => 'categorias',    // /admin/categorias    -> CRUD de categorias
+    'produtos'      => 'produtos',      // /admin/produtos      -> CRUD de produtos + galeria
+    'configuracoes' => 'configuracoes', // /admin/configuracoes -> editar settings
 ];
 
 // --- 3. Resolver a rota ------------------------------------------------------
