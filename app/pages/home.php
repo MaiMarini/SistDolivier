@@ -1,20 +1,19 @@
 <?php
 /**
- * PÁGINA DE TESTE (temporária) — valida a camada visual e os recursos do admin.
- * Será substituída pela home "real" numa tarefa futura.
- *
- * Mostra: banners ativos (do admin), seção "Destaques" (produtos marcados como
- * destaque) e uma grade geral de produtos.
+ * Home da loja: banner(es) ativos, Destaques e Coleções (categorias ativas).
+ * Tudo alimentado pelo que é cadastrado no admin.
  */
 
-// Banners ativos, na ordem definida (tolerante a banco vazio).
-$banners = [];
+// Banner ativo (mostra o primeiro; se houver vários, os demais ficam para um
+// carrossel numa evolução futura).
+$banner = null;
 try {
-    $banners = db()->query(
-        'SELECT imagem, titulo, link FROM banners WHERE ativo = 1 ORDER BY ordem ASC, id ASC'
-    )->fetchAll();
+    $stmt = db()->query(
+        'SELECT imagem, titulo, link FROM banners WHERE ativo = 1 ORDER BY ordem ASC, id ASC LIMIT 1'
+    );
+    $banner = $stmt->fetch() ?: null;
 } catch (PDOException $e) {
-    $banners = [];
+    $banner = null;
 }
 
 // Destaques.
@@ -28,78 +27,59 @@ try {
     $destaques = [];
 }
 
-// Grade geral.
-$produtos = [];
+// Coleções (categorias ativas).
+$colecoes = [];
 try {
-    $produtos = db()->query(
-        'SELECT slug, nome, preco_centavos, personalizavel, imagem
-           FROM products WHERE ativo = 1 ORDER BY id ASC LIMIT 8'
+    $colecoes = db()->query(
+        'SELECT slug, nome FROM categories WHERE ativo = 1 ORDER BY ordem ASC, nome ASC'
     )->fetchAll();
 } catch (PDOException $e) {
-    $produtos = [];
+    $colecoes = [];
 }
-
-/** Pequeno helper local para renderizar um card de produto. */
-$render_card = static function (array $p): void {
-    ?>
-    <article class="card">
-        <?php if (!empty($p['imagem'])): ?>
-            <img class="card-img" src="<?= e(url('assets/uploads/' . imagem_miniatura($p['imagem']))) ?>" alt="">
-        <?php else: ?>
-            <div class="card-img"></div>
-        <?php endif; ?>
-        <div class="card-corpo">
-            <?php if (!empty($p['personalizavel'])): ?>
-                <span class="etiqueta">Personalizável</span>
-            <?php endif; ?>
-            <h3 class="card-nome"><?= e($p['nome']) ?></h3>
-            <?php if (empty($p['personalizavel'])): ?>
-                <span class="card-preco"><?= e(money((int) $p['preco_centavos'])) ?></span>
-            <?php else: ?>
-                <span class="card-preco">Sob consulta</span>
-            <?php endif; ?>
-            <a class="btn" href="<?= e(url('produto/' . $p['slug'])) ?>">Ver</a>
-        </div>
-    </article>
-    <?php
-};
 
 ob_start();
 ?>
-<?php if (!empty($banners)): ?>
-    <?php foreach ($banners as $b): ?>
-        <?php $img = '<img src="' . e(url('assets/uploads/' . $b['imagem'])) . '" alt="' . e($b['titulo']) . '">'; ?>
-        <section class="banner">
-            <?php if (!empty($b['link'])): ?>
-                <a href="<?= e($b['link']) ?>"><?= $img /* já escapado acima */ ?></a>
-            <?php else: ?>
-                <?= $img ?>
-            <?php endif; ?>
-            <?php if (!empty($b['titulo'])): ?>
-                <h2><?= e($b['titulo']) ?></h2>
-            <?php endif; ?>
-        </section>
-    <?php endforeach; ?>
+<?php if ($banner !== null): ?>
+    <section class="banner-hero">
+        <?php
+        $img = '<img src="' . e(url('assets/uploads/' . $banner['imagem'])) . '" alt="'
+             . e($banner['titulo'] ?? '') . '">';
+        ?>
+        <?php if (!empty($banner['link'])): ?>
+            <a href="<?= e($banner['link']) ?>"><?= $img ?></a>
+        <?php else: ?>
+            <?= $img ?>
+        <?php endif; ?>
+        <?php if (!empty($banner['titulo'])): ?>
+            <h1 class="banner-hero-titulo"><?= e($banner['titulo']) ?></h1>
+        <?php endif; ?>
+    </section>
 <?php else: ?>
     <section class="banner">
         <h1><?= e(cfg('site_nome', 'Minha Loja')) ?></h1>
-        <p><?= e(cfg('site_descricao', 'Produtos artesanais feitos com carinho.')) ?></p>
+        <?php if (cfg('site_descricao')): ?>
+            <p><?= e(cfg('site_descricao')) ?></p>
+        <?php endif; ?>
     </section>
 <?php endif; ?>
 
 <?php if (!empty($destaques)): ?>
     <h2>Destaques</h2>
     <div class="grade">
-        <?php foreach ($destaques as $p) { $render_card($p); } ?>
+        <?php foreach ($destaques as $p): ?>
+            <?php view('_card_produto', ['p' => $p]); ?>
+        <?php endforeach; ?>
     </div>
 <?php endif; ?>
 
-<h2 class="mt-1">Nossos produtos</h2>
-<?php if (empty($produtos)): ?>
-    <p>Nenhum produto cadastrado ainda.</p>
-<?php else: ?>
-    <div class="grade">
-        <?php foreach ($produtos as $p) { $render_card($p); } ?>
+<?php if (!empty($colecoes)): ?>
+    <h2 class="mt-1">Coleções</h2>
+    <div class="grade-colecoes">
+        <?php foreach ($colecoes as $c): ?>
+            <a class="colecao" href="<?= e(url('categoria/' . $c['slug'])) ?>">
+                <span><?= e($c['nome']) ?></span>
+            </a>
+        <?php endforeach; ?>
     </div>
 <?php endif; ?>
 <?php

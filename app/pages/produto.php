@@ -34,13 +34,37 @@ if (!$produto) {
 
 $personalizavel = !empty($produto['personalizavel']);
 
+// Galeria: imagens do produto (ordenadas). Capa como imagem inicial.
+$imagens = [];
+$stmt = db()->prepare(
+    'SELECT arquivo FROM product_images WHERE product_id = ? ORDER BY ordem ASC, id ASC'
+);
+$stmt->execute([(int) $produto['id']]);
+$imagens = array_column($stmt->fetchAll(), 'arquivo');
+
+if (empty($imagens) && !empty($produto['imagem'])) {
+    $imagens = [$produto['imagem']];
+}
+$principal = !empty($produto['imagem']) ? $produto['imagem'] : ($imagens[0] ?? null);
+
 ob_start();
 ?>
 <div class="produto">
     <div>
-        <?php if (!empty($produto['imagem'])): ?>
-            <img class="produto-img" src="<?= e(url('assets/uploads/' . $produto['imagem'])) ?>"
+        <?php if ($principal !== null): ?>
+            <img class="produto-img" id="galeria-principal"
+                 src="<?= e(url('assets/uploads/' . $principal)) ?>"
                  alt="<?= e($produto['nome']) ?>">
+            <?php if (count($imagens) > 1): ?>
+                <div class="galeria-thumbs">
+                    <?php foreach ($imagens as $arq): ?>
+                        <img class="galeria-thumb<?= $arq === $principal ? ' ativa' : '' ?>"
+                             src="<?= e(url('assets/uploads/' . imagem_miniatura($arq))) ?>"
+                             data-src="<?= e(url('assets/uploads/' . $arq)) ?>"
+                             data-galeria-img alt="">
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         <?php else: ?>
             <div class="produto-img" style="aspect-ratio:1/1;"></div>
         <?php endif; ?>

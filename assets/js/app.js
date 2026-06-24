@@ -70,6 +70,20 @@
             });
         }
 
+        // --- Galeria do produto (troca a imagem principal) ------------------
+        var galeriaPrincipal = document.getElementById('galeria-principal');
+        var galeriaThumbs = document.querySelectorAll('[data-galeria-img]');
+        if (galeriaPrincipal && galeriaThumbs.length) {
+            galeriaThumbs.forEach(function (thumb) {
+                thumb.addEventListener('click', function () {
+                    var src = thumb.getAttribute('data-src');
+                    if (src) { galeriaPrincipal.src = src; }
+                    galeriaThumbs.forEach(function (x) { x.classList.remove('ativa'); });
+                    thumb.classList.add('ativa');
+                });
+            });
+        }
+
         // --- Aceite de termos habilita o botão de finalizar -----------------
         var aceite = document.getElementById('aceite');
         var btnFinalizar = document.getElementById('btn-finalizar');

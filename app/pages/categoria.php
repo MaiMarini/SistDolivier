@@ -46,26 +46,7 @@ ob_start();
 <?php else: ?>
     <div class="grade">
         <?php foreach ($produtos as $p): ?>
-            <article class="card">
-                <?php if (!empty($p['imagem'])): ?>
-                    <img class="card-img" src="<?= e(url('assets/uploads/' . $p['imagem'])) ?>"
-                         alt="<?= e($p['nome']) ?>">
-                <?php else: ?>
-                    <div class="card-img"></div>
-                <?php endif; ?>
-                <div class="card-corpo">
-                    <?php if (!empty($p['personalizavel'])): ?>
-                        <span class="etiqueta">Personalizável</span>
-                    <?php endif; ?>
-                    <h3 class="card-nome"><?= e($p['nome']) ?></h3>
-                    <?php if (empty($p['personalizavel'])): ?>
-                        <span class="card-preco"><?= e(money((int) $p['preco_centavos'])) ?></span>
-                    <?php else: ?>
-                        <span class="card-preco">Sob consulta</span>
-                    <?php endif; ?>
-                    <a class="btn" href="<?= e(url('produto/' . $p['slug'])) ?>">Ver</a>
-                </div>
-            </article>
+            <?php view('_card_produto', ['p' => $p]); ?>
         <?php endforeach; ?>
     </div>
 <?php endif; ?>

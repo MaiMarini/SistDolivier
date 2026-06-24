@@ -235,6 +235,60 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 }
 .produto-acoes { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
 
+/* Galeria do produto */
+.galeria-thumbs { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .6rem; }
+.galeria-thumb {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    background: var(--cor-fundo);
+}
+.galeria-thumb.ativa { border-color: var(--cor-pop); }
+
+/* Banner principal da home */
+.banner-hero { position: relative; margin-bottom: 1.5rem; }
+.banner-hero img {
+    width: 100%;
+    border-radius: var(--raio);
+    object-fit: cover;
+}
+.banner-hero-titulo {
+    position: absolute;
+    left: 1rem;
+    bottom: 1rem;
+    margin: 0;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, .5);
+}
+
+/* Coleções (categorias) na home */
+.grade-colecoes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+@media (min-width: 768px) {
+    .grade-colecoes { grid-template-columns: repeat(4, 1fr); }
+}
+.colecao {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 90px;
+    padding: 1rem;
+    text-align: center;
+    background: var(--cor-acento);
+    color: #fff;
+    font-family: var(--fonte-titulo);
+    font-size: 1.1rem;
+    border-radius: var(--raio);
+    box-shadow: var(--sombra);
+}
+.colecao:hover { text-decoration: none; opacity: .92; }
+
 /* --- Formulários --------------------------------------------------------- */
 .formulario {
     background: var(--cor-superficie);
