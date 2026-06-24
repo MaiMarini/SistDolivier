@@ -40,7 +40,11 @@ $qtd_carrinho = carrinho_quantidade();
             </a>
 
             <?php if ($usuario !== null): ?>
-                <a href="<?= e(url('meus-pedidos')) ?>">Meus Pedidos</a>
+                <?php if (($usuario['papel'] ?? '') === 'admin'): ?>
+                    <a href="<?= e(url('admin')) ?>">Painel</a>
+                <?php else: ?>
+                    <a href="<?= e(url('meus-pedidos')) ?>">Meus Pedidos</a>
+                <?php endif; ?>
                 <a href="<?= e(url('sair')) ?>">Sair</a>
             <?php else: ?>
                 <a href="<?= e(url('entrar')) ?>">Entrar</a>
