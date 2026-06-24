@@ -4,6 +4,9 @@
  * Comentários e textos em português; compatível com PHP 7.4+.
  */
 
+// Biblioteca de upload/otimização de imagens (GD).
+require_once __DIR__ . '/lib/imagem.php';
+
 // =============================================================================
 // Acesso ao banco
 // =============================================================================

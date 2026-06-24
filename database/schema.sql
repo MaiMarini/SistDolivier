@@ -10,6 +10,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS order_status_history;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS product_images;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS banners;
@@ -81,6 +82,22 @@ CREATE TABLE products (
     CONSTRAINT fk_products_category
         FOREIGN KEY (category_id) REFERENCES categories (id)
         ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+-- Imagens dos produtos (galeria). A "capa" continua em products.imagem.
+-- -----------------------------------------------------------------------------
+CREATE TABLE product_images (
+    id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    product_id INT UNSIGNED NOT NULL,
+    arquivo    VARCHAR(255) NOT NULL,
+    ordem      INT NOT NULL DEFAULT 0,
+    criado_em  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_product_images_product (product_id),
+    CONSTRAINT fk_product_images_product
+        FOREIGN KEY (product_id) REFERENCES products (id)
+        ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
