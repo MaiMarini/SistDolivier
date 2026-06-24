@@ -143,6 +143,47 @@ function imagem_processar(string $caminho_origem, array $opcoes = []): array
     return ['ok' => true, 'arquivo' => $nome_arquivo, 'miniatura' => $miniatura];
 }
 
+/** Caminho absoluto da pasta de uploads. */
+function imagem_dir_uploads(): string
+{
+    return defined('ROOT_PATH') ? ROOT_PATH . '/assets/uploads' : __DIR__ . '/../../assets/uploads';
+}
+
+/**
+ * Retorna o nome da miniatura (xxx-thumb.jpg) se ela existir; senão, o próprio
+ * arquivo. Útil para listagens/cards.
+ */
+function imagem_miniatura(string $arquivo): string
+{
+    if ($arquivo === '') {
+        return '';
+    }
+    $thumb = preg_replace('/\.jpg$/i', '-thumb.jpg', $arquivo);
+    if ($thumb !== null && $thumb !== $arquivo && is_file(imagem_dir_uploads() . '/' . $thumb)) {
+        return $thumb;
+    }
+    return $arquivo;
+}
+
+/** Apaga um arquivo de imagem e sua miniatura (se existirem). */
+function imagem_apagar(string $arquivo): void
+{
+    if ($arquivo === '') {
+        return;
+    }
+    $dir = imagem_dir_uploads();
+    $thumb = preg_replace('/\.jpg$/i', '-thumb.jpg', $arquivo);
+    foreach ([$arquivo, $thumb] as $f) {
+        if ($f === null || $f === '') {
+            continue;
+        }
+        $caminho = $dir . '/' . $f;
+        if (is_file($caminho)) {
+            @unlink($caminho);
+        }
+    }
+}
+
 /**
  * Cria uma nova imagem GD redimensionada mantendo a proporção, com no máximo
  * $max_lado pixels no maior lado. Fundo branco (saída será JPEG, sem alpha).

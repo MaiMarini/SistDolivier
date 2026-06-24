@@ -75,6 +75,33 @@ function money(int $centavos): string
     return 'R$ ' . number_format($centavos / 100, 2, ',', '.');
 }
 
+/**
+ * Converte um valor digitado em reais (ex.: "1.234,56" ou "35.00" ou "35,9")
+ * para centavos (inteiro). Aceita ponto e/ou vírgula.
+ */
+function reais_para_centavos(string $valor): int
+{
+    $valor = preg_replace('/[^0-9,.\-]/', '', trim($valor));
+    if ($valor === '' || $valor === '-') {
+        return 0;
+    }
+    if (strpos($valor, ',') !== false && strpos($valor, '.') !== false) {
+        // Tem os dois: ponto = milhar, vírgula = decimal.
+        $valor = str_replace('.', '', $valor);
+        $valor = str_replace(',', '.', $valor);
+    } elseif (strpos($valor, ',') !== false) {
+        // Só vírgula: decimal brasileiro.
+        $valor = str_replace(',', '.', $valor);
+    }
+    return (int) round(((float) $valor) * 100);
+}
+
+/** Formata centavos para preencher um input em reais (ex.: 3590 -> "35,90"). */
+function centavos_para_input(int $centavos): string
+{
+    return number_format($centavos / 100, 2, ',', '');
+}
+
 // =============================================================================
 // CSRF
 // =============================================================================
