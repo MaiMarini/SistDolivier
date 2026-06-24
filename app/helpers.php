@@ -257,3 +257,35 @@ function carrinho_quantidade(): int
 {
     return array_sum(carrinho());
 }
+
+// =============================================================================
+// Admin: destaque do item de menu
+// =============================================================================
+
+/**
+ * Seção atual da área administrativa, derivada da URL.
+ * Ex.: /admin -> '' ; /admin/produtos -> 'produtos'.
+ */
+function admin_secao_atual(): string
+{
+    $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+    $uri = $uri === null ? '' : rawurldecode($uri);
+
+    $base = parse_url($GLOBALS['config']['base_url'] ?? '', PHP_URL_PATH);
+    $base = $base === null ? '' : rtrim($base, '/');
+    if ($base !== '' && strpos($uri, $base) === 0) {
+        $uri = substr($uri, strlen($base));
+    }
+
+    $segmentos = array_values(array_filter(explode('/', trim($uri, '/')), 'strlen'));
+    if (isset($segmentos[0]) && $segmentos[0] === 'admin') {
+        return $segmentos[1] ?? '';
+    }
+    return '';
+}
+
+/** Retorna 'ativo' quando a seção informada é a página atual do admin. */
+function admin_menu_ativo(string $secao): string
+{
+    return admin_secao_atual() === $secao ? 'ativo' : '';
+}

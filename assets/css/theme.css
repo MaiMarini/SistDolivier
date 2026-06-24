@@ -407,6 +407,65 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 }
 .pedido.em-breve { opacity: .65; }
 
+/* Layout com menu lateral */
+.admin-topo { background: var(--cor-primaria); color: #fff; }
+.admin-topo-inner {
+    max-width: var(--largura-max);
+    margin: 0 auto;
+    padding: .8rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.admin-topo .logo { color: #fff; }
+.admin-user {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: .95rem;
+}
+.admin-user a { color: var(--cor-destaque); }
+
+.admin-corpo {
+    display: flex;
+    align-items: flex-start;
+    max-width: var(--largura-max);
+    width: 100%;
+    margin: 0 auto;
+}
+.admin-menu { flex: 0 0 220px; padding: 1rem .6rem; }
+.admin-menu nav { display: flex; flex-direction: column; gap: .2rem; }
+.admin-menu a,
+.admin-menu .menu-breve {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .6rem .8rem;
+    border-radius: var(--raio);
+    font-weight: 600;
+    color: var(--cor-texto);
+}
+.admin-menu a:hover { background: rgba(0, 0, 0, .06); text-decoration: none; }
+.admin-menu a.ativo { background: var(--cor-primaria); color: #fff; }
+.admin-menu .menu-breve { color: #aaa; cursor: not-allowed; }
+.admin-menu .menu-breve small {
+    font-size: .7rem;
+    background: #eee;
+    color: #999;
+    border-radius: 999px;
+    padding: .05rem .5rem;
+}
+.admin-conteudo { flex: 1; min-width: 0; padding: 1.5rem 1rem; }
+
+@media (max-width: 768px) {
+    .admin-corpo { flex-direction: column; }
+    .admin-menu { flex: auto; width: 100%; }
+    .admin-menu nav { flex-direction: row; flex-wrap: wrap; }
+    .admin-menu a, .admin-menu .menu-breve { justify-content: flex-start; gap: .4rem; }
+}
+
 /* --- Mensagens flash ----------------------------------------------------- */
 .flash {
     border-radius: var(--raio);

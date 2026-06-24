@@ -1,12 +1,24 @@
 <?php
 /**
- * Layout do painel administrativo (enxuto, sem a vitrine da loja).
+ * Layout reutilizável do painel administrativo (com menu lateral).
  * Espera $titulo e $conteudo. Reaproveita o theme.css e as cores das settings.
+ *
+ * Itens "Pedidos" e "E-mails" aparecem como "em breve" (fases futuras).
+ * O destaque do item ativo usa o helper admin_menu_ativo().
  */
 $titulo   = isset($titulo) ? $titulo : 'Admin';
 $conteudo = isset($conteudo) ? $conteudo : '';
 $u        = usuario_atual();
 $ehAdmin  = ($u !== null && !empty($u['is_admin']));
+
+// Itens do menu: rótulo => [seção, rota]
+$menu = [
+    'Painel'        => ['', 'admin'],
+    'Produtos'      => ['produtos', 'admin/produtos'],
+    'Categorias'    => ['categorias', 'admin/categorias'],
+    'Banners/Home'  => ['banners', 'admin/banners'],
+    'Configurações' => ['configuracoes', 'admin/configuracoes'],
+];
 ?>
 <!doctype html>
 <html lang="pt-br">
@@ -35,21 +47,34 @@ $ehAdmin  = ($u !== null && !empty($u['is_admin']));
 </head>
 <body>
 
-<header class="cabecalho">
-    <div class="container cabecalho-inner">
+<header class="admin-topo">
+    <div class="admin-topo-inner">
         <a class="logo" href="<?= e(url('admin')) ?>"><?= e(cfg('site_nome', 'Loja')) ?> · Admin</a>
         <?php if ($ehAdmin): ?>
-            <nav class="nav" id="menu">
-                <a href="<?= e(url('admin')) ?>">Painel</a>
+            <div class="admin-user">
+                <span>Olá, <?= e($u['nome']) ?></span>
                 <a href="<?= e(url()) ?>" target="_blank" rel="noopener">Ver loja</a>
                 <a href="<?= e(url('admin/sair')) ?>">Sair</a>
-            </nav>
+            </div>
         <?php endif; ?>
     </div>
 </header>
 
-<main>
-    <div class="container">
+<div class="admin-corpo">
+    <?php if ($ehAdmin): ?>
+        <aside class="admin-menu">
+            <nav>
+                <?php foreach ($menu as $rotulo => $info): ?>
+                    <a class="<?= admin_menu_ativo($info[0]) ?>"
+                       href="<?= e(url($info[1])) ?>"><?= e($rotulo) ?></a>
+                <?php endforeach; ?>
+                <span class="menu-breve">Pedidos <small>em breve</small></span>
+                <span class="menu-breve">E-mails <small>em breve</small></span>
+            </nav>
+        </aside>
+    <?php endif; ?>
+
+    <main class="admin-conteudo">
         <?php
         $flash_sucesso = flash_consumir('sucesso');
         $flash_erro    = flash_consumir('erro');
@@ -61,9 +86,10 @@ $ehAdmin  = ($u !== null && !empty($u['is_admin']));
             <div class="flash erro"><?= e($flash_erro) ?></div>
         <?php endif; ?>
 
+        <h1><?= e($titulo) ?></h1>
         <?= $conteudo ?>
-    </div>
-</main>
+    </main>
+</div>
 
 <script src="<?= e(url('assets/js/app.js')) ?>"></script>
 </body>
