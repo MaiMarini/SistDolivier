@@ -19,13 +19,14 @@ INSERT INTO settings (chave, valor) VALUES
     ('entrega_obs',                'Taxa de entrega varia conforme a região. Retirada no local é gratuita.'),
     ('parcelamento_limite_centavos','12000'),
     ('parcelamento_max',           '3'),
-    -- Cores do tema (valores padrão, nomes genéricos)
-    ('cor_primaria',               '#6B4A2C'),
-    ('cor_destaque',               '#D4A53F'),
-    ('cor_acento',                 '#8C9A5E'),
-    ('cor_pop',                    '#BC5B38'),
-    ('cor_fundo',                  '#F6EEDD'),
-    ('cor_texto',                  '#4A3320');
+    -- Informações comerciais (editáveis no admin; preencher por loja)
+    ('endereco',                   ''),
+    ('cnpj',                       ''),
+    ('rede_instagram',             ''),
+    ('rede_facebook',              ''),
+    ('rede_tiktok',                '');
+-- Observação: as cores do tema NÃO ficam mais no banco — são fixas no
+-- assets/css/theme.css (:root).
 
 -- -----------------------------------------------------------------------------
 -- Categorias de exemplo

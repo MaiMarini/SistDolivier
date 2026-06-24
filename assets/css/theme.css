@@ -1,10 +1,10 @@
 /* =============================================================================
-   Tema base da loja — GENÉRICO. As cores vêm de variáveis CSS (--cor-*),
-   injetadas no <head> pelo layout.php a partir das configurações do banco.
+   Tema base da loja. As cores são FIXAS aqui (:root) — não vêm mais do banco.
+   Para reaproveitar o projeto em outra loja, troque os valores abaixo.
    Mobile-first: o estilo padrão é para celular; @media amplia para telas maiores.
    ============================================================================= */
 
-/* Valores de reserva (caso o layout não injete as variáveis). */
+/* Identidade visual fixa do tema. */
 :root {
     --cor-primaria:   #6B4A2C;
     --cor-destaque:   #D4A53F;
