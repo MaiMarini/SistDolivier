@@ -289,3 +289,53 @@ function admin_menu_ativo(string $secao): string
 {
     return admin_secao_atual() === $secao ? 'ativo' : '';
 }
+
+// =============================================================================
+// Slugs
+// =============================================================================
+
+/** Gera um slug a partir de um texto (sem acentos, minúsculo, com hifens). */
+function gerar_slug(string $texto): string
+{
+    $texto = trim($texto);
+    if (function_exists('iconv')) {
+        $convertido = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto);
+        if ($convertido !== false) {
+            $texto = $convertido;
+        }
+    }
+    $texto = strtolower($texto);
+    $texto = preg_replace('/[^a-z0-9]+/', '-', $texto);
+    return trim($texto, '-');
+}
+
+/**
+ * Garante um slug único numa tabela (que tenha colunas id e slug). Acrescenta
+ * -2, -3... se necessário. $ignorar_id permite editar sem colidir consigo mesmo.
+ */
+function slug_unico(string $tabela, string $base, ?int $ignorar_id = null): string
+{
+    // Segurança: só nomes de tabela simples (não vêm do usuário, mas reforça).
+    if (!preg_match('/^[a-z_]+$/', $tabela)) {
+        $tabela = 'categories';
+    }
+    if ($base === '') {
+        $base = 'item';
+    }
+
+    $slug = $base;
+    $contador = 2;
+    do {
+        $sql = "SELECT id FROM {$tabela} WHERE slug = ?"
+             . ($ignorar_id !== null ? ' AND id <> ?' : '') . ' LIMIT 1';
+        $stmt = db()->prepare($sql);
+        $stmt->execute($ignorar_id !== null ? [$slug, $ignorar_id] : [$slug]);
+        $existe = (bool) $stmt->fetch();
+        if ($existe) {
+            $slug = $base . '-' . $contador;
+            $contador++;
+        }
+    } while ($existe);
+
+    return $slug;
+}
