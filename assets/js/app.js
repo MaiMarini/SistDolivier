@@ -9,12 +9,43 @@
 
     document.addEventListener('DOMContentLoaded', function () {
 
-        // --- Menu mobile -----------------------------------------------------
-        var toggle = document.querySelector('[data-menu-toggle]');
-        var menu = document.getElementById('menu');
-        if (toggle && menu) {
-            toggle.addEventListener('click', function () {
-                menu.classList.toggle('aberto');
+        // --- Menu mobile (overlay em tela cheia) ----------------------------
+        var menuToggle = document.querySelector('[data-menu-toggle]');
+        var menuOverlay = document.getElementById('menu-mobile');
+        if (menuToggle && menuOverlay) {
+            var menuFechar = menuOverlay.querySelector('[data-menu-fechar]');
+
+            var abrirMenu = function () {
+                menuOverlay.classList.add('aberto');
+                document.body.classList.add('menu-aberto');
+                menuToggle.setAttribute('aria-expanded', 'true');
+                if (menuFechar) { menuFechar.focus(); }
+            };
+            var fecharMenu = function () {
+                menuOverlay.classList.remove('aberto');
+                document.body.classList.remove('menu-aberto');
+                menuToggle.setAttribute('aria-expanded', 'false');
+            };
+
+            menuToggle.addEventListener('click', function () {
+                abrirMenu();
+            });
+            if (menuFechar) {
+                menuFechar.addEventListener('click', function () {
+                    fecharMenu();
+                    menuToggle.focus();
+                });
+            }
+            // Fecha ao clicar em qualquer link do menu.
+            menuOverlay.querySelectorAll('[data-menu-link]').forEach(function (a) {
+                a.addEventListener('click', fecharMenu);
+            });
+            // Fecha com ESC.
+            document.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Escape' && menuOverlay.classList.contains('aberto')) {
+                    fecharMenu();
+                    menuToggle.focus();
+                }
             });
         }
 
