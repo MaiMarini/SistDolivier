@@ -5,13 +5,13 @@
 ?>
 <footer class="rodape">
     <!-- Borda superior em arcos largos com fio dourado (estica em qualquer largura) -->
-    <svg class="rodape-curva" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true">
-        <!-- 1) fio dourado: só o contorno dos arcos -->
+    <svg class="rodape-curva" viewBox="0 0 1200 80" preserveAspectRatio="none" aria-hidden="true">
+        <!-- 1) fio dourado: arco mais alto -->
         <path class="rodape-curva-fio"
-              d="M0,70 Q150,0 300,70 T600,70 T900,70 T1200,70"/>
-        <!-- 2) corpo marrom: mesmo traçado, fechado até a base, por cima -->
+              d="M0,38 Q150,8 300,38 T600,38 T900,38 T1200,38"/>
+        <!-- 2) corpo marrom: arco paralelo ~14px abaixo, fechado até a base -->
         <path class="rodape-curva-corpo"
-              d="M0,70 Q150,0 300,70 T600,70 T900,70 T1200,70 L1200,120 L0,120 Z"/>
+              d="M0,52 Q150,22 300,52 T600,52 T900,52 T1200,52 L1200,80 L0,80 Z"/>
     </svg>
 
     <div class="container">

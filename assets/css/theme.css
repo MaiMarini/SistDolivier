@@ -829,7 +829,7 @@ body.menu-aberto { overflow: hidden; }
     background: var(--cor-primaria);
     color: #fff;
     padding: 2rem 0;
-    margin-top: 5rem;          /* espaço para a faixa de arcos no topo */
+    margin-top: 3rem;          /* espaço para a faixa de arcos no topo */
 }
 .rodape h3 { color: #fff; }
 .rodape a { color: var(--cor-destaque); }
@@ -845,14 +845,14 @@ body.menu-aberto { overflow: hidden; }
     left: 0;
     bottom: 100%;
     width: 100%;
-    height: 70px;
+    height: 42px;
     display: block;
     margin-bottom: -1px;          /* evita fresta entre a curva e o rodapé */
 }
 .rodape-curva-fio {
     fill: none;
     stroke: var(--cor-destaque);  /* fio de mel (dourado) */
-    stroke-width: 4;
+    stroke-width: 3;
 }
 .rodape-curva-corpo {
     fill: var(--cor-primaria);    /* corpo do footer (marrom) */
