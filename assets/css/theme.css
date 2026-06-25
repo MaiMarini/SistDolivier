@@ -99,14 +99,16 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
     .menu-toggle { display: none; }
     .nav-desktop {
         display: flex;
-        flex: 1;                 /* ocupa o centro entre nome e ícones */
         flex-direction: row;
         align-items: center;
-        justify-content: center; /* abas centralizadas */
         gap: 1.6rem;             /* respiro maior entre as abas (~26px) */
+        margin: 0 auto;          /* centraliza as abas e empurra o resto p/ as pontas */
     }
     .nav-desktop a { color: #fff; padding: .2rem 0; }
     .nav-desktop a:hover { color: var(--cor-destaque); text-decoration: none; }
+    /* No desktop, quem distribui é o margin:auto da nav; os ícones ficam
+       grudados na borda direita, logo após as abas. */
+    .header-acoes { margin-left: 0; }
 }
 
 /* Zona de ações (ícones) à direita */
