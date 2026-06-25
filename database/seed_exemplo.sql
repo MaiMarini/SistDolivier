@@ -13,6 +13,7 @@ INSERT INTO settings (chave, valor) VALUES
     ('site_descricao',             'Produtos artesanais feitos com carinho.'),
     ('whatsapp_numero',            '5511999999999'),
     ('whatsapp_msg',               'Olá! Tenho interesse no produto: {produto}'),
+    ('tarja_frases',               'Feito à mão | Em pequenos lotes | Receita de família | Ingredientes de verdade'),
     ('regras_texto',               'Pedidos personalizados levam de 3 a 7 dias para produção. Entregas por motoboy conforme a região ou retirada no local.'),
     ('sobre_texto',                'Somos uma loja de produtos artesanais. Cada peça é feita à mão, com atenção aos detalhes.'),
     ('entrega_taxa_centavos',      '1000'),
