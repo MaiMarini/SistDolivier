@@ -4,6 +4,11 @@
  */
 ?>
 <footer class="rodape">
+    <!-- Borda superior curva (estica em qualquer largura) -->
+    <svg class="rodape-curva" viewBox="0 0 1440 48" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,48 L0,24 Q720,-12 1440,24 L1440,48 Z" fill="currentColor"/>
+    </svg>
+
     <div class="container">
         <h3><?= e(cfg('site_nome', 'Minha Loja')) ?></h3>
 
@@ -30,7 +35,7 @@
         $redes = array_filter($redes);
         ?>
         <?php if (!empty($redes)): ?>
-            <p>
+            <p class="rodape-redes">
                 <?php foreach ($redes as $nome => $link): ?>
                     <a href="<?= e($link) ?>" target="_blank" rel="noopener"><?= e($nome) ?></a>
                 <?php endforeach; ?>

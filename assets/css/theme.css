@@ -776,10 +776,11 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 
 /* --- Rodapé -------------------------------------------------------------- */
 .rodape {
+    position: relative;
     background: var(--cor-primaria);
     color: #fff;
     padding: 2rem 0;
-    margin-top: 2rem;
+    margin-top: 3.5rem;        /* espaço para a curva no topo */
 }
 .rodape h3 { color: #fff; }
 .rodape a { color: var(--cor-destaque); }
@@ -787,6 +788,35 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
     margin-top: 1rem;
     font-size: .85rem;
     opacity: .8;
+}
+
+/* Borda superior curva (SVG que estica em qualquer largura) */
+.rodape-curva {
+    position: absolute;
+    left: 0;
+    bottom: 100%;
+    width: 100%;
+    height: 40px;
+    display: block;
+    color: var(--cor-primaria);   /* alimenta o fill="currentColor" do path */
+    margin-bottom: -1px;          /* evita fresta entre a curva e o rodapé */
+}
+
+/* Links de redes sociais como chips */
+.rodape-redes { display: flex; flex-wrap: wrap; gap: .5rem; }
+.rodape-redes a {
+    display: inline-block;
+    padding: .35rem .9rem;
+    border: 1px solid var(--cor-destaque);
+    border-radius: 999px;
+    color: var(--cor-destaque);
+    font-size: .9rem;
+    font-weight: 700;
+}
+.rodape-redes a:hover {
+    background: var(--cor-destaque);
+    color: var(--cor-primaria);
+    text-decoration: none;
 }
 
 /* --- Utilitários --------------------------------------------------------- */
