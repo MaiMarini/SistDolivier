@@ -19,9 +19,7 @@ $abas_campos = [
         'inteiro'  => ['parcelamento_max'],
     ],
     'config' => [
-        'texto' => ['regras_texto', 'whatsapp_msg', 'sobre_texto',
-                    'bloco_editorial_titulo', 'bloco_editorial_subtitulo',
-                    'bloco_editorial_botao_texto', 'bloco_editorial_botao_link'],
+        'texto' => ['regras_texto', 'whatsapp_msg', 'sobre_texto'],
     ],
 ];
 
@@ -53,21 +51,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach (($grupo['inteiro'] ?? []) as $k) {
         $v = (string) (int) ($_POST[$k] ?? 0);
         $stmt->execute([$k, $v, $v]);
-    }
-
-    // Imagem do bloco editorial (aba "config"): só troca se uma nova for enviada.
-    if ($aba === 'config' && !empty($_FILES['bloco_editorial_imagem']['name'])) {
-        $res = processar_upload_imagem($_FILES['bloco_editorial_imagem'], ['gerar_miniatura' => false]);
-        if (empty($res['ok'])) {
-            flash('erro', $res['erro'] ?? 'Falha ao enviar a imagem do bloco.');
-            flash('aba', 'config');
-            redirect('admin/configuracoes');
-        }
-        $antiga = cfg('bloco_editorial_imagem', '');
-        if ($antiga !== '') {
-            imagem_apagar($antiga);
-        }
-        $stmt->execute(['bloco_editorial_imagem', $res['arquivo'], $res['arquivo']]);
     }
 
     flash('sucesso', 'Configurações salvas com sucesso.');
@@ -160,7 +143,7 @@ ob_start();
 <!-- Aba 3: Configurações (textos + bloco editorial) -->
 <form method="post" action="<?= e(url('admin/configuracoes')) ?>"
       class="formulario painel<?= $aba === 'config' ? ' ativo' : '' ?>" data-painel="config"
-      enctype="multipart/form-data" style="max-width:640px;">
+      style="max-width:640px;">
     <?= csrf_input() ?>
     <input type="hidden" name="aba" value="config">
 
@@ -176,42 +159,6 @@ ob_start();
     <div class="campo">
         <label for="sobre_texto">Sobre nós</label>
         <textarea id="sobre_texto" name="sobre_texto" rows="5"><?= e(cfg('sobre_texto', '')) ?></textarea>
-    </div>
-
-    <h2 class="mt-1">Bloco editorial da home</h2>
-    <?php $bloco_img = cfg('bloco_editorial_imagem', ''); ?>
-    <?php if ($bloco_img !== '' && is_file(ROOT_PATH . '/assets/uploads/' . $bloco_img)): ?>
-        <div class="campo">
-            <label>Imagem atual</label>
-            <img src="<?= e(asset('assets/uploads/' . $bloco_img)) ?>" alt=""
-                 style="max-width:100%;border-radius:var(--raio);">
-        </div>
-    <?php endif; ?>
-    <div class="campo">
-        <label for="bloco_editorial_imagem">Imagem (deixe vazio para manter a atual)</label>
-        <input type="file" id="bloco_editorial_imagem" name="bloco_editorial_imagem"
-               accept="image/jpeg,image/png,image/webp">
-        <small>A imagem é otimizada automaticamente (máx. 1200px, JPEG).</small>
-    </div>
-    <div class="campo">
-        <label for="bloco_editorial_titulo">Título</label>
-        <input type="text" id="bloco_editorial_titulo" name="bloco_editorial_titulo"
-               value="<?= e(cfg('bloco_editorial_titulo', '')) ?>">
-    </div>
-    <div class="campo">
-        <label for="bloco_editorial_subtitulo">Subtítulo</label>
-        <textarea id="bloco_editorial_subtitulo" name="bloco_editorial_subtitulo" rows="3"><?= e(cfg('bloco_editorial_subtitulo', '')) ?></textarea>
-    </div>
-    <div class="campo">
-        <label for="bloco_editorial_botao_texto">Texto do botão</label>
-        <input type="text" id="bloco_editorial_botao_texto" name="bloco_editorial_botao_texto"
-               value="<?= e(cfg('bloco_editorial_botao_texto', '')) ?>">
-    </div>
-    <div class="campo">
-        <label for="bloco_editorial_botao_link">Link do botão</label>
-        <input type="text" id="bloco_editorial_botao_link" name="bloco_editorial_botao_link"
-               value="<?= e(cfg('bloco_editorial_botao_link', '')) ?>"
-               placeholder="Ex.: /categoria/velas ou https://...">
     </div>
 
     <button class="btn" type="submit">Salvar</button>

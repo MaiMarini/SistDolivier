@@ -16,7 +16,7 @@ $menu = [
     'Painel'        => ['', 'admin'],
     'Produtos'      => ['produtos', 'admin/produtos'],
     'Categorias'    => ['categorias', 'admin/categorias'],
-    'Banners/Home'  => ['banners', 'admin/banners'],
+    'Home'          => ['banners', 'admin/banners'],
     'Configurações' => ['configuracoes', 'admin/configuracoes'],
 ];
 ?>

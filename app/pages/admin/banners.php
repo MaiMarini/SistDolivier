@@ -33,6 +33,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/banners');
     }
 
+    // Bloco editorial (registro único em settings, NÃO é um banner).
+    if ($op === 'bloco_salvar') {
+        $stmt = db()->prepare(
+            'INSERT INTO settings (chave, valor) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE valor = ?'
+        );
+        foreach (['bloco_editorial_titulo', 'bloco_editorial_subtitulo',
+                  'bloco_editorial_botao_texto', 'bloco_editorial_botao_link'] as $k) {
+            $v = trim($_POST[$k] ?? '');
+            $stmt->execute([$k, $v, $v]);
+        }
+
+        // Imagem: só troca se uma nova for enviada; senão, mantém a atual.
+        if (!empty($_FILES['bloco_editorial_imagem']['name'])) {
+            $res = processar_upload_imagem($_FILES['bloco_editorial_imagem'], ['gerar_miniatura' => false]);
+            if (empty($res['ok'])) {
+                flash('erro', $res['erro'] ?? 'Falha ao enviar a imagem do bloco.');
+                redirect('admin/banners');
+            }
+            $antiga = cfg('bloco_editorial_imagem', '');
+            if ($antiga !== '') {
+                imagem_apagar($antiga);
+            }
+            $stmt->execute(['bloco_editorial_imagem', $res['arquivo'], $res['arquivo']]);
+        }
+
+        flash('sucesso', 'Bloco editorial salvo.');
+        redirect('admin/banners');
+    }
+
     if ($op === 'salvar') {
         $id     = (int) ($_POST['id'] ?? 0);
         $titulo = trim($_POST['titulo'] ?? '');
@@ -169,6 +199,7 @@ $banners = db()->query(
 
 ob_start();
 ?>
+<h2>Banners</h2>
 <p><a class="btn" href="<?= e(url('admin/banners/novo')) ?>">Novo banner</a></p>
 
 <?php if (empty($banners)): ?>
@@ -207,5 +238,54 @@ ob_start();
         </tbody>
     </table>
 <?php endif; ?>
+
+<hr class="mt-1">
+
+<h2 class="mt-1">Bloco editorial</h2>
+<p>Faixa de destaque exibida na home (foto + texto). É um conteúdo único — não faz
+   parte da lista de banners acima.</p>
+
+<?php $bloco_img = cfg('bloco_editorial_imagem', ''); ?>
+<form class="formulario" method="post" action="<?= e(url('admin/banners')) ?>"
+      enctype="multipart/form-data" style="max-width:640px;">
+    <?= csrf_input() ?>
+    <input type="hidden" name="op" value="bloco_salvar">
+
+    <?php if ($bloco_img !== '' && is_file(ROOT_PATH . '/assets/uploads/' . $bloco_img)): ?>
+        <div class="campo">
+            <label>Imagem atual</label>
+            <img src="<?= e(asset('assets/uploads/' . $bloco_img)) ?>" alt=""
+                 style="max-width:100%;border-radius:var(--raio);">
+        </div>
+    <?php endif; ?>
+    <div class="campo">
+        <label for="bloco_editorial_imagem">Imagem (deixe vazio para manter a atual)</label>
+        <input type="file" id="bloco_editorial_imagem" name="bloco_editorial_imagem"
+               accept="image/jpeg,image/png,image/webp">
+        <small>A imagem é otimizada automaticamente (máx. 1200px, JPEG).</small>
+    </div>
+    <div class="campo">
+        <label for="bloco_editorial_titulo">Título</label>
+        <input type="text" id="bloco_editorial_titulo" name="bloco_editorial_titulo"
+               value="<?= e(cfg('bloco_editorial_titulo', '')) ?>">
+    </div>
+    <div class="campo">
+        <label for="bloco_editorial_subtitulo">Subtítulo</label>
+        <textarea id="bloco_editorial_subtitulo" name="bloco_editorial_subtitulo" rows="3"><?= e(cfg('bloco_editorial_subtitulo', '')) ?></textarea>
+    </div>
+    <div class="campo">
+        <label for="bloco_editorial_botao_texto">Texto do botão</label>
+        <input type="text" id="bloco_editorial_botao_texto" name="bloco_editorial_botao_texto"
+               value="<?= e(cfg('bloco_editorial_botao_texto', '')) ?>">
+    </div>
+    <div class="campo">
+        <label for="bloco_editorial_botao_link">Link do botão</label>
+        <input type="text" id="bloco_editorial_botao_link" name="bloco_editorial_botao_link"
+               value="<?= e(cfg('bloco_editorial_botao_link', '')) ?>"
+               placeholder="Ex.: /colecoes ou https://wa.me/55...">
+    </div>
+
+    <button class="btn" type="submit">Salvar bloco editorial</button>
+</form>
 <?php
-view('admin_layout', ['titulo' => 'Banners', 'conteudo' => ob_get_clean()]);
+view('admin_layout', ['titulo' => 'Home', 'conteudo' => ob_get_clean()]);
