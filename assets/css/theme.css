@@ -123,7 +123,9 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 
 /* --- Tarja (marquee) ----------------------------------------------------- */
 .tarja {
-    width: 100%;
+    /* Full-bleed: ocupa a largura total da tela mesmo dentro de um container. */
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
     overflow: hidden;
     background: var(--cor-destaque);
     color: var(--cor-primaria);
@@ -135,16 +137,24 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
     padding: .5rem 0;
 }
 .tarja-track {
-    display: inline-flex;
-    flex-wrap: nowrap;
-    white-space: nowrap;
+    display: flex;
+    width: max-content;          /* a largura vem do conteúdo, não do container */
     will-change: transform;
-    animation: tarja-scroll 28s linear infinite;
+    animation: tarja-scroll 30s linear infinite;
 }
 .tarja:hover .tarja-track { animation-play-state: paused; }
-.tarja-grupo { display: inline-flex; align-items: center; }
-.tarja-item { padding: 0 .9rem; }
-.tarja-sep { opacity: .6; }
+
+/* Dois grupos idênticos; cada um termina com um espaçamento (padding-right)
+   igual ao gap, para a emenda entre as cópias manter o ritmo. */
+.tarja-grupo {
+    display: flex;
+    align-items: center;
+    gap: 1.4rem;
+    padding-right: 1.4rem;
+    flex: 0 0 auto;
+}
+.tarja-item { white-space: nowrap; }
+.tarja-sep { opacity: .55; }
 
 @keyframes tarja-scroll {
     from { transform: translateX(0); }
