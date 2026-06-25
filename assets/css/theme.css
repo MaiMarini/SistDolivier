@@ -875,23 +875,33 @@ body.menu-aberto { overflow: hidden; }
     text-decoration: none;
 }
 
-/* Layout do rodapé: conteúdo à esquerda, logo à direita */
-.rodape-inner {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 2rem;
-    flex-wrap: wrap;
+/* Rodapé em três colunas */
+.rodape-grid {
+    display: grid;
+    grid-template-columns: 1fr;          /* celular: empilha */
+    gap: 1.5rem 2rem;
+    align-items: start;
 }
-.rodape-marca { color: #fff; margin: 0; }
-.rodape-slogan { margin: .1rem 0 1rem; opacity: .85; }
-.rodape-nav { display: flex; flex-direction: column; gap: .3rem; margin-bottom: 1rem; }
+@media (min-width: 768px) {
+    .rodape-grid { grid-template-columns: 1.6fr 1fr 1fr; align-items: center; }
+}
+
+/* Coluna 1: marca */
+.rodape-marca-bloco { display: flex; align-items: center; gap: .8rem; }
+.rodape-logo-img { height: 46px; width: auto; display: block; }
+.rodape-marca-texto { display: flex; flex-direction: column; line-height: 1.15; }
+.rodape-marca { font-family: var(--fonte-titulo); font-size: 1.4rem; color: #fff; }
+.rodape-slogan { font-size: .9rem; opacity: .85; }
+
+/* Colunas 2 e 3: itens um por linha */
+.rodape-col { display: flex; flex-direction: column; gap: .55rem; }
 .rodape-nav a { color: #fff; }
 .rodape-nav a:hover { color: var(--cor-destaque); }
-.rodape-logo img { height: 64px; width: auto; display: block; }
-@media (max-width: 600px) {
-    .rodape-logo { margin-top: 1rem; }
-}
+.rodape-social { list-style: none; margin: 0; padding: 0; }
+.rodape-social a { display: inline-flex; align-items: center; gap: .55rem; color: #fff; }
+.rodape-social a:hover { color: var(--cor-destaque); text-decoration: none; }
+.rodape-social-ico { display: inline-flex; }
+.rodape-social-ico svg { width: 20px; height: 20px; }
 
 /* --- Utilitários --------------------------------------------------------- */
 .texto-centro { text-align: center; }
