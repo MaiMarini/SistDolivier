@@ -384,15 +384,19 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 
 /* Bloco editorial da home (foto à esquerda, texto à direita) */
 .bloco-duplo {
-    display: grid;
-    grid-template-columns: 1fr;     /* celular: empilhado (foto em cima) */
-    gap: 1.5rem 2.5rem;
+    display: flex;
+    flex-direction: column;          /* celular: foto em cima, texto embaixo */
+    gap: 1.5rem;
     margin: 2.5rem 0;
-    align-items: center;
 }
 @media (min-width: 768px) {
-    .bloco-duplo { grid-template-columns: 1fr 1fr; }
-    .bloco-duplo.sem-foto { grid-template-columns: 1fr; }  /* sem foto: texto ocupa tudo */
+    .bloco-duplo {
+        flex-direction: row;
+        align-items: center;
+        gap: 2.5rem;
+    }
+    .bloco-foto { flex: 0 0 50%; }   /* foto ocupa ~50% */
+    .bloco-texto { flex: 1; }        /* texto ocupa o resto (e tudo, se não houver foto) */
 }
 .bloco-foto {
     aspect-ratio: 4 / 3;
