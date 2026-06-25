@@ -23,7 +23,7 @@ $conteudo = isset($conteudo) ? $conteudo : '';
           href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Nunito:wght@400;600;700&display=swap">
 
     <!-- As cores do tema são fixas no theme.css (:root), não vêm mais do banco. -->
-    <link rel="stylesheet" href="<?= e(url('assets/css/theme.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset('assets/css/theme.css')) ?>">
 </head>
 <body>
 
@@ -51,6 +51,6 @@ $conteudo = isset($conteudo) ? $conteudo : '';
 <!-- Modal de regras com aceite (conteúdo vem das configurações) -->
 <?php require __DIR__ . '/modal-regras.php'; ?>
 
-<script src="<?= e(url('assets/js/app.js')) ?>"></script>
+<script src="<?= e(asset('assets/js/app.js')) ?>"></script>
 </body>
 </html>

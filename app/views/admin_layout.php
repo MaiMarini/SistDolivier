@@ -32,7 +32,7 @@ $menu = [
     <link rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Nunito:wght@400;600;700&display=swap">
     <!-- Cores fixas no theme.css (:root). -->
-    <link rel="stylesheet" href="<?= e(url('assets/css/theme.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset('assets/css/theme.css')) ?>">
 </head>
 <body>
 
@@ -80,6 +80,6 @@ $menu = [
     </main>
 </div>
 
-<script src="<?= e(url('assets/js/app.js')) ?>"></script>
+<script src="<?= e(asset('assets/js/app.js')) ?>"></script>
 </body>
 </html>

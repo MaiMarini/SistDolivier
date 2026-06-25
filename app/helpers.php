@@ -54,6 +54,21 @@ function url(string $caminho = ''): string
     return $caminho === '' ? $base . '/' : $base . '/' . $caminho;
 }
 
+/**
+ * URL de um arquivo estático com "cache-busting": acrescenta ?v=<mtime> para o
+ * navegador buscar a versão nova sempre que o arquivo mudar (ex.: CSS/JS).
+ */
+function asset(string $caminho): string
+{
+    $rel  = ltrim($caminho, '/');
+    $full = ROOT_PATH . '/' . $rel;
+    $u    = url($rel);
+    if (is_file($full)) {
+        $u .= (strpos($u, '?') !== false ? '&' : '?') . 'v=' . filemtime($full);
+    }
+    return $u;
+}
+
 /** Redireciona para uma URL (relativa à base ou absoluta) e encerra. */
 function redirect(string $destino): void
 {
