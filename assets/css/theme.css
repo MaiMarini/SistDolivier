@@ -75,6 +75,9 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
     padding-top: .8rem;
     padding-bottom: .8rem;
 }
+/* Nome (esquerda) e ações (direita) com o mesmo peso -> abas ficam centradas
+   e os ícones grudam na borda direita. */
+.cabecalho-inner .logo { flex: 1; }
 .logo {
     font-family: var(--fonte-titulo);
     font-size: 1.4rem;
@@ -101,14 +104,11 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
         display: flex;
         flex-direction: row;
         align-items: center;
+        justify-content: center; /* abas centradas no espaço do meio */
         gap: 1.6rem;             /* respiro maior entre as abas (~26px) */
-        margin: 0 auto;          /* centraliza as abas e empurra o resto p/ as pontas */
     }
     .nav-desktop a { color: #fff; padding: .2rem 0; }
     .nav-desktop a:hover { color: var(--cor-destaque); text-decoration: none; }
-    /* No desktop, quem distribui é o margin:auto da nav; os ícones ficam
-       grudados na borda direita, logo após as abas. */
-    .header-acoes { margin-left: 0; }
 }
 
 /* Zona de ações (ícones) à direita */
@@ -116,7 +116,8 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
     display: flex;
     align-items: center;
     gap: .4rem;
-    margin-left: auto;           /* empurra para a direita (inclusive no mobile) */
+    flex: 1;                     /* mesmo peso do nome */
+    justify-content: flex-end;   /* ícones grudados na borda direita */
 }
 .header-icone {
     position: relative;
