@@ -71,8 +71,7 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 .cabecalho-inner {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    gap: 1rem;
     padding-top: .8rem;
     padding-bottom: .8rem;
 }
@@ -94,19 +93,129 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
     padding: .2rem .4rem;
 }
 
-/* Navegação desktop (horizontal). Escondida no celular. */
+/* Navegação desktop (centralizada). Escondida no celular. */
 .nav-desktop { display: none; }
 @media (min-width: 768px) {
     .menu-toggle { display: none; }
     .nav-desktop {
         display: flex;
+        flex: 1;                 /* ocupa o centro entre nome e ícones */
         flex-direction: row;
         align-items: center;
-        gap: 1.1rem;
+        justify-content: center; /* abas centralizadas */
+        gap: 1.6rem;             /* respiro maior entre as abas (~26px) */
     }
     .nav-desktop a { color: #fff; padding: .2rem 0; }
     .nav-desktop a:hover { color: var(--cor-destaque); text-decoration: none; }
 }
+
+/* Zona de ações (ícones) à direita */
+.header-acoes {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    margin-left: auto;           /* empurra para a direita (inclusive no mobile) */
+}
+.header-icone {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: #fff;
+    cursor: pointer;
+}
+.header-icone:hover { color: var(--cor-destaque); text-decoration: none; }
+.header-icone svg { width: 24px; height: 24px; }
+.header-badge {
+    position: absolute;
+    top: 4px;
+    right: 2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--cor-pop);
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+}
+
+/* Drawer de login (desliza pela direita) */
+.drawer-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    background: rgba(0, 0, 0, .5);
+    display: flex;
+    justify-content: flex-end;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .3s ease, visibility .3s ease;
+}
+.drawer-overlay.aberto { opacity: 1; visibility: visible; }
+.drawer {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    height: 100%;
+    background: var(--cor-superficie);
+    color: var(--cor-texto);
+    padding: 2.4rem 1.5rem 1.5rem;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform .3s ease;
+}
+.drawer-overlay.aberto .drawer { transform: translateX(0); }
+.drawer h2 { margin-top: 0; }
+.drawer .formulario {
+    max-width: none;
+    background: none;
+    box-shadow: none;
+    padding: 0;
+}
+.drawer-fechar {
+    position: absolute;
+    top: .8rem;
+    right: .9rem;
+    background: none;
+    border: 0;
+    font-size: 1.9rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--cor-texto);
+}
+
+/* Mini-menu do perfil */
+.header-perfil { position: relative; }
+.perfil-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    min-width: 170px;
+    background: var(--cor-superficie);
+    color: var(--cor-texto);
+    border-radius: var(--raio);
+    box-shadow: var(--sombra);
+    padding: .4rem;
+    z-index: 1200;
+}
+.perfil-menu.aberto { display: block; }
+.perfil-menu a {
+    display: block;
+    padding: .55rem .7rem;
+    border-radius: 8px;
+    color: var(--cor-texto);
+    font-weight: 600;
+}
+.perfil-menu a:hover { background: var(--cor-fundo); text-decoration: none; }
 
 /* Overlay do menu mobile (tela cheia) */
 .menu-overlay {

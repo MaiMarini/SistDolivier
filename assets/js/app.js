@@ -101,6 +101,87 @@
             });
         }
 
+        // --- Mini-menu do perfil (header) -----------------------------------
+        var perfilToggle = document.querySelector('[data-perfil-toggle]');
+        var perfilMenu = document.querySelector('[data-perfil-menu]');
+        if (perfilToggle && perfilMenu) {
+            perfilToggle.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                var aberto = perfilMenu.classList.toggle('aberto');
+                perfilToggle.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+            });
+            // Fecha ao clicar fora.
+            document.addEventListener('click', function (ev) {
+                if (perfilMenu.classList.contains('aberto')
+                    && !perfilMenu.contains(ev.target) && ev.target !== perfilToggle) {
+                    perfilMenu.classList.remove('aberto');
+                    perfilToggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+            // Fecha com ESC.
+            document.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Escape' && perfilMenu.classList.contains('aberto')) {
+                    perfilMenu.classList.remove('aberto');
+                    perfilToggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+
+        // --- Drawer de login (deslogado) ------------------------------------
+        var loginOverlay = document.querySelector('[data-login-overlay]');
+        var abrirLogin = document.querySelector('[data-abrir-login]');
+        if (loginOverlay && abrirLogin) {
+            var loginFechar = loginOverlay.querySelector('[data-login-fechar]');
+            var painelLogin = loginOverlay.querySelector('[data-login-painel="login"]');
+            var painelCadastro = loginOverlay.querySelector('[data-login-painel="cadastro"]');
+            var irCadastro = loginOverlay.querySelector('[data-login-ir-cadastro]');
+            var voltarLogin = loginOverlay.querySelector('[data-login-voltar]');
+
+            var abrirDrawer = function () {
+                loginOverlay.classList.add('aberto');
+                document.body.classList.add('menu-aberto');
+                var campo = loginOverlay.querySelector('[data-login-painel]:not([hidden]) input');
+                if (campo) { campo.focus(); }
+            };
+            var fecharDrawer = function () {
+                loginOverlay.classList.remove('aberto');
+                document.body.classList.remove('menu-aberto');
+            };
+
+            // JS ligado: abre o drawer (sem JS, o link segue para /entrar).
+            abrirLogin.addEventListener('click', function (ev) {
+                ev.preventDefault();
+                abrirDrawer();
+            });
+            if (loginFechar) { loginFechar.addEventListener('click', fecharDrawer); }
+            loginOverlay.addEventListener('click', function (ev) {
+                if (ev.target === loginOverlay) { fecharDrawer(); }   // clique no fundo
+            });
+            document.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Escape' && loginOverlay.classList.contains('aberto')) {
+                    fecharDrawer();
+                }
+            });
+
+            // Alterna login <-> cadastro dentro do mesmo drawer.
+            if (irCadastro && painelLogin && painelCadastro) {
+                irCadastro.addEventListener('click', function () {
+                    painelLogin.hidden = true;
+                    painelCadastro.hidden = false;
+                    var c = painelCadastro.querySelector('input');
+                    if (c) { c.focus(); }
+                });
+            }
+            if (voltarLogin && painelLogin && painelCadastro) {
+                voltarLogin.addEventListener('click', function () {
+                    painelCadastro.hidden = true;
+                    painelLogin.hidden = false;
+                    var c = painelLogin.querySelector('input');
+                    if (c) { c.focus(); }
+                });
+            }
+        }
+
         // --- Carrossel de banners -------------------------------------------
         document.querySelectorAll('[data-carrossel]').forEach(function (raiz) {
             var trilho = raiz.querySelector('.carrossel-trilho');
