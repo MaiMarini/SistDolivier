@@ -92,6 +92,8 @@ ob_start();
     </div>
 <?php endif; ?>
 
+<?php view('_bloco_destaque'); ?>
+
 <?php if (!empty($colecoes)): ?>
     <h2 class="mt-1">Coleções</h2>
     <div class="grade-colecoes">

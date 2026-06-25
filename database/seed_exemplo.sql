@@ -25,7 +25,12 @@ INSERT INTO settings (chave, valor) VALUES
     ('cnpj',                       ''),
     ('rede_instagram',             ''),
     ('rede_facebook',              ''),
-    ('rede_tiktok',                '');
+    ('rede_tiktok',                ''),
+    -- Bloco de destaque da home (texto + foto)
+    ('home_bloco_titulo',          'Novidades feitas à mão'),
+    ('home_bloco_subtitulo',       'Conheça nossa seleção especial, preparada em pequenos lotes.'),
+    ('home_bloco_imagem',          ''),
+    ('home_bloco_link',            '');
 -- Observação: as cores do tema NÃO ficam mais no banco — são fixas no
 -- assets/css/theme.css (:root).
 
