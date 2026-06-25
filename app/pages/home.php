@@ -40,8 +40,8 @@ ob_start();
 <?php if (!empty($banners)): ?>
     <section class="carrossel" data-carrossel aria-roledescription="carrossel" aria-label="Banners">
         <div class="carrossel-trilho">
-            <?php foreach ($banners as $b): ?>
-                <div class="carrossel-slide">
+            <?php foreach ($banners as $i => $b): ?>
+                <div class="carrossel-slide<?= $i === 0 ? ' ativo' : '' ?>">
                     <?php
                     $img = '<img src="' . e(url('assets/uploads/' . $b['imagem'])) . '"'
                          . ' alt="' . e($b['titulo'] ?? '') . '" draggable="false">';

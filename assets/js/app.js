@@ -86,7 +86,9 @@
 
             function ir(i) {
                 atual = (i + total) % total;
-                trilho.style.transform = 'translateX(' + (-atual * 100) + '%)';
+                slides.forEach(function (s, idx) {
+                    s.classList.toggle('ativo', idx === atual);
+                });
                 dots.forEach(function (d, idx) {
                     d.classList.toggle('ativo', idx === atual);
                     d.setAttribute('aria-current', idx === atual ? 'true' : 'false');
