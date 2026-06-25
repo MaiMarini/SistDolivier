@@ -65,6 +65,7 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 
 /* --- Cabeçalho / menu ---------------------------------------------------- */
 .cabecalho {
+    position: relative;          /* referência para posicionar os ícones na borda */
     background: var(--cor-primaria);
     color: #fff;
 }
@@ -75,9 +76,6 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
     padding-top: .8rem;
     padding-bottom: .8rem;
 }
-/* Nome (esquerda) e ações (direita) com o mesmo peso -> abas ficam centradas
-   e os ícones grudam na borda direita. */
-.cabecalho-inner .logo { flex: 1; }
 .logo {
     font-family: var(--fonte-titulo);
     font-size: 1.4rem;
@@ -104,8 +102,12 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
         display: flex;
         flex-direction: row;
         align-items: center;
-        justify-content: center; /* abas centradas no espaço do meio */
         gap: 1.6rem;             /* respiro maior entre as abas (~26px) */
+        /* Centradas no header, sem depender da largura do nome/ícones. */
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
     }
     .nav-desktop a { color: #fff; padding: .2rem 0; }
     .nav-desktop a:hover { color: var(--cor-destaque); text-decoration: none; }
@@ -116,8 +118,12 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
     display: flex;
     align-items: center;
     gap: .4rem;
-    flex: 1;                     /* mesmo peso do nome */
-    justify-content: flex-end;   /* ícones grudados na borda direita */
+    /* Fora do limite do container: grudado na borda direita do header,
+       com uma pequena margem da borda da tela. */
+    position: absolute;
+    top: 50%;
+    right: 28px;
+    transform: translateY(-50%);
 }
 .header-icone {
     position: relative;
