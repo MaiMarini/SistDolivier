@@ -327,6 +327,7 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 }
 .carrossel-slide img {
     object-fit: cover;
+    object-position: center;   /* corte simétrico, respeitando a zona central da arte */
     -webkit-user-drag: none;
 }
 .carrossel-titulo {
@@ -377,9 +378,6 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 }
 .carrossel-dot.ativo { background: #fff; }
 
-@media (max-width: 600px) {
-    .carrossel { aspect-ratio: 4 / 3; }
-}
 @media (prefers-reduced-motion: reduce) {
     .carrossel-slide { transition: none; }
 }
