@@ -66,6 +66,7 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 /* --- Cabeçalho / menu ---------------------------------------------------- */
 .cabecalho {
     position: relative;          /* referência para posicionar os ícones na borda */
+    z-index: 1000;               /* acima do banner/carrossel da home */
     background: var(--cor-primaria);
     color: #fff;
 }
