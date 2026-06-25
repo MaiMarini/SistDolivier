@@ -293,20 +293,81 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
 }
 .galeria-thumb.ativa { border-color: var(--cor-pop); }
 
-/* Banner principal da home */
-.banner-hero { position: relative; margin-bottom: 1.5rem; }
-.banner-hero img {
-    width: 100%;
+/* Carrossel de banners da home */
+.carrossel {
+    position: relative;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
     border-radius: var(--raio);
-    object-fit: cover;
+    box-shadow: var(--sombra);
 }
-.banner-hero-titulo {
+.carrossel-trilho {
+    display: flex;
+    transition: transform .5s ease;
+    touch-action: pan-y;          /* permite rolar a página, captura o arrasto horizontal */
+    user-select: none;
+}
+.carrossel-slide {
+    position: relative;
+    flex: 0 0 100%;
+    min-width: 100%;
+}
+.carrossel-slide img {
+    width: 100%;
+    display: block;
+    object-fit: cover;
+    -webkit-user-drag: none;
+}
+.carrossel-titulo {
     position: absolute;
     left: 1rem;
-    bottom: 1rem;
+    bottom: 1.8rem;
     margin: 0;
     color: #fff;
     text-shadow: 0 2px 6px rgba(0, 0, 0, .5);
+}
+.carrossel-seta {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, .35);
+    color: #fff;
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.carrossel-seta:hover { background: rgba(0, 0, 0, .55); }
+.carrossel-seta.prev { left: .6rem; }
+.carrossel-seta.next { right: .6rem; }
+.carrossel-dots {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: .7rem;
+    display: flex;
+    justify-content: center;
+    gap: .4rem;
+}
+.carrossel-dot {
+    width: 11px;
+    height: 11px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .55);
+    cursor: pointer;
+}
+.carrossel-dot.ativo { background: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+    .carrossel-trilho { transition: none; }
 }
 
 /* Coleções (categorias) na home */
