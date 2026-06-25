@@ -1,41 +1,52 @@
 <?php
 /**
- * Bloco editorial da home em duas colunas (texto + foto). Conteúdo de settings
- * (chaves bloco_editorial_*), com fallback. A imagem é um arquivo em
- * assets/uploads; se não existir, mostra um placeholder elegante.
+ * Bloco editorial da home (foto + texto). TODO o conteúdo vem de settings
+ * (chaves bloco_editorial_*), sem texto fixo. Regras:
+ *  - imagem ausente: a coluna da foto é escondida e o texto ocupa a largura toda;
+ *  - botão só aparece se texto E link estiverem preenchidos;
+ *  - se nada estiver configurado, a seção inteira não é renderizada.
+ * Toda saída escapada com e().
  */
-$titulo      = cfg('bloco_editorial_titulo', 'Novidades feitas à mão');
-$subtitulo   = cfg('bloco_editorial_subtitulo', 'Conheça nossa seleção especial, preparada em pequenos lotes com ingredientes de verdade.');
-$botao_texto = cfg('bloco_editorial_botao_texto', 'Ver mais');
-$botao_link  = cfg('bloco_editorial_botao_link', '');
-$imagem      = cfg('bloco_editorial_imagem', '');
+$titulo      = (string) cfg('bloco_editorial_titulo', '');
+$subtitulo   = (string) cfg('bloco_editorial_subtitulo', '');
+$botao_texto = (string) cfg('bloco_editorial_botao_texto', '');
+$botao_link  = (string) cfg('bloco_editorial_botao_link', '');
+$imagem      = (string) cfg('bloco_editorial_imagem', '');
 
 $tem_imagem = $imagem !== '' && is_file(ROOT_PATH . '/assets/uploads/' . $imagem);
+$tem_botao  = $botao_texto !== '' && $botao_link !== '';
+
+// Bloco sem nenhum conteúdo configurado: não renderiza nada.
+if ($titulo === '' && $subtitulo === '' && !$tem_imagem && !$tem_botao) {
+    return;
+}
 ?>
-<section class="bloco-duplo">
+<section class="bloco-duplo<?= $tem_imagem ? '' : ' sem-foto' ?>">
     <div class="bloco-texto">
-        <h2 class="bloco-titulo"><?= e($titulo) ?></h2>
+        <?php if ($titulo !== ''): ?>
+            <h2 class="bloco-titulo"><?= e($titulo) ?></h2>
 
-        <!-- Divisor com linha ondulada sutil -->
-        <svg class="bloco-divisor" width="120" height="12" viewBox="0 0 120 12"
-             fill="none" aria-hidden="true">
-            <path d="M0 6 Q 10 0 20 6 T 40 6 T 60 6 T 80 6 T 100 6 T 120 6"
-                  stroke="currentColor" stroke-width="2" fill="none"
-                  stroke-linecap="round"/>
-        </svg>
+            <!-- Divisor com linha ondulada sutil -->
+            <svg class="bloco-divisor" width="120" height="12" viewBox="0 0 120 12"
+                 fill="none" aria-hidden="true">
+                <path d="M0 6 Q 10 0 20 6 T 40 6 T 60 6 T 80 6 T 100 6 T 120 6"
+                      stroke="currentColor" stroke-width="2" fill="none"
+                      stroke-linecap="round"/>
+            </svg>
+        <?php endif; ?>
 
-        <p class="bloco-sub"><?= e($subtitulo) ?></p>
+        <?php if ($subtitulo !== ''): ?>
+            <p class="bloco-sub"><?= e($subtitulo) ?></p>
+        <?php endif; ?>
 
-        <?php if ($botao_link !== '' && $botao_texto !== ''): ?>
+        <?php if ($tem_botao): ?>
             <a class="btn" href="<?= e($botao_link) ?>"><?= e($botao_texto) ?></a>
         <?php endif; ?>
     </div>
 
-    <div class="bloco-foto">
-        <?php if ($tem_imagem): ?>
+    <?php if ($tem_imagem): ?>
+        <div class="bloco-foto">
             <img src="<?= e(asset('assets/uploads/' . $imagem)) ?>" alt="<?= e($titulo) ?>">
-        <?php else: ?>
-            <div class="bloco-foto-placeholder" aria-hidden="true"></div>
-        <?php endif; ?>
-    </div>
+        </div>
+    <?php endif; ?>
 </section>
