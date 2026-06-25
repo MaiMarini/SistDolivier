@@ -63,6 +63,8 @@ ob_start();
     </section>
 <?php endif; ?>
 
+<?php view('tarja'); ?>
+
 <?php if (!empty($destaques)): ?>
     <h2>Destaques</h2>
     <div class="grade">
