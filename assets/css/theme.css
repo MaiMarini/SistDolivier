@@ -829,7 +829,7 @@ body.menu-aberto { overflow: hidden; }
     background: var(--cor-primaria);
     color: #fff;
     padding: 2rem 0;
-    margin-top: 3.5rem;        /* espaço para a curva no topo */
+    margin-top: 5rem;          /* espaço para a faixa de arcos no topo */
 }
 .rodape h3 { color: #fff; }
 .rodape a { color: var(--cor-destaque); }
@@ -839,16 +839,23 @@ body.menu-aberto { overflow: hidden; }
     opacity: .8;
 }
 
-/* Borda superior curva (SVG que estica em qualquer largura) */
+/* Borda superior em arcos (SVG que estica em qualquer largura) */
 .rodape-curva {
     position: absolute;
     left: 0;
     bottom: 100%;
     width: 100%;
-    height: 40px;
+    height: 70px;
     display: block;
-    color: var(--cor-primaria);   /* alimenta o fill="currentColor" do path */
     margin-bottom: -1px;          /* evita fresta entre a curva e o rodapé */
+}
+.rodape-curva-fio {
+    fill: none;
+    stroke: var(--cor-destaque);  /* fio de mel (dourado) */
+    stroke-width: 4;
+}
+.rodape-curva-corpo {
+    fill: var(--cor-primaria);    /* corpo do footer (marrom) */
 }
 
 /* Links de redes sociais como chips */

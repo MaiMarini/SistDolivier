@@ -4,9 +4,14 @@
  */
 ?>
 <footer class="rodape">
-    <!-- Borda superior curva (estica em qualquer largura) -->
-    <svg class="rodape-curva" viewBox="0 0 1440 48" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M0,48 L0,24 Q720,-12 1440,24 L1440,48 Z" fill="currentColor"/>
+    <!-- Borda superior em arcos largos com fio dourado (estica em qualquer largura) -->
+    <svg class="rodape-curva" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true">
+        <!-- 1) fio dourado: só o contorno dos arcos -->
+        <path class="rodape-curva-fio"
+              d="M0,70 Q150,0 300,70 T600,70 T900,70 T1200,70"/>
+        <!-- 2) corpo marrom: mesmo traçado, fechado até a base, por cima -->
+        <path class="rodape-curva-corpo"
+              d="M0,70 Q150,0 300,70 T600,70 T900,70 T1200,70 L1200,120 L0,120 Z"/>
     </svg>
 
     <div class="container">
