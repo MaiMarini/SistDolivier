@@ -25,11 +25,19 @@ try {
     $destaques = [];
 }
 
-// Coleções (categorias ativas).
+// Coleções (categorias ativas). A "capa" é a imagem do produto mais recente da
+// categoria (se houver) — sem alterar o schema das categorias.
 $colecoes = [];
 try {
     $colecoes = db()->query(
-        'SELECT slug, nome FROM categories WHERE ativo = 1 ORDER BY ordem ASC, nome ASC'
+        "SELECT c.slug, c.nome,
+                (SELECT p.imagem FROM products p
+                  WHERE p.category_id = c.id AND p.ativo = 1
+                        AND p.imagem IS NOT NULL AND p.imagem <> ''
+                  ORDER BY p.id DESC LIMIT 1) AS capa
+           FROM categories c
+          WHERE c.ativo = 1
+          ORDER BY c.ordem ASC, c.nome ASC"
     )->fetchAll();
 } catch (PDOException $e) {
     $colecoes = [];
@@ -84,25 +92,36 @@ ob_start();
 <?php view('tarja'); ?>
 
 <?php if (!empty($destaques)): ?>
-    <h2>Destaques</h2>
-    <div class="grade">
-        <?php foreach ($destaques as $p): ?>
-            <?php view('_card_produto', ['p' => $p]); ?>
-        <?php endforeach; ?>
-    </div>
+    <section class="secao">
+        <p class="eyebrow">Os queridinhos</p>
+        <h2 class="secao-titulo">Mais vendidos</h2>
+        <div class="grade">
+            <?php foreach ($destaques as $p): ?>
+                <?php view('_card_produto', ['p' => $p]); ?>
+            <?php endforeach; ?>
+        </div>
+    </section>
 <?php endif; ?>
 
 <?php view('_bloco_destaque'); ?>
 
 <?php if (!empty($colecoes)): ?>
-    <h2 class="mt-1">Coleções</h2>
-    <div class="grade-colecoes">
-        <?php foreach ($colecoes as $c): ?>
-            <a class="colecao" href="<?= e(url('categoria/' . $c['slug'])) ?>">
-                <span><?= e($c['nome']) ?></span>
-            </a>
-        <?php endforeach; ?>
-    </div>
+    <section class="secao">
+        <p class="eyebrow">Explore</p>
+        <h2 class="secao-titulo">Coleções</h2>
+        <div class="grade-colecoes">
+            <?php foreach ($colecoes as $c): ?>
+                <?php $capa = imagem_miniatura($c['capa'] ?? ''); ?>
+                <a class="colecao<?= $capa !== '' ? ' tem-capa' : '' ?>"
+                   href="<?= e(url('categoria/' . $c['slug'])) ?>">
+                    <?php if ($capa !== ''): ?>
+                        <img class="colecao-capa" src="<?= e(url('assets/uploads/' . $capa)) ?>" alt="">
+                    <?php endif; ?>
+                    <span class="colecao-nome"><?= e($c['nome']) ?></span>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </section>
 <?php endif; ?>
 <?php
 view('layout', ['titulo' => 'Início', 'conteudo' => ob_get_clean()]);
