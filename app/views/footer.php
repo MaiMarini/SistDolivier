@@ -1,60 +1,71 @@
 <?php
 /**
- * Rodapé do site: identidade da loja, observação de entrega, WhatsApp e ano.
+ * Rodapé do site.
+ * - Textos da marca e links de navegação são FIXOS.
+ * - Redes sociais/contato vêm de settings (o banco guarda o dado puro; o link é
+ *   montado aqui na exibição). Toda saída escapada com e().
  */
+
+// Redes sociais: monta o link a partir das chaves de settings (só as preenchidas).
+$redes = [];
+
+$wpp = preg_replace('/\D+/', '', (string) cfg('whatsapp_numero', ''));
+if ($wpp !== '') {
+    $redes['WhatsApp'] = 'https://wa.me/' . $wpp;
+}
+$ig = trim((string) cfg('instagram_usuario', ''));
+if ($ig !== '') {
+    $redes['Instagram'] = 'https://instagram.com/' . ltrim($ig, '@');
+}
+$tt = trim((string) cfg('tiktok_usuario', ''));
+if ($tt !== '') {
+    $redes['TikTok'] = 'https://tiktok.com/@' . ltrim($tt, '@');
+}
+$fb = trim((string) cfg('facebook_url', ''));
+if ($fb !== '') {
+    $redes['Facebook'] = $fb;
+}
+$pin = trim((string) cfg('pinterest_url', ''));
+if ($pin !== '') {
+    $redes['Pinterest'] = $pin;
+}
 ?>
 <footer class="rodape">
     <!-- Borda superior em arcos largos com fio dourado (estica em qualquer largura) -->
     <svg class="rodape-curva" viewBox="0 0 1200 80" preserveAspectRatio="none" aria-hidden="true">
-        <!-- 1) fio dourado: arco mais alto -->
         <path class="rodape-curva-fio"
               d="M0,38 Q150,8 300,38 T600,38 T900,38 T1200,38"/>
-        <!-- 2) corpo marrom: arco paralelo ~14px abaixo, fechado até a base -->
         <path class="rodape-curva-corpo"
               d="M0,52 Q150,22 300,52 T600,52 T900,52 T1200,52 L1200,80 L0,80 Z"/>
     </svg>
 
-    <div class="container">
-        <h3><?= e(cfg('site_nome', 'Minha Loja')) ?></h3>
+    <div class="container rodape-inner">
+        <div class="rodape-conteudo">
+            <h3 class="rodape-marca">D'Olivier</h3>
+            <p class="rodape-slogan">Confeitaria Artesanal</p>
 
-        <?php if (cfg('site_descricao')): ?>
-            <p><?= e(cfg('site_descricao')) ?></p>
-        <?php endif; ?>
+            <nav class="rodape-nav">
+                <a href="<?= e(url('sobre')) ?>">Sobre nós</a>
+                <a href="<?= e(url('meus-pedidos')) ?>">Meus pedidos</a>
+                <a href="<?= e(url('regras')) ?>">Regras e prazos</a>
+            </nav>
 
-        <?php if (cfg('entrega_obs')): ?>
-            <p><?= e(cfg('entrega_obs')) ?></p>
-        <?php endif; ?>
+            <?php if (!empty($redes)): ?>
+                <p class="rodape-redes">
+                    <?php foreach ($redes as $nome => $link): ?>
+                        <a href="<?= e($link) ?>" target="_blank" rel="noopener"><?= e($nome) ?></a>
+                    <?php endforeach; ?>
+                </p>
+            <?php endif; ?>
 
-        <p>
-            <a class="btn wpp" href="<?= e(whatsapp_link()) ?>"
-               target="_blank" rel="noopener">Falar no WhatsApp</a>
-        </p>
-
-        <?php
-        // Redes sociais (mostra só as preenchidas nas configurações).
-        $redes = [
-            'Instagram' => cfg('rede_instagram', ''),
-            'Facebook'  => cfg('rede_facebook', ''),
-            'TikTok'    => cfg('rede_tiktok', ''),
-        ];
-        $redes = array_filter($redes);
-        ?>
-        <?php if (!empty($redes)): ?>
-            <p class="rodape-redes">
-                <?php foreach ($redes as $nome => $link): ?>
-                    <a href="<?= e($link) ?>" target="_blank" rel="noopener"><?= e($nome) ?></a>
-                <?php endforeach; ?>
+            <p class="copyright">
+                &copy; <?= e(date('Y')) ?> D'Olivier. Todos os direitos reservados.
             </p>
-        <?php endif; ?>
+        </div>
 
-        <?php if (cfg('endereco')): ?>
-            <p><?= e(cfg('endereco')) ?></p>
-        <?php endif; ?>
-
-        <p class="copyright">
-            &copy; <?= e(date('Y')) ?> <?= e(cfg('site_nome', 'Minha Loja')) ?>.
-            <?php if (cfg('cnpj')): ?>CNPJ: <?= e(cfg('cnpj')) ?>.<?php endif; ?>
-            Todos os direitos reservados.
-        </p>
+        <div class="rodape-logo">
+            <img src="<?= e(asset('assets/img/trigo.png')) ?>" height="64"
+                 alt="D'Olivier Confeitaria Artesanal">
+        </div>
     </div>
 </footer>

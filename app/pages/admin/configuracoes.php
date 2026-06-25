@@ -12,7 +12,7 @@ exigir_admin();
 $abas_campos = [
     'comercial' => [
         'texto' => ['site_descricao', 'whatsapp_numero', 'endereco', 'cnpj',
-                    'rede_instagram', 'rede_facebook', 'rede_tiktok'],
+                    'instagram_usuario', 'tiktok_usuario', 'facebook_url', 'pinterest_url'],
     ],
     'pagamento' => [
         'dinheiro' => ['parcelamento_limite_centavos'],
@@ -99,19 +99,24 @@ ob_start();
         <input type="text" id="cnpj" name="cnpj" value="<?= e(cfg('cnpj', '')) ?>">
     </div>
     <div class="campo">
-        <label for="rede_instagram">Instagram (URL)</label>
-        <input type="url" id="rede_instagram" name="rede_instagram"
-               value="<?= e(cfg('rede_instagram', '')) ?>" placeholder="https://instagram.com/...">
+        <label for="instagram_usuario">Instagram (usuário, sem @)</label>
+        <input type="text" id="instagram_usuario" name="instagram_usuario"
+               value="<?= e(cfg('instagram_usuario', '')) ?>" placeholder="ex.: minhaloja">
     </div>
     <div class="campo">
-        <label for="rede_facebook">Facebook (URL)</label>
-        <input type="url" id="rede_facebook" name="rede_facebook"
-               value="<?= e(cfg('rede_facebook', '')) ?>" placeholder="https://facebook.com/...">
+        <label for="tiktok_usuario">TikTok (usuário, sem @)</label>
+        <input type="text" id="tiktok_usuario" name="tiktok_usuario"
+               value="<?= e(cfg('tiktok_usuario', '')) ?>" placeholder="ex.: minhaloja">
     </div>
     <div class="campo">
-        <label for="rede_tiktok">TikTok (URL)</label>
-        <input type="url" id="rede_tiktok" name="rede_tiktok"
-               value="<?= e(cfg('rede_tiktok', '')) ?>" placeholder="https://tiktok.com/@...">
+        <label for="facebook_url">Facebook (URL completa)</label>
+        <input type="text" id="facebook_url" name="facebook_url"
+               value="<?= e(cfg('facebook_url', '')) ?>" placeholder="https://facebook.com/...">
+    </div>
+    <div class="campo">
+        <label for="pinterest_url">Pinterest (URL completa)</label>
+        <input type="text" id="pinterest_url" name="pinterest_url"
+               value="<?= e(cfg('pinterest_url', '')) ?>" placeholder="https://br.pinterest.com/seu-perfil">
     </div>
 
     <button class="btn" type="submit">Salvar</button>

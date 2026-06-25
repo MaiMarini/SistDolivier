@@ -23,9 +23,10 @@ INSERT INTO settings (chave, valor) VALUES
     -- Informações comerciais (editáveis no admin; preencher por loja)
     ('endereco',                   ''),
     ('cnpj',                       ''),
-    ('rede_instagram',             ''),
-    ('rede_facebook',              ''),
-    ('rede_tiktok',                ''),
+    ('instagram_usuario',          ''),
+    ('tiktok_usuario',             ''),
+    ('facebook_url',               ''),
+    ('pinterest_url',              ''),
     -- Bloco editorial da home (texto + foto)
     ('bloco_editorial_titulo',       'Novidades feitas à mão'),
     ('bloco_editorial_subtitulo',    'Conheça nossa seleção especial, preparada em pequenos lotes.'),
