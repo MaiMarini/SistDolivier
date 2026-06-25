@@ -63,6 +63,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/banners');
     }
 
+    // ----- Frases do marquee (máx. 5) -----
+    if ($op === 'frase_adicionar') {
+        $total = (int) db()->query('SELECT COUNT(*) FROM marquee_frases')->fetchColumn();
+        if ($total >= 5) {
+            flash('erro', 'Limite de 5 frases atingido.');
+        } else {
+            $ordem = (int) db()->query('SELECT COALESCE(MAX(ordem), 0) FROM marquee_frases')->fetchColumn() + 1;
+            $stmt = db()->prepare('INSERT INTO marquee_frases (texto, ordem) VALUES (?, ?)');
+            $stmt->execute(['', $ordem]);
+            flash('sucesso', 'Frase adicionada. Edite o texto e salve.');
+        }
+        redirect('admin/banners');
+    }
+
+    if ($op === 'frase_salvar') {
+        $id = (int) ($_POST['id'] ?? 0);
+        $texto = trim($_POST['texto'] ?? '');
+        if (mb_strlen($texto) > 120) {
+            $texto = mb_substr($texto, 0, 120);
+        }
+        if ($id > 0) {
+            $stmt = db()->prepare('UPDATE marquee_frases SET texto = ? WHERE id = ?');
+            $stmt->execute([$texto, $id]);
+            flash('sucesso', 'Frase atualizada.');
+        }
+        redirect('admin/banners');
+    }
+
+    if ($op === 'frase_excluir') {
+        $id = (int) ($_POST['id'] ?? 0);
+        if ($id > 0) {
+            $stmt = db()->prepare('DELETE FROM marquee_frases WHERE id = ?');
+            $stmt->execute([$id]);
+            flash('sucesso', 'Frase excluída.');
+        }
+        redirect('admin/banners');
+    }
+
     if ($op === 'salvar') {
         $id     = (int) ($_POST['id'] ?? 0);
         $titulo = trim($_POST['titulo'] ?? '');
@@ -197,6 +235,17 @@ $banners = db()->query(
     'SELECT id, imagem, titulo, ordem, ativo FROM banners ORDER BY ordem ASC, id ASC'
 )->fetchAll();
 
+// Frases do marquee (ordenadas).
+$frases = [];
+try {
+    $frases = db()->query(
+        'SELECT id, texto, ordem FROM marquee_frases ORDER BY ordem ASC, id ASC'
+    )->fetchAll();
+} catch (PDOException $e) {
+    $frases = [];
+}
+$total_frases = count($frases);
+
 ob_start();
 ?>
 <h2>Banners</h2>
@@ -237,6 +286,38 @@ ob_start();
             <?php endforeach; ?>
         </tbody>
     </table>
+<?php endif; ?>
+
+<hr class="mt-1">
+
+<h2 class="mt-1">Frases do marquee</h2>
+<p>Frases curtas que passam na faixa da home. Máximo de 5.</p>
+
+<?php if (empty($frases)): ?>
+    <p>Nenhuma frase cadastrada.</p>
+<?php else: ?>
+    <?php foreach ($frases as $f): ?>
+        <form method="post" action="<?= e(url('admin/banners')) ?>"
+              class="campo-inline" style="margin-bottom:.5rem; max-width:640px;">
+            <?= csrf_input() ?>
+            <input type="hidden" name="id" value="<?= (int) $f['id'] ?>">
+            <input type="text" name="texto" value="<?= e($f['texto']) ?>"
+                   maxlength="120" style="flex:1;" placeholder="Texto da frase">
+            <button class="btn sec" type="submit" name="op" value="frase_salvar">Salvar</button>
+            <button class="btn" type="submit" name="op" value="frase_excluir"
+                    onclick="return confirm('Excluir esta frase?');">Excluir</button>
+        </form>
+    <?php endforeach; ?>
+<?php endif; ?>
+
+<?php if ($total_frases < 5): ?>
+    <form method="post" action="<?= e(url('admin/banners')) ?>" style="margin-top:.5rem;">
+        <?= csrf_input() ?>
+        <input type="hidden" name="op" value="frase_adicionar">
+        <button class="btn" type="submit">Adicionar frase</button>
+    </form>
+<?php else: ?>
+    <p><em>Limite de 5 frases atingido.</em></p>
 <?php endif; ?>
 
 <hr class="mt-1">

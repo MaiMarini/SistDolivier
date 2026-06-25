@@ -2,19 +2,28 @@
 /**
  * Tarja horizontal (marquee) com loop SEM emenda.
  *
- * Técnica: a "trilha" (track) contém DOIS grupos idênticos lado a lado e é
- * animada de translateX(0) até translateX(-50%). Como há duas cópias, ao chegar
- * em -50% o conteúdo está na mesma posição visual do início -> loop perfeito.
+ * Frases vindas da tabela marquee_frases (ordenadas por `ordem`). Se não houver
+ * nenhuma frase cadastrada, a tarja não é renderizada.
  *
- * Para sempre cobrir a largura da tela (mesmo com poucas frases), a lista é
- * repetida algumas vezes DENTRO de cada grupo.
+ * Técnica: a "trilha" contém DOIS grupos idênticos lado a lado, animados de
+ * translateX(0) até translateX(-50%) -> emenda perfeita. A lista é repetida o
+ * suficiente dentro de cada grupo para cobrir a largura da tela.
  */
-$padrao = 'Feito à mão | Em pequenos lotes | Receita de família | Ingredientes de verdade';
-$frases = explode('|', (string) cfg('tarja_frases', $padrao));
-$frases = array_values(array_filter(array_map('trim', $frases), 'strlen'));
+$frases = [];
+try {
+    $rows = db()->query('SELECT texto FROM marquee_frases ORDER BY ordem ASC, id ASC')->fetchAll();
+    foreach ($rows as $r) {
+        $texto = trim((string) $r['texto']);
+        if ($texto !== '') {
+            $frases[] = $texto;
+        }
+    }
+} catch (PDOException $e) {
+    $frases = [];
+}
 
 if (empty($frases)) {
-    return; // sem frases, não mostra a tarja
+    return; // sem frases cadastradas: não renderiza a faixa
 }
 
 // Repete a lista o suficiente para um grupo já cobrir bem a largura da tela.
