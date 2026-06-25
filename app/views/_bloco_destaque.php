@@ -1,13 +1,14 @@
 <?php
 /**
- * Bloco de destaque em duas colunas (texto + foto). Conteúdo de settings:
- *   home_bloco_titulo, home_bloco_subtitulo, home_bloco_imagem, home_bloco_link
- * com fallback. Imagem é um arquivo em assets/uploads; se não existir, placeholder.
+ * Bloco editorial da home em duas colunas (texto + foto). Conteúdo de settings
+ * (chaves bloco_editorial_*), com fallback. A imagem é um arquivo em
+ * assets/uploads; se não existir, mostra um placeholder elegante.
  */
-$titulo    = cfg('home_bloco_titulo', 'Novidades feitas à mão');
-$subtitulo = cfg('home_bloco_subtitulo', 'Conheça nossa seleção especial, preparada em pequenos lotes com ingredientes de verdade.');
-$link      = cfg('home_bloco_link', '');
-$imagem    = cfg('home_bloco_imagem', '');
+$titulo      = cfg('bloco_editorial_titulo', 'Novidades feitas à mão');
+$subtitulo   = cfg('bloco_editorial_subtitulo', 'Conheça nossa seleção especial, preparada em pequenos lotes com ingredientes de verdade.');
+$botao_texto = cfg('bloco_editorial_botao_texto', 'Ver mais');
+$botao_link  = cfg('bloco_editorial_botao_link', '');
+$imagem      = cfg('bloco_editorial_imagem', '');
 
 $tem_imagem = $imagem !== '' && is_file(ROOT_PATH . '/assets/uploads/' . $imagem);
 ?>
@@ -25,14 +26,14 @@ $tem_imagem = $imagem !== '' && is_file(ROOT_PATH . '/assets/uploads/' . $imagem
 
         <p class="bloco-sub"><?= e($subtitulo) ?></p>
 
-        <?php if ($link !== ''): ?>
-            <a class="btn" href="<?= e($link) ?>">Ver mais</a>
+        <?php if ($botao_link !== '' && $botao_texto !== ''): ?>
+            <a class="btn" href="<?= e($botao_link) ?>"><?= e($botao_texto) ?></a>
         <?php endif; ?>
     </div>
 
     <div class="bloco-foto">
         <?php if ($tem_imagem): ?>
-            <img src="<?= e(url('assets/uploads/' . $imagem)) ?>" alt="<?= e($titulo) ?>">
+            <img src="<?= e(asset('assets/uploads/' . $imagem)) ?>" alt="<?= e($titulo) ?>">
         <?php else: ?>
             <div class="bloco-foto-placeholder" aria-hidden="true"></div>
         <?php endif; ?>

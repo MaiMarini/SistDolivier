@@ -26,11 +26,12 @@ INSERT INTO settings (chave, valor) VALUES
     ('rede_instagram',             ''),
     ('rede_facebook',              ''),
     ('rede_tiktok',                ''),
-    -- Bloco de destaque da home (texto + foto)
-    ('home_bloco_titulo',          'Novidades feitas à mão'),
-    ('home_bloco_subtitulo',       'Conheça nossa seleção especial, preparada em pequenos lotes.'),
-    ('home_bloco_imagem',          ''),
-    ('home_bloco_link',            '');
+    -- Bloco editorial da home (texto + foto)
+    ('bloco_editorial_titulo',       'Novidades feitas à mão'),
+    ('bloco_editorial_subtitulo',    'Conheça nossa seleção especial, preparada em pequenos lotes.'),
+    ('bloco_editorial_imagem',       ''),
+    ('bloco_editorial_botao_texto',  'Ver mais'),
+    ('bloco_editorial_botao_link',   '');
 -- Observação: as cores do tema NÃO ficam mais no banco — são fixas no
 -- assets/css/theme.css (:root).
 
