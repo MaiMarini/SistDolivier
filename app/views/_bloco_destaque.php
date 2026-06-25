@@ -22,6 +22,12 @@ if ($titulo === '' && $subtitulo === '' && !$tem_imagem && !$tem_botao) {
 }
 ?>
 <section class="bloco-duplo<?= $tem_imagem ? '' : ' sem-foto' ?>">
+    <?php if ($tem_imagem): ?>
+        <div class="bloco-foto">
+            <img src="<?= e(asset('assets/uploads/' . $imagem)) ?>" alt="<?= e($titulo) ?>">
+        </div>
+    <?php endif; ?>
+
     <div class="bloco-texto">
         <?php if ($titulo !== ''): ?>
             <h2 class="bloco-titulo"><?= e($titulo) ?></h2>
@@ -43,10 +49,4 @@ if ($titulo === '' && $subtitulo === '' && !$tem_imagem && !$tem_botao) {
             <a class="btn" href="<?= e($botao_link) ?>"><?= e($botao_texto) ?></a>
         <?php endif; ?>
     </div>
-
-    <?php if ($tem_imagem): ?>
-        <div class="bloco-foto">
-            <img src="<?= e(asset('assets/uploads/' . $imagem)) ?>" alt="<?= e($titulo) ?>">
-        </div>
-    <?php endif; ?>
 </section>

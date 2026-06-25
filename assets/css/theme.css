@@ -382,46 +382,36 @@ main { flex: 1 0 auto; padding: 1.5rem 0; }
     .carrossel-slide { transition: none; }
 }
 
-/* Bloco de destaque (texto + foto) na home */
+/* Bloco editorial da home (foto à esquerda, texto à direita) */
 .bloco-duplo {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.2rem;
-    margin: 2rem 0;
-    align-items: stretch;
+    grid-template-columns: 1fr;     /* celular: empilhado (foto em cima) */
+    gap: 1.5rem 2.5rem;
+    margin: 2.5rem 0;
+    align-items: center;
 }
 @media (min-width: 768px) {
     .bloco-duplo { grid-template-columns: 1fr 1fr; }
+    .bloco-duplo.sem-foto { grid-template-columns: 1fr; }  /* sem foto: texto ocupa tudo */
 }
-.bloco-texto {
-    background: var(--cor-acento);
-    color: #fff;
-    border-radius: 24px;
-    padding: 2rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-.bloco-titulo {
-    font-family: var(--fonte-titulo);
-    color: #fff;
-    font-size: 2rem;
-    margin: 0;
-}
-.bloco-divisor { color: rgba(255, 255, 255, .75); margin: .9rem 0; display: block; }
-.bloco-sub { font-size: 1.1rem; margin: 0 0 1.4rem; }
-.bloco-texto .btn { align-self: flex-start; }
 .bloco-foto {
-    border-radius: 24px;
+    aspect-ratio: 4 / 3;
+    border-radius: 5rem;            /* cantos bem arredondados (igual à referência) */
     overflow: hidden;
-    min-height: 240px;
     box-shadow: var(--sombra);
 }
 .bloco-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bloco-titulo {
+    font-family: var(--fonte-titulo);
+    color: var(--cor-primaria);
+    font-size: 2.2rem;
+    margin: 0;
+}
+.bloco-divisor { color: var(--cor-destaque); margin: .9rem 0; display: block; }
+.bloco-sub { color: var(--cor-texto); font-size: 1.1rem; margin: 0 0 1.4rem; }
 
-/* Sem imagem: a coluna da foto some e o texto ocupa a largura toda. */
-@media (min-width: 768px) {
-    .bloco-duplo.sem-foto { grid-template-columns: 1fr; }
+@media (max-width: 767px) {
+    .bloco-foto { border-radius: 2.5rem; }  /* proporcional em telas pequenas */
 }
 
 /* Coleções (categorias) na home */
