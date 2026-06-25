@@ -4,16 +4,14 @@
  * Tudo alimentado pelo que é cadastrado no admin.
  */
 
-// Banner ativo (mostra o primeiro; se houver vários, os demais ficam para um
-// carrossel numa evolução futura).
-$banner = null;
+// Banners ativos (todos, na ordem) -> carrossel.
+$banners = [];
 try {
-    $stmt = db()->query(
-        'SELECT imagem, titulo, link FROM banners WHERE ativo = 1 ORDER BY ordem ASC, id ASC LIMIT 1'
-    );
-    $banner = $stmt->fetch() ?: null;
+    $banners = db()->query(
+        'SELECT imagem, titulo, link FROM banners WHERE ativo = 1 ORDER BY ordem ASC, id ASC'
+    )->fetchAll();
 } catch (PDOException $e) {
-    $banner = null;
+    $banners = [];
 }
 
 // Destaques.
@@ -39,19 +37,39 @@ try {
 
 ob_start();
 ?>
-<?php if ($banner !== null): ?>
-    <section class="banner-hero">
-        <?php
-        $img = '<img src="' . e(url('assets/uploads/' . $banner['imagem'])) . '" alt="'
-             . e($banner['titulo'] ?? '') . '">';
-        ?>
-        <?php if (!empty($banner['link'])): ?>
-            <a href="<?= e($banner['link']) ?>"><?= $img ?></a>
-        <?php else: ?>
-            <?= $img ?>
-        <?php endif; ?>
-        <?php if (!empty($banner['titulo'])): ?>
-            <h1 class="banner-hero-titulo"><?= e($banner['titulo']) ?></h1>
+<?php if (!empty($banners)): ?>
+    <section class="carrossel" data-carrossel aria-roledescription="carrossel" aria-label="Banners">
+        <div class="carrossel-trilho">
+            <?php foreach ($banners as $b): ?>
+                <div class="carrossel-slide">
+                    <?php
+                    $img = '<img src="' . e(url('assets/uploads/' . $b['imagem'])) . '"'
+                         . ' alt="' . e($b['titulo'] ?? '') . '" draggable="false">';
+                    ?>
+                    <?php if (!empty($b['link'])): ?>
+                        <a href="<?= e($b['link']) ?>"><?= $img ?></a>
+                    <?php else: ?>
+                        <?= $img ?>
+                    <?php endif; ?>
+                    <?php if (!empty($b['titulo'])): ?>
+                        <h2 class="carrossel-titulo"><?= e($b['titulo']) ?></h2>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <?php if (count($banners) > 1): ?>
+            <button class="carrossel-seta prev" type="button"
+                    data-carrossel-prev aria-label="Banner anterior">&lsaquo;</button>
+            <button class="carrossel-seta next" type="button"
+                    data-carrossel-next aria-label="Próximo banner">&rsaquo;</button>
+            <div class="carrossel-dots">
+                <?php foreach ($banners as $i => $b): ?>
+                    <button class="carrossel-dot" type="button"
+                            data-carrossel-dot="<?= (int) $i ?>"
+                            aria-label="Ir para o slide <?= (int) $i + 1 ?>"></button>
+                <?php endforeach; ?>
+            </div>
         <?php endif; ?>
     </section>
 <?php else: ?>
