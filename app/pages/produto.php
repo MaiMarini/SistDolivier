@@ -265,7 +265,11 @@ ob_start();
     <!-- Informações nutricionais: largura total, abaixo das duas colunas -->
     <div class="acordeon" data-acordeon>
         <button type="button" class="acordeon-cabeca" data-acordeon-toggle aria-expanded="false">
-            Informações nutricionais
+            <span class="acordeon-titulo">
+                <svg class="acordeon-icone" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21c.5-4.5 2.5-8 7-10"/><path d="M9 18c6.218 0 10.5-3.288 11-12V4h-4.014c-9 0-11.986 4-12 9 0 1 0 3 2 5h3z"/></svg>
+                Informações nutricionais
+            </span>
             <span class="acordeon-seta" aria-hidden="true">&#9662;</span>
         </button>
         <div class="acordeon-corpo" data-acordeon-corpo>

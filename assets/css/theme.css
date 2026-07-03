@@ -881,6 +881,8 @@ body.menu-aberto {
     justify-content: space-between;
     gap: .5rem;
 }
+.acordeon-titulo { display: inline-flex; align-items: center; gap: .5rem; }
+.acordeon-icone { width: 20px; height: 20px; flex: 0 0 auto; color: var(--cor-acento); }
 .acordeon-seta { transition: transform .2s ease; }
 .acordeon.aberto .acordeon-seta { transform: rotate(180deg); }
 .acordeon-corpo { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
@@ -891,33 +893,37 @@ body.menu-aberto {
     display: flex;
     gap: .6rem;
     align-items: flex-start;
-    background: #fdf1d6;
-    border-left: 4px solid var(--cor-destaque);
-    color: var(--cor-texto);
+    background: #fbe3e0;                 /* rosado/salmão (mesmo tom do alerta da marca) */
+    border: 1px solid #f0bcb4;
+    color: #9a2a1a;                      /* alerta escuro (não amarelo) */
     padding: .7rem .9rem;
-    border-radius: 8px;
+    border-radius: 10px;
     margin-bottom: 1rem;
 }
-.nutri-alerta svg { flex: 0 0 auto; width: 22px; height: 22px; color: var(--cor-pop); }
+.nutri-alerta svg { flex: 0 0 auto; width: 22px; height: 22px; color: currentColor; }
 .nutri-porcao { margin: .2rem 0 1rem; }
 .nutri-tabela { width: 100%; border-collapse: collapse; }
-.nutri-tabela td { padding: .5rem .2rem; border-bottom: 1px solid #eee; }
+.nutri-tabela td { padding: .55rem .2rem; border-bottom: 1px solid rgba(74, 51, 32, .08); }
 .nutri-tabela tr:last-child td { border-bottom: 0; }
-.nutri-tabela td:first-child { width: 100%; text-align: left; }  /* absorve o espaço */
-.nutri-tabela td:last-child { text-align: right; font-weight: 700; white-space: nowrap; }
+.nutri-tabela td:first-child { width: 100%; text-align: left; color: rgba(74, 51, 32, .65); }
+.nutri-tabela td:last-child { text-align: right; font-weight: 700; color: var(--cor-texto); white-space: nowrap; }
 
-.nutri-abas { display: flex; flex-wrap: wrap; gap: .3rem; border-bottom: 2px solid #eee; margin-bottom: 1rem; }
+/* Abas do kit em chips (pílulas) */
+.nutri-abas { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
 .nutri-aba {
-    background: none;
-    border: 0;
-    border-bottom: 3px solid transparent;
-    margin-bottom: -2px;
-    padding: .5rem .8rem;
+    background: var(--cor-fundo);        /* creme claro */
+    border: 1px solid rgba(107, 74, 44, .2);
+    border-radius: 999px;
+    padding: .4rem .9rem;
     cursor: pointer;
     font-weight: 700;
-    color: #999;
+    color: var(--cor-primaria);          /* marrom */
 }
-.nutri-aba.ativa { color: var(--cor-primaria); border-bottom-color: var(--cor-pop); }
+.nutri-aba.ativa {
+    background: var(--cor-acento);       /* verde-oliva */
+    border-color: var(--cor-acento);
+    color: #fff;
+}
 .nutri-painel { display: none; }
 .nutri-painel.ativo { display: block; }
 
