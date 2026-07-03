@@ -57,7 +57,7 @@ $rotas_admin = [
     'sair'       => 'sair',        // /admin/sair       -> logout
     'categorias'    => 'categorias',    // /admin/categorias    -> CRUD de categorias
     'produtos'      => 'produtos',      // /admin/produtos      -> CRUD de produtos + galeria
-    'receitas'      => 'receitas',      // /admin/receitas      -> CRUD de tabelas nutricionais
+    'tabelas-nutricionais' => 'tabelas_nutricionais', // /admin/tabelas-nutricionais -> CRUD
     'banners'       => 'banners',       // /admin/banners       -> banners da home
     'configuracoes' => 'configuracoes', // /admin/configuracoes -> editar settings
 ];

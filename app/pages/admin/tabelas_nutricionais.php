@@ -3,9 +3,9 @@
  * Admin: Tabelas nutricionais. CRUD sobre tabelas_nutricionais.
  * Uma tabela nutricional pode ser usada em vários produtos (produto_tabelas_nutricionais).
  * Rotas:
- *   /admin/receitas              -> listar
- *   /admin/receitas/novo         -> form de criação
- *   /admin/receitas/editar/{id}  -> form de edição
+ *   /admin/tabelas-nutricionais              -> listar
+ *   /admin/tabelas-nutricionais/novo         -> form de criação
+ *   /admin/tabelas-nutricionais/editar/{id}  -> form de edição
  *   POST op=salvar / op=excluir
  */
 exigir_admin();
@@ -48,7 +48,7 @@ function _rec_num($v)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_validar()) {
         flash('erro', 'Sua sessão expirou. Tente novamente.');
-        redirect('admin/receitas');
+        redirect('admin/tabelas-nutricionais');
     }
 
     $op = $_POST['op'] ?? '';
@@ -61,14 +61,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$id]);
             flash('sucesso', 'Tabela nutricional excluída e removida dos produtos que a utilizavam.');
         }
-        redirect('admin/receitas');
+        redirect('admin/tabelas-nutricionais');
     }
 
     if ($op === 'salvar') {
         $id   = (int) ($_POST['id'] ?? 0);
         $nome = trim($_POST['nome'] ?? '');
 
-        $destino_erro = $id > 0 ? 'admin/receitas/editar/' . $id : 'admin/receitas/novo';
+        $destino_erro = $id > 0 ? 'admin/tabelas-nutricionais/editar/' . $id : 'admin/tabelas-nutricionais/novo';
         if (mb_strlen($nome) < 2) {
             flash('erro', 'Informe o nome da tabela nutricional.');
             redirect($destino_erro);
@@ -98,10 +98,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute(array_values($cols));
             flash('sucesso', 'Tabela nutricional criada.');
         }
-        redirect('admin/receitas');
+        redirect('admin/tabelas-nutricionais');
     }
 
-    redirect('admin/receitas');
+    redirect('admin/tabelas-nutricionais');
 }
 
 // --- GET ---------------------------------------------------------------------
@@ -120,7 +120,7 @@ if ($acao === 'novo' || $acao === 'editar') {
         $row = $stmt->fetch();
         if (!$row) {
             flash('erro', 'Tabela nutricional não encontrada.');
-            redirect('admin/receitas');
+            redirect('admin/tabelas-nutricionais');
         }
         $rec = $row;
     }
@@ -129,9 +129,9 @@ if ($acao === 'novo' || $acao === 'editar') {
 
     ob_start();
     ?>
-    <p><a href="<?= e(url('admin/receitas')) ?>">&larr; Voltar para tabelas nutricionais</a></p>
+    <p><a href="<?= e(url('admin/tabelas-nutricionais')) ?>">&larr; Voltar para tabelas nutricionais</a></p>
 
-    <form class="formulario" method="post" action="<?= e(url('admin/receitas')) ?>" style="max-width:640px;">
+    <form class="formulario" method="post" action="<?= e(url('admin/tabelas-nutricionais')) ?>" style="max-width:640px;">
         <?= csrf_input() ?>
         <input type="hidden" name="op" value="salvar">
         <input type="hidden" name="id" value="<?= (int) $rec['id'] ?>">
@@ -169,15 +169,15 @@ if ($acao === 'novo' || $acao === 'editar') {
 }
 
 // Listagem
-$receitas = db()->query(
+$tabelas = db()->query(
     'SELECT id, nome FROM tabelas_nutricionais ORDER BY nome ASC'
 )->fetchAll();
 
 ob_start();
 ?>
-<p><a class="btn" href="<?= e(url('admin/receitas/novo')) ?>">Nova tabela nutricional</a></p>
+<p><a class="btn" href="<?= e(url('admin/tabelas-nutricionais/novo')) ?>">Nova tabela nutricional</a></p>
 
-<?php if (empty($receitas)): ?>
+<?php if (empty($tabelas)): ?>
     <p>Nenhuma tabela nutricional cadastrada.</p>
 <?php else: ?>
     <table class="tabela">
@@ -185,12 +185,12 @@ ob_start();
             <tr><th>Nome</th><th>Ações</th></tr>
         </thead>
         <tbody>
-            <?php foreach ($receitas as $r): ?>
+            <?php foreach ($tabelas as $r): ?>
                 <tr>
                     <td><?= e($r['nome']) ?></td>
                     <td>
-                        <a class="btn sec" href="<?= e(url('admin/receitas/editar/' . $r['id'])) ?>">Editar</a>
-                        <form method="post" action="<?= e(url('admin/receitas')) ?>" style="display:inline"
+                        <a class="btn sec" href="<?= e(url('admin/tabelas-nutricionais/editar/' . $r['id'])) ?>">Editar</a>
+                        <form method="post" action="<?= e(url('admin/tabelas-nutricionais')) ?>" style="display:inline"
                               onsubmit="return confirm('Excluir esta tabela nutricional? Ela será removida de todos os produtos que a utilizam.');">
                             <?= csrf_input() ?>
                             <input type="hidden" name="op" value="excluir">
