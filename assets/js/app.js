@@ -101,6 +101,19 @@
             });
         }
 
+        // --- Contador de fotos escolhidas -----------------------------------
+        var arqInput = document.querySelector('[data-arquivo-input]');
+        var arqInfo = document.querySelector('[data-arquivo-info]');
+        if (arqInput && arqInfo) {
+            var arqTextoPadrao = arqInfo.textContent;
+            arqInput.addEventListener('change', function () {
+                var n = arqInput.files ? arqInput.files.length : 0;
+                arqInfo.textContent = n > 0
+                    ? (n + (n === 1 ? ' foto selecionada' : ' fotos selecionadas'))
+                    : arqTextoPadrao;
+            });
+        }
+
         // --- Slug automático (nome -> slug) ---------------------------------
         var slugSource = document.querySelector('[data-slug-source]');
         var slugTarget = document.querySelector('[data-slug-target]');

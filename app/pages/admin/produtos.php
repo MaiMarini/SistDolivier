@@ -477,13 +477,13 @@ if ($acao === 'novo' || $acao === 'editar') {
                         <?php if (empty($tabelas_nutri)): ?>
                             <small>Nenhuma tabela nutricional cadastrada.</small>
                         <?php else: ?>
-                            <div class="checklist">
+                            <div class="chips">
                                 <?php foreach ($tabelas_nutri as $tn): ?>
-                                    <label class="checklist-item">
-                                        <input type="checkbox" name="tabelas[]" value="<?= (int) $tn['id'] ?>"
-                                               <?= in_array((int) $tn['id'], $tabelas_sel, true) ? 'checked' : '' ?>>
-                                        <?= e($tn['nome']) ?>
-                                    </label>
+                                    <?php $tnid = (int) $tn['id']; ?>
+                                    <input class="chip-input" type="checkbox" id="tn-<?= $tnid ?>"
+                                           name="tabelas[]" value="<?= $tnid ?>"
+                                           <?= in_array($tnid, $tabelas_sel, true) ? 'checked' : '' ?>>
+                                    <label class="chip" for="tn-<?= $tnid ?>"><?= e($tn['nome']) ?></label>
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
@@ -497,10 +497,16 @@ if ($acao === 'novo' || $acao === 'editar') {
     <div class="card-bloco">
         <h2>Fotos do produto</h2>
         <div class="campo">
-            <label for="imagens">Escolher arquivos (JPG, PNG ou WebP)</label>
-            <input type="file" id="imagens" name="imagens[]" form="form-produto"
-                   accept="image/jpeg,image/png,image/webp" multiple>
-            <small>As fotos são enviadas ao salvar. A primeira vira a capa (se ainda não houver).</small>
+            <input class="input-arquivo" type="file" id="imagens" name="imagens[]" form="form-produto"
+                   accept="image/jpeg,image/png,image/webp" multiple data-arquivo-input>
+            <div class="arquivo-linha">
+                <label for="imagens" class="btn btn-arquivo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14l4-4h6"/><line x1="18" y1="14" x2="18" y2="20"/><line x1="15" y1="17" x2="21" y2="17"/></svg>
+                    Escolher fotos
+                </label>
+                <span class="arquivo-info" data-arquivo-info>As fotos são enviadas ao salvar. A 1ª vira a capa.</span>
+            </div>
         </div>
 
         <?php if ($produto['id'] > 0 && !empty($imagens)): ?>
