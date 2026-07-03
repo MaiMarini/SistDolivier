@@ -10,11 +10,8 @@
  */
 exigir_admin();
 
-// Campos: rótulos e tipo (texto x número). Todos opcionais, exceto "nome".
-$campos_texto = [
-    'nutri_porcao'         => 'Porção (ex.: 30 g)',
-    'nutri_porcao_individual' => 'Porção individual (ex.: 1 unidade)',
-];
+// Porção padrão FIXA de 100 g: a cliente informa os valores POR 100 g e os
+// gramas da porção individual (porcao_individual_g). Todos opcionais, exceto o nome.
 $campos_num = [
     'nutri_valor_energetico' => 'Valor energético (kcal)',
     'nutri_carboidratos'     => 'Carboidratos (g)',
@@ -76,9 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Monta o conjunto de colunas -> valores (whitelist; nada vem cru do usuário).
         $cols = ['nome' => $nome, 'alergenicos' => _rec_txt($_POST['alergenicos'] ?? '')];
-        foreach (array_keys($campos_texto) as $c) {
-            $cols[$c] = _rec_txt($_POST[$c] ?? '');
-        }
+        $cols['porcao_individual_g'] = _rec_num($_POST['porcao_individual_g'] ?? '');
         foreach (array_keys($campos_num) as $c) {
             $cols[$c] = _rec_num($_POST[$c] ?? '');
         }
@@ -109,8 +104,7 @@ $acao = $params[0] ?? 'listar';
 
 if ($acao === 'novo' || $acao === 'editar') {
     // Valores padrão vazios.
-    $rec = ['id' => 0, 'nome' => '', 'alergenicos' => ''];
-    foreach (array_keys($campos_texto) as $c) { $rec[$c] = ''; }
+    $rec = ['id' => 0, 'nome' => '', 'alergenicos' => '', 'porcao_individual_g' => ''];
     foreach (array_keys($campos_num) as $c) { $rec[$c] = ''; }
 
     if ($acao === 'editar') {
@@ -146,13 +140,15 @@ if ($acao === 'novo' || $acao === 'editar') {
                       placeholder="Ex.: Contém glúten, leite e ovos."><?= e($rec['alergenicos'] ?? '') ?></textarea>
         </div>
 
-        <h2 class="mt-1">Informação nutricional (por porção)</h2>
-        <?php foreach ($campos_texto as $k => $rotulo): ?>
-            <div class="campo">
-                <label for="<?= e($k) ?>"><?= e($rotulo) ?></label>
-                <input type="text" id="<?= e($k) ?>" name="<?= e($k) ?>" value="<?= e($rec[$k] ?? '') ?>">
-            </div>
-        <?php endforeach; ?>
+        <div class="campo">
+            <label for="porcao_individual_g">Porção individual (g)</label>
+            <input type="number" step="0.01" min="0" id="porcao_individual_g" name="porcao_individual_g"
+                   value="<?= e($rec['porcao_individual_g'] ?? '') ?>" placeholder="Ex.: 30">
+            <small>Quantos gramas tem a porção individual (ex.: 30). Usado para calcular os valores por porção.</small>
+        </div>
+
+        <h2 class="mt-1">Valores nutricionais (por 100 g)</h2>
+        <p><small>Informe os valores considerando <strong>100 g</strong> do produto.</small></p>
         <?php foreach ($campos_num as $k => $rotulo): ?>
             <div class="campo">
                 <label for="<?= e($k) ?>"><?= e($rotulo) ?></label>

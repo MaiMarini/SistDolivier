@@ -109,6 +109,11 @@ if (!function_exists('_tabela_nutri_html')) {
             'nutri_fibra'            => ['Fibra alimentar', 'g'],
             'nutri_sodio'            => ['Sódio', 'mg'],
         ];
+        // Porção individual (em gramas). A porção padrão dos valores é 100 g.
+        $porcao_g = (isset($t['porcao_individual_g']) && $t['porcao_individual_g'] !== null
+            && $t['porcao_individual_g'] !== '') ? (float) $t['porcao_individual_g'] : null;
+        $tem_porcao = $porcao_g !== null && $porcao_g > 0;
+
         ob_start();
         ?>
         <?php if (!empty($t['alergenicos'])): ?>
@@ -118,13 +123,6 @@ if (!function_exists('_tabela_nutri_html')) {
                 <div><strong>Alérgenos:</strong> <?= nl2br(e($t['alergenicos'])) ?></div>
             </div>
         <?php endif; ?>
-        <?php if (!empty($t['nutri_porcao']) || !empty($t['nutri_porcao_individual'])): ?>
-            <p class="nutri-porcao">
-                <?php if (!empty($t['nutri_porcao'])): ?>Porção: <strong><?= e($t['nutri_porcao']) ?></strong><?php endif; ?>
-                <?php if (!empty($t['nutri_porcao']) && !empty($t['nutri_porcao_individual'])): ?> &middot; <?php endif; ?>
-                <?php if (!empty($t['nutri_porcao_individual'])): ?>Porção individual: <strong><?= e($t['nutri_porcao_individual']) ?></strong><?php endif; ?>
-            </p>
-        <?php endif; ?>
         <?php
         $linhas = '';
         foreach ($campos as $k => $info) {
@@ -132,11 +130,31 @@ if (!function_exists('_tabela_nutri_html')) {
             if ($v === null || $v === '') {
                 continue;
             }
-            $linhas .= '<tr><td>' . e($info[0]) . '</td><td>' . e(_num_br($v) . ' ' . $info[1]) . '</td></tr>';
+            $unidade = $info[1];
+            $celulas = '<td>' . e($info[0]) . '</td>'
+                     . '<td>' . e(_num_br($v) . ' ' . $unidade) . '</td>';
+            if ($tem_porcao) {
+                // Regra de três: valor por porção = valor_100g × (gramas ÷ 100).
+                $casas = ($unidade === 'kcal') ? 0 : 1;
+                $ind = round(((float) $v) * ($porcao_g / 100), $casas);
+                $celulas .= '<td>' . e(_num_br($ind) . ' ' . $unidade) . '</td>';
+            }
+            $linhas .= '<tr>' . $celulas . '</tr>';
         }
         ?>
         <?php if ($linhas !== ''): ?>
-            <table class="nutri-tabela"><tbody><?= $linhas ?></tbody></table>
+            <table class="nutri-tabela">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>por 100 g</th>
+                        <?php if ($tem_porcao): ?>
+                            <th>por porção (<?= e(_num_br($porcao_g)) ?> g)</th>
+                        <?php endif; ?>
+                    </tr>
+                </thead>
+                <tbody><?= $linhas ?></tbody>
+            </table>
         <?php endif; ?>
         <?php
         return ob_get_clean();

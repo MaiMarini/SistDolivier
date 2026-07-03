@@ -110,6 +110,7 @@ CREATE TABLE product_images (
 CREATE TABLE tabelas_nutricionais (
     id                     INT UNSIGNED NOT NULL AUTO_INCREMENT,
     nome                   VARCHAR(120) NOT NULL,
+    porcao_individual_g    DECIMAL(8,2) NULL,
     alergenicos            TEXT NULL,
     nutri_porcao           VARCHAR(60)  NULL,
     nutri_porcao_individual VARCHAR(60) NULL,

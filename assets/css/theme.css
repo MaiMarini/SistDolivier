@@ -903,10 +903,26 @@ body.menu-aberto {
 .nutri-alerta svg { flex: 0 0 auto; width: 22px; height: 22px; color: currentColor; }
 .nutri-porcao { margin: .2rem 0 1rem; }
 .nutri-tabela { width: 100%; border-collapse: collapse; }
+.nutri-tabela th {
+    text-align: right;
+    font-weight: 700;
+    color: rgba(74, 51, 32, .6);
+    font-size: .82rem;
+    padding: .3rem .2rem .5rem;
+    border-bottom: 2px solid rgba(74, 51, 32, .12);
+    white-space: nowrap;
+}
+.nutri-tabela th:first-child { text-align: left; }
 .nutri-tabela td { padding: .55rem .2rem; border-bottom: 1px solid rgba(74, 51, 32, .08); }
 .nutri-tabela tr:last-child td { border-bottom: 0; }
 .nutri-tabela td:first-child { width: 100%; text-align: left; color: rgba(74, 51, 32, .65); }
-.nutri-tabela td:last-child { text-align: right; font-weight: 700; color: var(--cor-texto); white-space: nowrap; }
+.nutri-tabela td:not(:first-child) {
+    text-align: right;
+    font-weight: 700;
+    color: var(--cor-texto);
+    white-space: nowrap;
+    padding-left: 1rem;
+}
 
 /* Abas do kit em chips (pílulas) */
 .nutri-abas { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
