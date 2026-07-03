@@ -29,7 +29,7 @@ if (!$categoria) {
 
 // Produtos ativos da categoria.
 $stmt = db()->prepare(
-    'SELECT slug, nome, preco_centavos, imagem, personalizavel
+    'SELECT slug, nome, preco_centavos, imagem, permite_personalizacao
        FROM products
       WHERE category_id = ? AND ativo = 1
       ORDER BY id ASC'
