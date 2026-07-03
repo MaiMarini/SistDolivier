@@ -24,6 +24,66 @@ function _produto_imagem(int $imagem_id, int $produto_id): ?array
     return $img ?: null;
 }
 
+/**
+ * Processa os arquivos enviados em $_FILES['imagens'] para um produto: otimiza
+ * (GD), grava em product_images (na ordem seguinte à existente) e define a capa
+ * (products.imagem) se ainda não houver. Usado tanto na criação quanto na galeria.
+ * Retorna ['adicionadas' => int, 'erros' => string[]].
+ */
+function _produto_processar_imagens(int $pid): array
+{
+    $enviados = $_FILES['imagens'] ?? null;
+    if (!is_array($enviados) || !isset($enviados['name']) || !is_array($enviados['name'])) {
+        return ['adicionadas' => 0, 'erros' => []];
+    }
+
+    $stmt = db()->prepare('SELECT COALESCE(MAX(ordem), 0) FROM product_images WHERE product_id = ?');
+    $stmt->execute([$pid]);
+    $ordem = (int) $stmt->fetchColumn();
+
+    $adicionadas = 0;
+    $erros = [];
+    $primeira_nova = null;
+
+    $total = count($enviados['name']);
+    for ($i = 0; $i < $total; $i++) {
+        if (($enviados['error'][$i] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            continue; // campo vazio
+        }
+        $arquivo = [
+            'name'     => $enviados['name'][$i],
+            'type'     => $enviados['type'][$i] ?? '',
+            'tmp_name' => $enviados['tmp_name'][$i] ?? '',
+            'error'    => $enviados['error'][$i] ?? UPLOAD_ERR_NO_FILE,
+            'size'     => $enviados['size'][$i] ?? 0,
+        ];
+        $res = processar_upload_imagem($arquivo);
+        if (!empty($res['ok'])) {
+            $ordem++;
+            db()->prepare('INSERT INTO product_images (product_id, arquivo, ordem) VALUES (?, ?, ?)')
+                ->execute([$pid, $res['arquivo'], $ordem]);
+            $adicionadas++;
+            if ($primeira_nova === null) {
+                $primeira_nova = $res['arquivo'];
+            }
+        } else {
+            $erros[] = $res['erro'] ?? 'Falha em uma imagem.';
+        }
+    }
+
+    // Define a capa com a primeira imagem enviada, se ainda não houver.
+    if ($primeira_nova !== null) {
+        $st = db()->prepare('SELECT imagem FROM products WHERE id = ?');
+        $st->execute([$pid]);
+        if (!$st->fetchColumn()) {
+            db()->prepare('UPDATE products SET imagem = ? WHERE id = ?')
+                ->execute([$primeira_nova, $pid]);
+        }
+    }
+
+    return ['adicionadas' => $adicionadas, 'erros' => $erros];
+}
+
 // =============================================================================
 // POST
 // =============================================================================
@@ -120,7 +180,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $dias, $destaque, $permite_pers, $ativo,
         ]);
         $novo_id = (int) db()->lastInsertId();
-        flash('sucesso', 'Produto criado. Agora adicione as imagens.');
+
+        // Processa as fotos escolhidas no cadastro (se houver): otimiza, grava
+        // em product_images e define a capa. Nada é criado antes de salvar.
+        $r = _produto_processar_imagens($novo_id);
+        $msg = 'Produto criado.';
+        if ($r['adicionadas'] > 0) {
+            $msg .= ' ' . $r['adicionadas'] . ' imagem(ns) adicionada(s).';
+        }
+        flash('sucesso', $msg);
+        if (!empty($r['erros'])) {
+            flash('erro', implode(' ', $r['erros']));
+        }
         redirect('admin/produtos/editar/' . $novo_id);
     }
 
@@ -131,63 +202,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($op === 'img_adicionar') {
-        $enviados = $_FILES['imagens'] ?? null;
-        $adicionadas = 0;
-        $erros = [];
-
-        // Ordem inicial = após a maior existente.
-        $stmt = db()->prepare('SELECT COALESCE(MAX(ordem), 0) FROM product_images WHERE product_id = ?');
-        $stmt->execute([$pid]);
-        $ordem = (int) $stmt->fetchColumn();
-
-        $primeira_nova = null;
-
-        if (is_array($enviados) && isset($enviados['name']) && is_array($enviados['name'])) {
-            $total = count($enviados['name']);
-            for ($i = 0; $i < $total; $i++) {
-                if (($enviados['error'][$i] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-                    continue; // campo vazio
-                }
-                $arquivo = [
-                    'name'     => $enviados['name'][$i],
-                    'type'     => $enviados['type'][$i] ?? '',
-                    'tmp_name' => $enviados['tmp_name'][$i] ?? '',
-                    'error'    => $enviados['error'][$i] ?? UPLOAD_ERR_NO_FILE,
-                    'size'     => $enviados['size'][$i] ?? 0,
-                ];
-                $res = processar_upload_imagem($arquivo);
-                if (!empty($res['ok'])) {
-                    $ordem++;
-                    $ins = db()->prepare(
-                        'INSERT INTO product_images (product_id, arquivo, ordem) VALUES (?, ?, ?)'
-                    );
-                    $ins->execute([$pid, $res['arquivo'], $ordem]);
-                    $adicionadas++;
-                    if ($primeira_nova === null) {
-                        $primeira_nova = $res['arquivo'];
-                    }
-                } else {
-                    $erros[] = $res['erro'] ?? 'Falha em uma imagem.';
-                }
-            }
+        $r = _produto_processar_imagens($pid);
+        if ($r['adicionadas'] > 0) {
+            flash('sucesso', $r['adicionadas'] . ' imagem(ns) adicionada(s).');
         }
-
-        // Se o produto ainda não tem capa, usa a primeira imagem enviada.
-        if ($primeira_nova !== null) {
-            $stmt = db()->prepare('SELECT imagem FROM products WHERE id = ?');
-            $stmt->execute([$pid]);
-            $capa_atual = $stmt->fetchColumn();
-            if (!$capa_atual) {
-                $up = db()->prepare('UPDATE products SET imagem = ? WHERE id = ?');
-                $up->execute([$primeira_nova, $pid]);
-            }
-        }
-
-        if ($adicionadas > 0) {
-            flash('sucesso', $adicionadas . ' imagem(ns) adicionada(s).');
-        }
-        if (!empty($erros)) {
-            flash('erro', implode(' ', $erros));
+        if (!empty($r['erros'])) {
+            flash('erro', implode(' ', $r['erros']));
         }
         redirect('admin/produtos/editar/' . $pid);
     }
@@ -288,7 +308,8 @@ if ($acao === 'novo' || $acao === 'editar') {
     <p><a href="<?= e(url('admin/produtos')) ?>">&larr; Voltar para produtos</a></p>
 
     <div class="produto-form-grid">
-    <form class="formulario" method="post" action="<?= e(url('admin/produtos')) ?>">
+    <form id="form-produto" class="formulario" method="post" action="<?= e(url('admin/produtos')) ?>"
+          enctype="multipart/form-data">
         <?= csrf_input() ?>
         <input type="hidden" name="op" value="salvar">
         <input type="hidden" name="id" value="<?= (int) $produto['id'] ?>">
@@ -408,7 +429,13 @@ if ($acao === 'novo' || $acao === 'editar') {
             </div>
         <?php endif; ?>
     <?php else: ?>
-        <p><small>As imagens ficam disponíveis após salvar o produto.</small></p>
+        <h2 style="margin-top:0;">Fotos</h2>
+        <div class="campo">
+            <label for="imagens">Fotos do produto (JPG, PNG ou WebP)</label>
+            <input type="file" id="imagens" name="imagens[]" form="form-produto"
+                   accept="image/jpeg,image/png,image/webp" multiple>
+            <small>As fotos são enviadas ao salvar o produto. A primeira vira a capa.</small>
+        </div>
     <?php endif; ?>
     </div><!-- .produto-form-lado -->
     </div><!-- .produto-form-grid -->
