@@ -180,9 +180,13 @@ ob_start();
 <?php if (empty($tabelas)): ?>
     <p>Nenhuma tabela nutricional cadastrada.</p>
 <?php else: ?>
-    <table class="tabela">
+    <table class="tabela" style="table-layout:fixed;">
         <thead>
-            <tr><th style="width:100%">Nome</th><th>Última atualização</th><th style="text-align:right">Ações</th></tr>
+            <tr>
+                <th style="width:34%">Nome</th>
+                <th style="width:33%">Última atualização</th>
+                <th style="width:33%; text-align:right">Ações</th>
+            </tr>
         </thead>
         <tbody>
             <?php foreach ($tabelas as $r): ?>
