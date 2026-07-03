@@ -1,10 +1,9 @@
 <?php
 /**
- * Cabeçalho em três zonas:
- *   esquerda  -> nome "D'Olivier"
- *   centro    -> abas (Início + categorias do banco + Sobre + Regras)
- *   direita   -> ícones: carrinho (com contador) e perfil (comportamento por login)
- * No celular, as abas centrais viram o menu hambúrguer (overlay); os ícones ficam.
+ * Cabeçalho em DUAS linhas:
+ *   linha 1 -> nome "D'Olivier" (logo + nome) centralizado + ícones à direita
+ *   linha 2 -> categorias do banco + páginas fixas, distribuídas na largura
+ * No celular, a linha 2 vira o menu hambúrguer (overlay); a linha 1 permanece.
  */
 $usuario = usuario_atual();
 
@@ -26,12 +25,51 @@ $ico_carrinho = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 $ico_usuario  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
 ?>
 <header class="cabecalho">
-    <div class="container cabecalho-inner">
-        <!-- Zona 1: nome -->
-        <a class="logo" href="<?= e(url()) ?>">D'Olivier</a>
+    <div class="container">
+        <!-- Linha 1: (espaçador/hambúrguer) | marca centralizada | ícones à direita -->
+        <div class="header-linha1">
+            <div class="header-esq">
+                <button class="menu-toggle" type="button" data-menu-toggle
+                        aria-label="Abrir menu" aria-controls="menu-mobile" aria-expanded="false">&#9776;</button>
+            </div>
 
-        <!-- Zona 2: abas centrais (desktop) -->
-        <nav class="nav-desktop">
+            <a class="header-marca" href="<?= e(url()) ?>">
+                <img class="header-marca-logo" src="<?= e(asset('Logo/trigo.png')) ?>" height="34" alt="D'Olivier">
+                <span class="header-marca-nome">D'Olivier</span>
+            </a>
+
+            <div class="header-acoes">
+                <a class="header-icone header-carrinho" href="<?= e(url('carrinho')) ?>" aria-label="Carrinho">
+                    <?= $ico_carrinho ?>
+                    <?php if ($qtd_carrinho > 0): ?>
+                        <span class="header-badge"><?= (int) $qtd_carrinho ?></span>
+                    <?php endif; ?>
+                </a>
+
+                <?php if ($usuario === null): ?>
+                    <!-- Deslogado: abre o drawer de login (sem JS, vai para /entrar) -->
+                    <a class="header-icone" href="<?= e(url('entrar')) ?>" data-abrir-login aria-label="Entrar">
+                        <?= $ico_usuario ?>
+                    </a>
+                <?php else: ?>
+                    <div class="header-perfil">
+                        <button class="header-icone" type="button" data-perfil-toggle
+                                aria-haspopup="true" aria-expanded="false" aria-label="Conta"><?= $ico_usuario ?></button>
+                        <div class="perfil-menu" data-perfil-menu>
+                            <?php if ($eh_admin): ?>
+                                <a href="<?= e(url('admin')) ?>">Painel</a>
+                            <?php else: ?>
+                                <a href="<?= e(url('meus-pedidos')) ?>">Meus pedidos</a>
+                            <?php endif; ?>
+                            <a href="<?= e(url('sair')) ?>">Sair</a>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Linha 2: categorias + páginas fixas, distribuídas na largura -->
+        <nav class="header-linha2">
             <a href="<?= e(url()) ?>">Início</a>
             <?php foreach ($categorias as $categoria): ?>
                 <a href="<?= e(url('categoria/' . $categoria['slug'])) ?>"><?= e($categoria['nome']) ?></a>
@@ -39,39 +77,6 @@ $ico_usuario  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
             <a href="<?= e(url('sobre')) ?>">Sobre</a>
             <a href="<?= e(url('regras')) ?>">Regras</a>
         </nav>
-
-        <!-- Zona 3: ações (ícones) -->
-        <div class="header-acoes">
-            <button class="menu-toggle" type="button" data-menu-toggle
-                    aria-label="Abrir menu" aria-controls="menu-mobile" aria-expanded="false">&#9776;</button>
-
-            <a class="header-icone header-carrinho" href="<?= e(url('carrinho')) ?>" aria-label="Carrinho">
-                <?= $ico_carrinho ?>
-                <?php if ($qtd_carrinho > 0): ?>
-                    <span class="header-badge"><?= (int) $qtd_carrinho ?></span>
-                <?php endif; ?>
-            </a>
-
-            <?php if ($usuario === null): ?>
-                <!-- Deslogado: abrirá o drawer de login (próxima tarefa); por ora vai para /entrar -->
-                <a class="header-icone" href="<?= e(url('entrar')) ?>" data-abrir-login aria-label="Entrar">
-                    <?= $ico_usuario ?>
-                </a>
-            <?php else: ?>
-                <div class="header-perfil">
-                    <button class="header-icone" type="button" data-perfil-toggle
-                            aria-haspopup="true" aria-expanded="false" aria-label="Conta"><?= $ico_usuario ?></button>
-                    <div class="perfil-menu" data-perfil-menu>
-                        <?php if ($eh_admin): ?>
-                            <a href="<?= e(url('admin')) ?>">Painel</a>
-                        <?php else: ?>
-                            <a href="<?= e(url('meus-pedidos')) ?>">Meus pedidos</a>
-                        <?php endif; ?>
-                        <a href="<?= e(url('sair')) ?>">Sair</a>
-                    </div>
-                </div>
-            <?php endif; ?>
-        </div>
     </div>
 </header>
 
