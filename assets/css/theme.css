@@ -886,7 +886,7 @@ body.menu-aberto {
 .acordeon-seta { transition: transform .2s ease; }
 .acordeon.aberto .acordeon-seta { transform: rotate(180deg); }
 .acordeon-corpo { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
-.acordeon-conteudo { padding: 1rem; }
+.acordeon-conteudo { padding: 1rem; background: var(--cor-superficie); }  /* corpo branco */
 
 /* Conteúdo nutricional */
 .nutri-alerta {
