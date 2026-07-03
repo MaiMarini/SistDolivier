@@ -66,6 +66,83 @@ if ($capa !== '') {
 }
 $imagens = array_values(array_unique(array_filter($imagens, 'strlen')));
 
+// Tabelas nutricionais associadas (na ordem). Tolerante se as tabelas não existirem.
+$tabelas_nutri = [];
+try {
+    $stmt = db()->prepare(
+        'SELECT t.* FROM produto_tabelas_nutricionais pt
+           JOIN tabelas_nutricionais t ON t.id = pt.tabela_nutricional_id
+          WHERE pt.produto_id = ?
+          ORDER BY pt.ordem ASC, t.nome ASC'
+    );
+    $stmt->execute([(int) $produto['id']]);
+    $tabelas_nutri = $stmt->fetchAll();
+} catch (PDOException $e) {
+    $tabelas_nutri = [];
+}
+
+/** Número no padrão brasileiro (vírgula; sem zeros à direita desnecessários). */
+if (!function_exists('_num_br')) {
+    function _num_br($v): string
+    {
+        $s = number_format((float) $v, 2, ',', '.');
+        if (strpos($s, ',') !== false) {
+            $s = rtrim(rtrim($s, '0'), ',');
+        }
+        return $s;
+    }
+}
+
+/** HTML de uma tabela nutricional: só os campos preenchidos (não NULL). */
+if (!function_exists('_tabela_nutri_html')) {
+    function _tabela_nutri_html(array $t): string
+    {
+        $campos = [
+            'nutri_valor_energetico' => ['Valor energético', 'kcal'],
+            'nutri_carboidratos'     => ['Carboidratos', 'g'],
+            'nutri_acucares_totais'  => ['Açúcares totais', 'g'],
+            'nutri_acucares_add'     => ['Açúcares adicionados', 'g'],
+            'nutri_proteinas'        => ['Proteínas', 'g'],
+            'nutri_gorduras_totais'  => ['Gorduras totais', 'g'],
+            'nutri_gorduras_sat'     => ['Gorduras saturadas', 'g'],
+            'nutri_gorduras_trans'   => ['Gorduras trans', 'g'],
+            'nutri_fibra'            => ['Fibra alimentar', 'g'],
+            'nutri_sodio'            => ['Sódio', 'mg'],
+        ];
+        ob_start();
+        ?>
+        <?php if (!empty($t['alergenicos'])): ?>
+            <div class="nutri-alerta">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <div><strong>Alérgenos:</strong> <?= nl2br(e($t['alergenicos'])) ?></div>
+            </div>
+        <?php endif; ?>
+        <?php if (!empty($t['nutri_porcao']) || !empty($t['nutri_medida_caseira'])): ?>
+            <p class="nutri-porcao">
+                <?php if (!empty($t['nutri_porcao'])): ?>Porção: <strong><?= e($t['nutri_porcao']) ?></strong><?php endif; ?>
+                <?php if (!empty($t['nutri_porcao']) && !empty($t['nutri_medida_caseira'])): ?> &middot; <?php endif; ?>
+                <?php if (!empty($t['nutri_medida_caseira'])): ?>Medida caseira: <strong><?= e($t['nutri_medida_caseira']) ?></strong><?php endif; ?>
+            </p>
+        <?php endif; ?>
+        <?php
+        $linhas = '';
+        foreach ($campos as $k => $info) {
+            $v = $t[$k] ?? null;
+            if ($v === null || $v === '') {
+                continue;
+            }
+            $linhas .= '<tr><td>' . e($info[0]) . '</td><td>' . e(_num_br($v) . ' ' . $info[1]) . '</td></tr>';
+        }
+        ?>
+        <?php if ($linhas !== ''): ?>
+            <table class="nutri-tabela"><tbody><?= $linhas ?></tbody></table>
+        <?php endif; ?>
+        <?php
+        return ob_get_clean();
+    }
+}
+
 ob_start();
 ?>
 <div class="produto">
@@ -181,6 +258,34 @@ ob_start();
                 Regras e prazos
             </button>
         </div>
+
+        <?php if (!empty($tabelas_nutri)): ?>
+            <div class="acordeon" data-acordeon>
+                <button type="button" class="acordeon-cabeca" data-acordeon-toggle aria-expanded="false">
+                    Informações nutricionais
+                    <span class="acordeon-seta" aria-hidden="true">&#9662;</span>
+                </button>
+                <div class="acordeon-corpo" data-acordeon-corpo>
+                    <div class="acordeon-conteudo">
+                        <?php if (count($tabelas_nutri) === 1): ?>
+                            <?= _tabela_nutri_html($tabelas_nutri[0]) ?>
+                        <?php else: ?>
+                            <div class="nutri-abas" role="tablist">
+                                <?php foreach ($tabelas_nutri as $i => $t): ?>
+                                    <button type="button" class="nutri-aba<?= $i === 0 ? ' ativa' : '' ?>"
+                                            data-nutri-aba="<?= (int) $i ?>"><?= e($t['nome']) ?></button>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php foreach ($tabelas_nutri as $i => $t): ?>
+                                <div class="nutri-painel<?= $i === 0 ? ' ativo' : '' ?>" data-nutri-painel="<?= (int) $i ?>">
+                                    <?= _tabela_nutri_html($t) ?>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 

@@ -286,6 +286,37 @@
             }
         }
 
+        // --- Acordeão de informações nutricionais ---------------------------
+        document.querySelectorAll('[data-acordeon]').forEach(function (ac) {
+            var btn = ac.querySelector('[data-acordeon-toggle]');
+            var corpo = ac.querySelector('[data-acordeon-corpo]');
+            if (!btn || !corpo) { return; }
+            var aberto = false;
+            var recalc = function () {
+                if (aberto) { corpo.style.maxHeight = corpo.scrollHeight + 'px'; }
+            };
+            btn.addEventListener('click', function () {
+                aberto = !aberto;
+                ac.classList.toggle('aberto', aberto);
+                btn.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+                corpo.style.maxHeight = aberto ? corpo.scrollHeight + 'px' : '0';
+            });
+            // Abas internas (kit com várias tabelas): trocar ajusta a altura.
+            var abas = ac.querySelectorAll('[data-nutri-aba]');
+            var paineis = ac.querySelectorAll('[data-nutri-painel]');
+            abas.forEach(function (a) {
+                a.addEventListener('click', function () {
+                    var alvo = a.getAttribute('data-nutri-aba');
+                    abas.forEach(function (x) { x.classList.toggle('ativa', x === a); });
+                    paineis.forEach(function (p) {
+                        p.classList.toggle('ativo', p.getAttribute('data-nutri-painel') === alvo);
+                    });
+                    recalc();
+                });
+            });
+            window.addEventListener('resize', recalc);
+        });
+
         // --- Carrossel de banners -------------------------------------------
         document.querySelectorAll('[data-carrossel]').forEach(function (raiz) {
             var trilho = raiz.querySelector('.carrossel-trilho');
