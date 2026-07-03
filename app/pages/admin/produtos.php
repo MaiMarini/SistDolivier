@@ -51,11 +51,11 @@ function _produto_processar_imagens(int $pid): array
             continue; // campo vazio
         }
         $arquivo = [
-            'name'     => $enviados['name'][$i],
-            'type'     => $enviados['type'][$i] ?? '',
+            'name' => $enviados['name'][$i],
+            'type' => $enviados['type'][$i] ?? '',
             'tmp_name' => $enviados['tmp_name'][$i] ?? '',
-            'error'    => $enviados['error'][$i] ?? UPLOAD_ERR_NO_FILE,
-            'size'     => $enviados['size'][$i] ?? 0,
+            'error' => $enviados['error'][$i] ?? UPLOAD_ERR_NO_FILE,
+            'size' => $enviados['size'][$i] ?? 0,
         ];
         $res = processar_upload_imagem($arquivo);
         if (!empty($res['ok'])) {
@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo = db();
             $pdo->beginTransaction();
             try {
-                $up  = $pdo->prepare('UPDATE product_images SET ordem = ? WHERE id = ? AND product_id = ?');
+                $up = $pdo->prepare('UPDATE product_images SET ordem = ? WHERE id = ? AND product_id = ?');
                 $sel = $pdo->prepare('SELECT arquivo FROM product_images WHERE id = ? AND product_id = ? LIMIT 1');
                 $pos = 1;
                 $capa = null;
@@ -192,15 +192,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ------------------------------------------------------------------ SALVAR
     if ($op === 'salvar') {
-        $id             = (int) ($_POST['id'] ?? 0);
-        $nome           = trim($_POST['nome'] ?? '');
-        $slug           = trim($_POST['slug'] ?? '');
-        $descricao      = trim($_POST['descricao'] ?? '');
-        $regras         = trim($_POST['regras_produto'] ?? '');
-        $dias           = (int) ($_POST['dias_producao'] ?? 0);
-        $destaque       = isset($_POST['destaque']) ? 1 : 0;
-        $permite_pers   = isset($_POST['permite_personalizacao']) ? 1 : 0;
-        $ativo          = isset($_POST['ativo']) ? 1 : 0;
+        $id = (int) ($_POST['id'] ?? 0);
+        $nome = trim($_POST['nome'] ?? '');
+        $slug = trim($_POST['slug'] ?? '');
+        $descricao = trim($_POST['descricao'] ?? '');
+        $regras = trim($_POST['regras_produto'] ?? '');
+        $dias = (int) ($_POST['dias_producao'] ?? 0);
+        $destaque = isset($_POST['destaque']) ? 1 : 0;
+        $permite_pers = isset($_POST['permite_personalizacao']) ? 1 : 0;
+        $ativo = isset($_POST['ativo']) ? 1 : 0;
         $preco_centavos = reais_para_centavos($_POST['preco'] ?? '');
 
         $category_id = (int) ($_POST['category_id'] ?? 0);
@@ -232,9 +232,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   WHERE id = ?'
             );
             $stmt->execute([
-                $nome, $slug, ($descricao !== '' ? $descricao : null),
-                ($regras !== '' ? $regras : null), $preco_centavos, $category_id,
-                $dias, $destaque, $permite_pers, $ativo, $id,
+                $nome,
+                $slug,
+                ($descricao !== '' ? $descricao : null),
+                ($regras !== '' ? $regras : null),
+                $preco_centavos,
+                $category_id,
+                $dias,
+                $destaque,
+                $permite_pers,
+                $ativo,
+                $id,
             ]);
             _produto_salvar_tabelas($id, $tabelas_sel);
             $r = _produto_processar_imagens($id);
@@ -256,9 +264,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
-            $slug, $nome, ($descricao !== '' ? $descricao : null),
-            ($regras !== '' ? $regras : null), $preco_centavos, $category_id,
-            $dias, $destaque, $permite_pers, $ativo,
+            $slug,
+            $nome,
+            ($descricao !== '' ? $descricao : null),
+            ($regras !== '' ? $regras : null),
+            $preco_centavos,
+            $category_id,
+            $dias,
+            $destaque,
+            $permite_pers,
+            $ativo,
         ]);
         $novo_id = (int) db()->lastInsertId();
 
@@ -342,10 +357,18 @@ $categorias = db()->query('SELECT id, nome FROM categories ORDER BY nome ASC')->
 
 if ($acao === 'novo' || $acao === 'editar') {
     $produto = [
-        'id' => 0, 'nome' => '', 'slug' => '', 'descricao' => '', 'regras_produto' => '',
-        'preco_centavos' => 0, 'category_id' => null, 'dias_producao' => 0,
-        'destaque' => 0, 'permite_personalizacao' => 0,
-        'ativo' => 1, 'imagem' => null,
+        'id' => 0,
+        'nome' => '',
+        'slug' => '',
+        'descricao' => '',
+        'regras_produto' => '',
+        'preco_centavos' => 0,
+        'category_id' => null,
+        'dias_producao' => 0,
+        'destaque' => 0,
+        'permite_personalizacao' => 0,
+        'ativo' => 1,
+        'imagem' => null,
     ];
     $imagens = [];
 
@@ -388,8 +411,7 @@ if ($acao === 'novo' || $acao === 'editar') {
     ?>
     <p><a href="<?= e(url('admin/produtos')) ?>">&larr; Voltar para produtos</a></p>
 
-    <form id="form-produto" method="post" action="<?= e(url('admin/produtos')) ?>"
-          enctype="multipart/form-data">
+    <form id="form-produto" method="post" action="<?= e(url('admin/produtos')) ?>" enctype="multipart/form-data">
         <?= csrf_input() ?>
         <input type="hidden" name="op" value="salvar">
         <input type="hidden" name="id" value="<?= (int) $produto['id'] ?>">
@@ -401,13 +423,13 @@ if ($acao === 'novo' || $acao === 'editar') {
                 <div class="produto-col">
                     <div class="campo">
                         <label for="nome">Nome</label>
-                        <input type="text" id="nome" name="nome" value="<?= e($produto['nome']) ?>"
-                               required data-slug-source>
+                        <input type="text" id="nome" name="nome" value="<?= e($produto['nome']) ?>" required
+                            data-slug-source>
                     </div>
                     <div class="campo">
                         <label for="slug">Slug (endereço)</label>
                         <input type="text" id="slug" name="slug" value="<?= e($produto['slug']) ?>"
-                               placeholder="Gerado a partir do nome" data-slug-target>
+                            placeholder="Gerado a partir do nome" data-slug-target>
                         <small>Gerado automaticamente do nome. Edite só se souber o que está fazendo.</small>
                     </div>
                     <div class="campo">
@@ -415,8 +437,7 @@ if ($acao === 'novo' || $acao === 'editar') {
                         <select id="category_id" name="category_id">
                             <option value="">— sem categoria —</option>
                             <?php foreach ($categorias as $c): ?>
-                                <option value="<?= (int) $c['id'] ?>"
-                                    <?= ((int) $produto['category_id'] === (int) $c['id']) ? 'selected' : '' ?>>
+                                <option value="<?= (int) $c['id'] ?>" <?= ((int) $produto['category_id'] === (int) $c['id']) ? 'selected' : '' ?>>
                                     <?= e($c['nome']) ?>
                                 </option>
                             <?php endforeach; ?>
@@ -428,28 +449,27 @@ if ($acao === 'novo' || $acao === 'editar') {
                     <div class="campo">
                         <label for="preco">Preço (R$)</label>
                         <input type="text" id="preco" name="preco" inputmode="decimal"
-                               value="<?= e(centavos_para_input((int) $produto['preco_centavos'])) ?>"
-                               placeholder="Ex.: 35,90">
+                            value="<?= e(centavos_para_input((int) $produto['preco_centavos'])) ?>"
+                            placeholder="Ex.: 35,90">
                         <small>Para produtos personalizáveis, o preço é opcional.</small>
                     </div>
                     <div class="campo">
                         <label for="dias_producao">Dias de produção</label>
                         <input type="number" id="dias_producao" name="dias_producao" min="0"
-                               value="<?= (int) $produto['dias_producao'] ?>">
+                            value="<?= (int) $produto['dias_producao'] ?>">
                     </div>
                     <div class="campo campo-inline">
-                        <input type="checkbox" id="destaque" name="destaque" value="1"
-                               <?= $produto['destaque'] ? 'checked' : '' ?>>
+                        <input type="checkbox" id="destaque" name="destaque" value="1" <?= $produto['destaque'] ? 'checked' : '' ?>>
                         <label for="destaque">Destaque (aparece na home)</label>
                     </div>
                     <div class="campo campo-inline">
                         <input type="checkbox" id="permite_personalizacao" name="permite_personalizacao" value="1"
-                               <?= $produto['permite_personalizacao'] ? 'checked' : '' ?>>
-                        <label for="permite_personalizacao">Permitir personalização (mostra botão que leva ao WhatsApp)</label>
+                            <?= $produto['permite_personalizacao'] ? 'checked' : '' ?>>
+                        <label for="permite_personalizacao">Permitir personalização (mostra botão que leva ao
+                            WhatsApp)</label>
                     </div>
                     <div class="campo campo-inline">
-                        <input type="checkbox" id="ativo" name="ativo" value="1"
-                               <?= $produto['ativo'] ? 'checked' : '' ?>>
+                        <input type="checkbox" id="ativo" name="ativo" value="1" <?= $produto['ativo'] ? 'checked' : '' ?>>
                         <label for="ativo">Ativo (aparece na loja)</label>
                     </div>
                 </div>
@@ -463,11 +483,12 @@ if ($acao === 'novo' || $acao === 'editar') {
                 <div class="produto-col">
                     <div class="campo">
                         <label for="descricao">Descrição</label>
-                        <textarea id="descricao" name="descricao" rows="8"><?= e($produto['descricao']) ?></textarea>
+                        <textarea id="descricao" name="descricao" rows="10"><?= e($produto['descricao']) ?></textarea>
                     </div>
                     <div class="campo">
                         <label for="regras_produto">Regras/observações deste produto</label>
-                        <textarea id="regras_produto" name="regras_produto" rows="6"><?= e($produto['regras_produto']) ?></textarea>
+                        <textarea id="regras_produto" name="regras_produto"
+                            rows="10"><?= e($produto['regras_produto']) ?></textarea>
                     </div>
                 </div>
 
@@ -480,14 +501,14 @@ if ($acao === 'novo' || $acao === 'editar') {
                             <div class="tn-lista">
                                 <?php foreach ($tabelas_nutri as $tn): ?>
                                     <?php $tnid = (int) $tn['id']; ?>
-                                    <input class="tn-input" type="checkbox" id="tn-<?= $tnid ?>"
-                                           name="tabelas[]" value="<?= $tnid ?>"
-                                           <?= in_array($tnid, $tabelas_sel, true) ? 'checked' : '' ?>>
+                                    <input class="tn-input" type="checkbox" id="tn-<?= $tnid ?>" name="tabelas[]"
+                                        value="<?= $tnid ?>" <?= in_array($tnid, $tabelas_sel, true) ? 'checked' : '' ?>>
                                     <label class="tn-item" for="tn-<?= $tnid ?>">
                                         <span><?= e($tn['nome']) ?></span>
-                                        <svg class="tn-check" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                             stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
-                                             aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                                        <svg class="tn-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <polyline points="20 6 9 17 4 12" />
+                                        </svg>
                                     </label>
                                 <?php endforeach; ?>
                             </div>
@@ -503,28 +524,38 @@ if ($acao === 'novo' || $acao === 'editar') {
         <h2>Fotos do produto</h2>
         <div class="campo">
             <input class="input-arquivo" type="file" id="imagens" name="imagens[]" form="form-produto"
-                   accept="image/jpeg,image/png,image/webp" multiple data-arquivo-input>
+                accept="image/jpeg,image/png,image/webp" multiple data-arquivo-input>
             <div class="arquivo-linha">
                 <label for="imagens" class="btn btn-arquivo">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14l4-4h6"/><line x1="18" y1="14" x2="18" y2="20"/><line x1="15" y1="17" x2="21" y2="17"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14l4-4h6" />
+                        <line x1="18" y1="14" x2="18" y2="20" />
+                        <line x1="15" y1="17" x2="21" y2="17" />
+                    </svg>
                     Escolher fotos
                 </label>
                 <span class="arquivo-info" data-arquivo-info>As fotos são enviadas ao salvar. A 1ª vira a capa.</span>
             </div>
         </div>
 
+        <!-- Prévia: fotos escolhidas no navegador, ainda NÃO enviadas -->
+        <div class="fotos-preview-wrap" data-preview-wrap hidden>
+            <h3 class="mt-1">A enviar ao salvar</h3>
+            <div class="grade-fotos" data-fotos-preview></div>
+        </div>
+
         <?php if ($produto['id'] > 0 && !empty($imagens)): ?>
-            <p class="mt-1"><small>Arraste as fotos para reordenar. A primeira é sempre a capa.</small></p>
+            <h3 class="mt-1">Fotos já salvas</h3>
+            <p><small>Arraste as fotos para reordenar. A primeira é sempre a capa.</small></p>
             <div class="grade-fotos" id="fotos-galeria">
                 <?php foreach ($imagens as $img): ?>
                     <div class="foto-card" data-img-id="<?= (int) $img['id'] ?>">
                         <span class="foto-handle" title="Arraste para reordenar" aria-hidden="true">&#9776;</span>
                         <span class="foto-capa etiqueta">Capa</span>
-                        <img class="card-img"
-                             src="<?= e(url('assets/uploads/' . imagem_miniatura($img['arquivo']))) ?>" alt="">
+                        <img class="card-img" src="<?= e(url('assets/uploads/' . imagem_miniatura($img['arquivo']))) ?>" alt="">
                         <form method="post" action="<?= e(url('admin/produtos')) ?>"
-                              onsubmit="return confirm('Remover esta imagem?');">
+                            onsubmit="return confirm('Remover esta imagem?');">
                             <?= csrf_input() ?>
                             <input type="hidden" name="produto_id" value="<?= (int) $produto['id'] ?>">
                             <input type="hidden" name="imagem_id" value="<?= (int) $img['id'] ?>">
@@ -538,48 +569,48 @@ if ($acao === 'novo' || $acao === 'editar') {
 
             <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
             <script>
-            (function () {
-                var cont = document.getElementById('fotos-galeria');
-                if (!cont) { return; }
-                var endpoint = <?= json_encode(url('admin/produtos')) ?>;
-                var csrf = <?= json_encode(csrf_token()) ?>;
-                var pid = <?= (int) $produto['id'] ?>;
-                var feedback = document.getElementById('fotos-feedback');
+                (function () {
+                    var cont = document.getElementById('fotos-galeria');
+                    if (!cont) { return; }
+                    var endpoint = <?= json_encode(url('admin/produtos')) ?>;
+                    var csrf = <?= json_encode(csrf_token()) ?>;
+                    var pid = <?= (int) $produto['id'] ?>;
+                    var feedback = document.getElementById('fotos-feedback');
 
-                function ids() {
-                    return Array.prototype.map.call(
-                        cont.querySelectorAll('[data-img-id]'),
-                        function (el) { return el.getAttribute('data-img-id'); }
-                    );
-                }
-                function fb(ok) {
-                    if (!feedback) { return; }
-                    feedback.textContent = ok ? 'Ordem salva ✓' : 'Erro ao salvar';
-                    feedback.classList.toggle('erro', !ok);
-                    feedback.hidden = false;
-                    clearTimeout(feedback._t);
-                    feedback._t = setTimeout(function () { feedback.hidden = true; }, 1800);
-                }
-                function salvar() {
-                    var body = new URLSearchParams();
-                    body.append('op', 'img_reordenar');
-                    body.append('_csrf', csrf);
-                    body.append('produto_id', pid);
-                    ids().forEach(function (id) { body.append('ids[]', id); });
-                    fetch(endpoint, {
-                        method: 'POST',
-                        headers: { 'X-Requested-With': 'fetch' },
-                        credentials: 'same-origin',
-                        body: body
-                    })
-                        .then(function (r) { return r.json(); })
-                        .then(function (d) { fb(!!(d && d.ok)); })
-                        .catch(function () { fb(false); });
-                }
-                if (window.Sortable) {
-                    Sortable.create(cont, { handle: '.foto-handle', animation: 150, onEnd: salvar });
-                }
-            })();
+                    function ids() {
+                        return Array.prototype.map.call(
+                            cont.querySelectorAll('[data-img-id]'),
+                            function (el) { return el.getAttribute('data-img-id'); }
+                        );
+                    }
+                    function fb(ok) {
+                        if (!feedback) { return; }
+                        feedback.textContent = ok ? 'Ordem salva ✓' : 'Erro ao salvar';
+                        feedback.classList.toggle('erro', !ok);
+                        feedback.hidden = false;
+                        clearTimeout(feedback._t);
+                        feedback._t = setTimeout(function () { feedback.hidden = true; }, 1800);
+                    }
+                    function salvar() {
+                        var body = new URLSearchParams();
+                        body.append('op', 'img_reordenar');
+                        body.append('_csrf', csrf);
+                        body.append('produto_id', pid);
+                        ids().forEach(function (id) { body.append('ids[]', id); });
+                        fetch(endpoint, {
+                            method: 'POST',
+                            headers: { 'X-Requested-With': 'fetch' },
+                            credentials: 'same-origin',
+                            body: body
+                        })
+                            .then(function (r) { return r.json(); })
+                            .then(function (d) { fb(!!(d && d.ok)); })
+                            .catch(function () { fb(false); });
+                    }
+                    if (window.Sortable) {
+                        Sortable.create(cont, { handle: '.foto-handle', animation: 150, onEnd: salvar });
+                    }
+                })();
             </script>
         <?php elseif ($produto['id'] > 0): ?>
             <p class="mt-1"><small>Nenhuma imagem ainda. A primeira enviada vira a capa.</small></p>
@@ -613,15 +644,22 @@ ob_start();
 <?php else: ?>
     <table class="tabela">
         <thead>
-            <tr><th></th><th>Nome</th><th>Categoria</th><th>Preço</th><th>Ativo</th><th>Ações</th></tr>
+            <tr>
+                <th></th>
+                <th>Nome</th>
+                <th>Categoria</th>
+                <th>Preço</th>
+                <th>Ativo</th>
+                <th>Ações</th>
+            </tr>
         </thead>
         <tbody>
             <?php foreach ($produtos as $p): ?>
                 <tr>
                     <td style="width:60px;">
                         <?php if (!empty($p['imagem'])): ?>
-                            <img src="<?= e(url('assets/uploads/' . imagem_miniatura($p['imagem']))) ?>"
-                                 alt="" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
+                            <img src="<?= e(url('assets/uploads/' . imagem_miniatura($p['imagem']))) ?>" alt=""
+                                style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
                         <?php else: ?>
                             —
                         <?php endif; ?>
@@ -639,7 +677,7 @@ ob_start();
                     <td>
                         <a class="btn sec" href="<?= e(url('admin/produtos/editar/' . $p['id'])) ?>">Editar</a>
                         <form method="post" action="<?= e(url('admin/produtos')) ?>" style="display:inline"
-                              onsubmit="return confirm('Excluir este produto e suas imagens?');">
+                            onsubmit="return confirm('Excluir este produto e suas imagens?');">
                             <?= csrf_input() ?>
                             <input type="hidden" name="op" value="excluir">
                             <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">

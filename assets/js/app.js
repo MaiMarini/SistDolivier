@@ -101,16 +101,78 @@
             });
         }
 
-        // --- Contador de fotos escolhidas -----------------------------------
+        // --- Prévia das fotos escolhidas (acumula; envia só ao salvar) ------
         var arqInput = document.querySelector('[data-arquivo-input]');
-        var arqInfo = document.querySelector('[data-arquivo-info]');
-        if (arqInput && arqInfo) {
-            var arqTextoPadrao = arqInfo.textContent;
-            arqInput.addEventListener('change', function () {
-                var n = arqInput.files ? arqInput.files.length : 0;
+        var arqPreview = document.querySelector('[data-fotos-preview]');
+        if (arqInput && arqPreview) {
+            var arqInfo = document.querySelector('[data-arquivo-info]');
+            var arqWrap = document.querySelector('[data-preview-wrap]');
+            var arqTextoPadrao = arqInfo ? arqInfo.textContent : '';
+            var arquivos = [];                       // lista acumulada de File
+            var TIPOS = ['image/jpeg', 'image/png', 'image/webp'];
+            var MAX = 5 * 1024 * 1024;               // ~5 MB
+
+            var sincronizarInput = function () {
+                // Reconstrói input.files com a lista acumulada (DataTransfer).
+                var dt = new DataTransfer();
+                arquivos.forEach(function (f) { dt.items.add(f); });
+                arqInput.files = dt.files;
+            };
+            var atualizarInfo = function () {
+                if (!arqInfo) { return; }
+                var n = arquivos.length;
                 arqInfo.textContent = n > 0
                     ? (n + (n === 1 ? ' foto selecionada' : ' fotos selecionadas'))
                     : arqTextoPadrao;
+            };
+            var render = function () {
+                arqPreview.innerHTML = '';
+                arquivos.forEach(function (f, idx) {
+                    var card = document.createElement('div');
+                    card.className = 'foto-card';
+                    var img = document.createElement('img');
+                    img.className = 'card-img';
+                    img.alt = '';
+                    img.src = URL.createObjectURL(f);
+                    img.addEventListener('load', function () { URL.revokeObjectURL(img.src); });
+
+                    var badge = document.createElement('span');
+                    badge.className = 'foto-nova etiqueta';
+                    badge.textContent = 'nova';
+
+                    var x = document.createElement('button');
+                    x.type = 'button';
+                    x.className = 'foto-remover';
+                    x.setAttribute('aria-label', 'Remover');
+                    x.innerHTML = '&times;';
+                    x.addEventListener('click', function () {
+                        arquivos.splice(idx, 1);
+                        sincronizarInput();
+                        atualizarInfo();
+                        render();
+                    });
+
+                    card.appendChild(badge);
+                    card.appendChild(img);
+                    card.appendChild(x);
+                    arqPreview.appendChild(card);
+                });
+                if (arqWrap) { arqWrap.hidden = arquivos.length === 0; }
+            };
+
+            arqInput.addEventListener('change', function () {
+                var novos = Array.prototype.slice.call(arqInput.files || []);
+                var rejeitados = 0;
+                novos.forEach(function (f) {
+                    if (TIPOS.indexOf(f.type) === -1 || f.size > MAX) { rejeitados++; return; }
+                    arquivos.push(f);
+                });
+                sincronizarInput();   // input.files passa a ter a lista acumulada
+                atualizarInfo();
+                render();
+                if (rejeitados > 0) {
+                    alert('Algumas fotos foram ignoradas. Use JPG, PNG ou WebP de até 5 MB.');
+                }
             });
         }
 

@@ -713,6 +713,35 @@ body.menu-aberto {
 .foto-card form { padding: .5rem; margin-top: auto; }
 .foto-card form .btn { width: 100%; }
 
+/* Prévia (fotos ainda não enviadas) */
+.foto-nova {
+    position: absolute;
+    top: .4rem;
+    left: .4rem;
+    z-index: 2;
+    background: var(--cor-acento);
+    color: #fff;
+}
+.foto-remover {
+    position: absolute;
+    top: .4rem;
+    right: .4rem;
+    z-index: 2;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, .55);
+    color: #fff;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.foto-remover:hover { background: rgba(0, 0, 0, .75); }
+
 .produto-form-grid {
     display: grid;
     grid-template-columns: 1fr;   /* mobile: 1 coluna */
