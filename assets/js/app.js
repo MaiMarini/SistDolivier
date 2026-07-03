@@ -279,7 +279,31 @@
             iniciar();
         });
 
-        // --- Galeria do produto (fotos empilhadas + miniaturas + zonas + dots) ---
+        // --- Seletor de quantidade em pílula (− num +) ----------------------
+        var qtdPilula = document.querySelector('[data-qtd]');
+        if (qtdPilula) {
+            var qtdInput = qtdPilula.querySelector('[data-qtd-input]');
+            var qtdNum = qtdPilula.querySelector('[data-qtd-num]');
+            var qtdMenos = qtdPilula.querySelector('[data-qtd-menos]');
+            var qtdMais = qtdPilula.querySelector('[data-qtd-mais]');
+            var setQtd = function (v) {
+                v = Math.max(1, Math.min(99, v || 1));
+                if (qtdInput) { qtdInput.value = v; }
+                if (qtdNum) { qtdNum.textContent = v; }
+            };
+            if (qtdMenos) {
+                qtdMenos.addEventListener('click', function () {
+                    setQtd((parseInt(qtdInput.value, 10) || 1) - 1);
+                });
+            }
+            if (qtdMais) {
+                qtdMais.addEventListener('click', function () {
+                    setQtd((parseInt(qtdInput.value, 10) || 1) + 1);
+                });
+            }
+        }
+
+        // --- Galeria do produto (fotos + miniaturas + zonas + dots + lightbox) ---
         var galeria = document.querySelector('[data-galeria]');
         if (galeria) {
             var fotos = galeria.querySelectorAll('[data-galeria-foto]');
@@ -287,13 +311,23 @@
             var dots  = galeria.querySelectorAll('[data-galeria-dot]');
             var totalFotos = fotos.length;
 
+            var lightbox = galeria.querySelector('[data-lightbox]');
+            var lbImg = galeria.querySelector('[data-lightbox-img]');
+            var lbContador = galeria.querySelector('[data-lightbox-contador]');
+
             if (totalFotos > 0) {
                 var atualFoto = 0;
+
+                var atualizarLightbox = function () {
+                    if (lbImg) { lbImg.setAttribute('src', fotos[atualFoto].getAttribute('src')); }
+                    if (lbContador) { lbContador.textContent = (atualFoto + 1) + ' / ' + totalFotos; }
+                };
                 var irFoto = function (i) {
                     atualFoto = (i + totalFotos) % totalFotos;
                     fotos.forEach(function (el, idx) { el.classList.toggle('ativa', idx === atualFoto); });
                     minis.forEach(function (el, idx) { el.classList.toggle('ativa', idx === atualFoto); });
                     dots.forEach(function (el, idx) { el.classList.toggle('ativa', idx === atualFoto); });
+                    atualizarLightbox();
                 };
 
                 var galPrev = galeria.querySelector('[data-galeria-prev]');
@@ -311,6 +345,40 @@
                         irFoto(parseInt(d.getAttribute('data-galeria-dot'), 10) || 0);
                     });
                 });
+
+                // Lightbox: compartilha o índice atual da galeria.
+                if (lightbox) {
+                    var abrirLightbox = function () {
+                        atualizarLightbox();
+                        lightbox.classList.add('aberto');
+                        document.body.classList.add('menu-aberto'); // trava o scroll
+                    };
+                    var fecharLightbox = function () {
+                        lightbox.classList.remove('aberto');
+                        document.body.classList.remove('menu-aberto');
+                    };
+
+                    var expandir = galeria.querySelector('[data-galeria-expandir]');
+                    if (expandir) { expandir.addEventListener('click', abrirLightbox); }
+                    var lbFechar = galeria.querySelector('[data-lightbox-fechar]');
+                    if (lbFechar) { lbFechar.addEventListener('click', fecharLightbox); }
+                    var lbPrev = galeria.querySelector('[data-lightbox-prev]');
+                    var lbNext = galeria.querySelector('[data-lightbox-next]');
+                    if (lbPrev) { lbPrev.addEventListener('click', function () { irFoto(atualFoto - 1); }); }
+                    if (lbNext) { lbNext.addEventListener('click', function () { irFoto(atualFoto + 1); }); }
+
+                    // Clique no fundo escuro fecha.
+                    lightbox.addEventListener('click', function (ev) {
+                        if (ev.target === lightbox) { fecharLightbox(); }
+                    });
+                    // Teclado: setas navegam, Esc fecha (só com o lightbox aberto).
+                    document.addEventListener('keydown', function (ev) {
+                        if (!lightbox.classList.contains('aberto')) { return; }
+                        if (ev.key === 'Escape') { fecharLightbox(); }
+                        else if (ev.key === 'ArrowLeft') { irFoto(atualFoto - 1); }
+                        else if (ev.key === 'ArrowRight') { irFoto(atualFoto + 1); }
+                    });
+                }
 
                 irFoto(0);
             }

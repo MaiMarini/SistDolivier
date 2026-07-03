@@ -666,6 +666,64 @@ body.menu-aberto {
     margin-top: 1rem;
 }
 
+/* Área de compra (coluna direita) */
+.produto-desc { margin: .6rem 0 1rem; }
+
+.qtd-linha { display: flex; align-items: center; gap: .9rem; margin: 1rem 0; }
+.qtd-rotulo { font-weight: 700; }
+.qtd-pilula {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #ccc;
+    border-radius: 999px;
+    overflow: hidden;
+}
+.qtd-pilula button {
+    width: 42px;
+    height: 42px;
+    border: 0;
+    background: none;
+    color: var(--cor-texto);
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.qtd-pilula button:hover { background: var(--cor-fundo); }
+.qtd-num { min-width: 2.5ch; text-align: center; font-weight: 700; }
+
+.btn-carrinho {
+    width: 100%;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+}
+
+.produto-botoes { display: flex; gap: .6rem; margin-top: .8rem; }
+.produto-botoes .btn {
+    flex: 1;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+}
+/* "Personalizar": contorno verde-oliva (acento) */
+.btn.btn-wpp-out {
+    background: transparent;
+    border-color: var(--cor-acento);
+    color: var(--cor-acento);
+}
+.btn.btn-wpp-out:hover { background: var(--cor-acento); color: #fff; opacity: 1; }
+
+.btn-carrinho svg,
+.produto-botoes .btn svg { width: 20px; height: 20px; }
+
+@media (max-width: 600px) {
+    .produto-botoes { flex-direction: column; }
+}
+
 /* Galeria do produto (miniaturas em pé à esquerda + foto quadrada) */
 .galeria { display: flex; gap: .6rem; align-items: flex-start; }
 .galeria-miniaturas {
@@ -761,6 +819,85 @@ body.menu-aberto {
     cursor: pointer;
 }
 .galeria-dot.ativa { background: #fff; }
+
+/* Botão de ampliar (abre o lightbox) */
+.galeria-expandir {
+    position: absolute;
+    top: .5rem;
+    right: .5rem;
+    z-index: 3;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, .4);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.galeria-expandir:hover { background: rgba(0, 0, 0, .6); }
+.galeria-expandir svg { width: 18px; height: 18px; }
+
+/* Lightbox (foto em tela cheia) */
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 1500;                /* acima do header e dos overlays */
+    background: rgba(0, 0, 0, .9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+}
+.lightbox.aberto { display: flex; }
+.lightbox-img {
+    max-width: 92vw;
+    max-height: 85vh;
+    object-fit: contain;
+    border-radius: var(--raio);
+}
+.lightbox-fechar {
+    position: absolute;
+    top: 1rem;
+    right: 1.2rem;
+    background: none;
+    border: 0;
+    color: #fff;
+    font-size: 2.4rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.lightbox-seta {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .15);
+    color: #fff;
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.lightbox-seta:hover { background: rgba(255, 255, 255, .3); }
+.lightbox-prev { left: 1rem; }
+.lightbox-next { right: 1rem; }
+.lightbox-contador {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1rem;
+    text-align: center;
+    color: #fff;
+    font-size: .9rem;
+}
 
 /* Mobile: miniaturas viram uma linha horizontal abaixo da foto */
 @media (max-width: 600px) {

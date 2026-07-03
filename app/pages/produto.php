@@ -93,6 +93,14 @@ ob_start();
                              alt="<?= e($produto['nome']) ?>">
                     <?php endforeach; ?>
 
+                    <!-- Ampliar (abre o lightbox) -->
+                    <button type="button" class="galeria-expandir" data-galeria-expandir aria-label="Ampliar foto">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>
+                        </svg>
+                    </button>
+
                     <?php if (count($imagens) > 1): ?>
                         <button type="button" class="galeria-zona galeria-zona-esq"
                                 data-galeria-prev aria-label="Foto anterior"><span class="galeria-seta">&lsaquo;</span></button>
@@ -106,11 +114,22 @@ ob_start();
                         </div>
                     <?php endif; ?>
                 </div>
+
+                <!-- Lightbox (tela cheia) -->
+                <div class="lightbox" data-lightbox>
+                    <button type="button" class="lightbox-fechar" data-lightbox-fechar aria-label="Fechar">&times;</button>
+                    <?php if (count($imagens) > 1): ?>
+                        <button type="button" class="lightbox-seta lightbox-prev" data-lightbox-prev aria-label="Foto anterior">&lsaquo;</button>
+                        <button type="button" class="lightbox-seta lightbox-next" data-lightbox-next aria-label="Próxima foto">&rsaquo;</button>
+                    <?php endif; ?>
+                    <img class="lightbox-img" data-lightbox-img src="" alt="<?= e($produto['nome']) ?>">
+                    <div class="lightbox-contador" data-lightbox-contador></div>
+                </div>
             </div>
         <?php endif; ?>
     </div>
 
-    <div>
+    <div class="produto-info">
         <?php if ($mostrar_personalizar): ?>
             <span class="etiqueta">Personalizável</span>
         <?php endif; ?>
@@ -129,31 +148,47 @@ ob_start();
         <?php endif; ?>
 
         <?php if (!empty($produto['descricao'])): ?>
-            <div class="mt-1"><?= nl2br(e($produto['descricao'])) ?></div>
+            <div class="produto-desc"><?= nl2br(e($produto['descricao'])) ?></div>
         <?php endif; ?>
 
-        <div class="produto-acoes">
-            <?php if ($mostrar_personalizar): ?>
-                <a class="btn btn-personalizar" href="<?= e($link_personalizar) ?>"
-                   target="_blank" rel="noopener">Personalizar</a>
-            <?php endif; ?>
-            <?php if ((int) $produto['preco_centavos'] > 0): ?>
-                <form class="campo-inline" method="post" action="<?= e(url('carrinho')) ?>">
-                    <?= csrf_input() ?>
-                    <input type="hidden" name="acao" value="adicionar">
-                    <input type="hidden" name="produto_id" value="<?= (int) $produto['id'] ?>">
-                    <label for="quantidade">Qtd.</label>
-                    <input type="number" id="quantidade" name="quantidade"
-                           value="1" min="1" max="99" style="width:80px;">
-                    <button class="btn" type="submit">Adicionar ao carrinho</button>
-                </form>
-            <?php endif; ?>
-        </div>
+        <?php if ((int) $produto['preco_centavos'] > 0): ?>
+            <form method="post" action="<?= e(url('carrinho')) ?>" class="compra-form">
+                <?= csrf_input() ?>
+                <input type="hidden" name="acao" value="adicionar">
+                <input type="hidden" name="produto_id" value="<?= (int) $produto['id'] ?>">
 
-        <p class="mt-1">
-            <button class="btn sec" type="button"
-                    data-abrir-modal="modal-produto-regras">Ver regras e prazos</button>
-        </p>
+                <div class="qtd-linha">
+                    <span class="qtd-rotulo">Quantidade</span>
+                    <div class="qtd-pilula" data-qtd>
+                        <button type="button" data-qtd-menos aria-label="Diminuir">&minus;</button>
+                        <span class="qtd-num" data-qtd-num>1</span>
+                        <input type="hidden" name="quantidade" value="1" data-qtd-input>
+                        <button type="button" data-qtd-mais aria-label="Aumentar">+</button>
+                    </div>
+                </div>
+
+                <button class="btn btn-carrinho" type="submit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                    Adicionar ao carrinho
+                </button>
+            </form>
+        <?php endif; ?>
+
+        <div class="produto-botoes">
+            <?php if ($mostrar_personalizar): ?>
+                <a class="btn btn-wpp-out" href="<?= e($link_personalizar) ?>"
+                   target="_blank" rel="noopener">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.978-.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.149-.173.198-.297.298-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.876 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                    Personalizar
+                </a>
+            <?php endif; ?>
+            <button class="btn sec" type="button" data-abrir-modal="modal-produto-regras">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                Regras e prazos
+            </button>
+        </div>
     </div>
 </div>
 
