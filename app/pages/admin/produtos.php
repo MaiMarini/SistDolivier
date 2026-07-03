@@ -110,12 +110,60 @@ function _produto_salvar_tabelas(int $pid, array $ids): void
 // POST
 // =============================================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $op = $_POST['op'] ?? '';
+
+    // ------------------------------------------- REORDENAR IMAGENS (AJAX/JSON)
+    // Renumera a ordem de TODAS as imagens do produto (1..N) e define a capa
+    // (products.imagem) como o arquivo da PRIMEIRA. Tudo numa transação.
+    if ($op === 'img_reordenar') {
+        header('Content-Type: application/json; charset=utf-8');
+        if (!csrf_validar()) {
+            echo json_encode(['ok' => false, 'erro' => 'csrf']);
+            return;
+        }
+        $pid = (int) ($_POST['produto_id'] ?? 0);
+        $ids = $_POST['ids'] ?? [];
+        if (!is_array($ids)) {
+            $ids = [];
+        }
+        $ids = array_values(array_filter(array_map('intval', $ids), static function ($v) {
+            return $v > 0;
+        }));
+
+        if ($pid > 0 && !empty($ids)) {
+            $pdo = db();
+            $pdo->beginTransaction();
+            try {
+                $up  = $pdo->prepare('UPDATE product_images SET ordem = ? WHERE id = ? AND product_id = ?');
+                $sel = $pdo->prepare('SELECT arquivo FROM product_images WHERE id = ? AND product_id = ? LIMIT 1');
+                $pos = 1;
+                $capa = null;
+                foreach ($ids as $iid) {
+                    $up->execute([$pos, $iid, $pid]);
+                    if ($pos === 1) {
+                        $sel->execute([$iid, $pid]);
+                        $capa = $sel->fetchColumn();
+                    }
+                    $pos++;
+                }
+                if ($capa !== null && $capa !== false) {
+                    $pdo->prepare('UPDATE products SET imagem = ? WHERE id = ?')->execute([$capa, $pid]);
+                }
+                $pdo->commit();
+            } catch (Throwable $e) {
+                $pdo->rollBack();
+                echo json_encode(['ok' => false, 'erro' => 'db']);
+                return;
+            }
+        }
+        echo json_encode(['ok' => true]);
+        return;
+    }
+
     if (!csrf_validar()) {
         flash('erro', 'Sua sessão expirou. Tente novamente.');
         redirect('admin/produtos');
     }
-
-    $op = $_POST['op'] ?? '';
 
     // ----------------------------------------------------------------- EXCLUIR
     if ($op === 'excluir') {
@@ -247,47 +295,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/produtos/editar/' . $pid);
     }
 
-    if ($op === 'img_salvar_ordem') {
-        $imagem_id = (int) ($_POST['imagem_id'] ?? 0);
-        $ordem = (int) ($_POST['ordem'] ?? 0);
-        if (_produto_imagem($imagem_id, $pid)) {
-            $stmt = db()->prepare('UPDATE product_images SET ordem = ? WHERE id = ? AND product_id = ?');
-            $stmt->execute([$ordem, $imagem_id, $pid]);
-            flash('sucesso', 'Ordem atualizada.');
-        }
-        redirect('admin/produtos/editar/' . $pid);
-    }
-
-    if ($op === 'img_capa') {
-        $imagem_id = (int) ($_POST['imagem_id'] ?? 0);
-        $img = _produto_imagem($imagem_id, $pid);
-        if ($img) {
-            $stmt = db()->prepare('UPDATE products SET imagem = ? WHERE id = ?');
-            $stmt->execute([$img['arquivo'], $pid]);
-            flash('sucesso', 'Capa definida.');
-        }
-        redirect('admin/produtos/editar/' . $pid);
-    }
-
     if ($op === 'img_remover') {
         $imagem_id = (int) ($_POST['imagem_id'] ?? 0);
         $img = _produto_imagem($imagem_id, $pid);
         if ($img) {
             imagem_apagar($img['arquivo']);
-            $del = db()->prepare('DELETE FROM product_images WHERE id = ? AND product_id = ?');
-            $del->execute([$imagem_id, $pid]);
+            db()->prepare('DELETE FROM product_images WHERE id = ? AND product_id = ?')
+                ->execute([$imagem_id, $pid]);
 
-            // Se era a capa, escolhe outra imagem (a de menor ordem) ou limpa.
-            $stmt = db()->prepare('SELECT imagem FROM products WHERE id = ?');
-            $stmt->execute([$pid]);
-            if ($stmt->fetchColumn() === $img['arquivo']) {
-                $q = db()->prepare(
-                    'SELECT arquivo FROM product_images WHERE product_id = ? ORDER BY ordem ASC, id ASC LIMIT 1'
-                );
-                $q->execute([$pid]);
-                $nova_capa = $q->fetchColumn();
-                $up = db()->prepare('UPDATE products SET imagem = ? WHERE id = ?');
-                $up->execute([$nova_capa !== false ? $nova_capa : null, $pid]);
+            // Renumera o restante (1..N) e define a capa = primeira (ou limpa).
+            $rest = db()->prepare(
+                'SELECT id, arquivo FROM product_images WHERE product_id = ? ORDER BY ordem ASC, id ASC'
+            );
+            $rest->execute([$pid]);
+            $rows = $rest->fetchAll();
+            $pdo = db();
+            $pdo->beginTransaction();
+            try {
+                $up = $pdo->prepare('UPDATE product_images SET ordem = ? WHERE id = ?');
+                $pos = 1;
+                foreach ($rows as $im) {
+                    $up->execute([$pos, $im['id']]);
+                    $pos++;
+                }
+                $capa = $rows[0]['arquivo'] ?? null;
+                $pdo->prepare('UPDATE products SET imagem = ? WHERE id = ?')->execute([$capa, $pid]);
+                $pdo->commit();
+            } catch (Throwable $e) {
+                $pdo->rollBack();
             }
             flash('sucesso', 'Imagem removida.');
         }
@@ -353,136 +388,197 @@ if ($acao === 'novo' || $acao === 'editar') {
     ?>
     <p><a href="<?= e(url('admin/produtos')) ?>">&larr; Voltar para produtos</a></p>
 
-    <form id="form-produto" class="formulario" method="post" action="<?= e(url('admin/produtos')) ?>"
-          enctype="multipart/form-data" style="max-width:none;">
+    <form id="form-produto" method="post" action="<?= e(url('admin/produtos')) ?>"
+          enctype="multipart/form-data">
         <?= csrf_input() ?>
         <input type="hidden" name="op" value="salvar">
         <input type="hidden" name="id" value="<?= (int) $produto['id'] ?>">
 
-        <!-- Linha 1: duas colunas -->
-        <div class="produto-form-grid">
-            <div class="produto-col">
-                <div class="campo">
-                    <label for="nome">Nome</label>
-                    <input type="text" id="nome" name="nome" value="<?= e($produto['nome']) ?>"
-                           required data-slug-source>
-                </div>
-                <div class="campo">
-                    <label for="slug">Slug (endereço)</label>
-                    <input type="text" id="slug" name="slug" value="<?= e($produto['slug']) ?>"
-                           placeholder="Gerado a partir do nome" data-slug-target>
-                    <small>Gerado automaticamente do nome. Edite só se souber o que está fazendo.</small>
-                </div>
-                <div class="campo">
-                    <label for="category_id">Categoria</label>
-                    <select id="category_id" name="category_id">
-                        <option value="">— sem categoria —</option>
-                        <?php foreach ($categorias as $c): ?>
-                            <option value="<?= (int) $c['id'] ?>"
-                                <?= ((int) $produto['category_id'] === (int) $c['id']) ? 'selected' : '' ?>>
-                                <?= e($c['nome']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="campo">
-                    <label for="preco">Preço (R$)</label>
-                    <input type="text" id="preco" name="preco" inputmode="decimal"
-                           value="<?= e(centavos_para_input((int) $produto['preco_centavos'])) ?>"
-                           placeholder="Ex.: 35,90">
-                    <small>Para produtos personalizáveis, o preço é opcional.</small>
-                </div>
-                <div class="campo">
-                    <label for="dias_producao">Dias de produção</label>
-                    <input type="number" id="dias_producao" name="dias_producao" min="0"
-                           value="<?= (int) $produto['dias_producao'] ?>">
-                </div>
-                <div class="campo campo-inline">
-                    <input type="checkbox" id="destaque" name="destaque" value="1"
-                           <?= $produto['destaque'] ? 'checked' : '' ?>>
-                    <label for="destaque">Destaque (aparece na home)</label>
-                </div>
-                <div class="campo campo-inline">
-                    <input type="checkbox" id="permite_personalizacao" name="permite_personalizacao" value="1"
-                           <?= $produto['permite_personalizacao'] ? 'checked' : '' ?>>
-                    <label for="permite_personalizacao">Permitir personalização (mostra botão que leva ao WhatsApp)</label>
-                </div>
-                <div class="campo campo-inline">
-                    <input type="checkbox" id="ativo" name="ativo" value="1"
-                           <?= $produto['ativo'] ? 'checked' : '' ?>>
-                    <label for="ativo">Ativo (aparece na loja)</label>
-                </div>
-            </div>
-
-            <div class="produto-col">
-                <div class="campo">
-                    <label for="descricao">Descrição</label>
-                    <textarea id="descricao" name="descricao" rows="5"><?= e($produto['descricao']) ?></textarea>
-                </div>
-                <div class="campo">
-                    <label for="regras_produto">Regras/observações deste produto</label>
-                    <textarea id="regras_produto" name="regras_produto" rows="4"><?= e($produto['regras_produto']) ?></textarea>
-                </div>
-                <div class="campo">
-                    <label>Tabelas nutricionais</label>
-                    <?php if (empty($tabelas_nutri)): ?>
-                        <small>Nenhuma tabela nutricional cadastrada.</small>
-                    <?php else: ?>
-                        <div class="checklist">
-                            <?php foreach ($tabelas_nutri as $tn): ?>
-                                <label class="checklist-item">
-                                    <input type="checkbox" name="tabelas[]" value="<?= (int) $tn['id'] ?>"
-                                           <?= in_array((int) $tn['id'], $tabelas_sel, true) ? 'checked' : '' ?>>
-                                    <?= e($tn['nome']) ?>
-                                </label>
+        <!-- Bloco 1: Informações do produto -->
+        <div class="card-bloco">
+            <h2>Informações do produto</h2>
+            <div class="produto-form-grid">
+                <div class="produto-col">
+                    <div class="campo">
+                        <label for="nome">Nome</label>
+                        <input type="text" id="nome" name="nome" value="<?= e($produto['nome']) ?>"
+                               required data-slug-source>
+                    </div>
+                    <div class="campo">
+                        <label for="slug">Slug (endereço)</label>
+                        <input type="text" id="slug" name="slug" value="<?= e($produto['slug']) ?>"
+                               placeholder="Gerado a partir do nome" data-slug-target>
+                        <small>Gerado automaticamente do nome. Edite só se souber o que está fazendo.</small>
+                    </div>
+                    <div class="campo">
+                        <label for="category_id">Categoria</label>
+                        <select id="category_id" name="category_id">
+                            <option value="">— sem categoria —</option>
+                            <?php foreach ($categorias as $c): ?>
+                                <option value="<?= (int) $c['id'] ?>"
+                                    <?= ((int) $produto['category_id'] === (int) $c['id']) ? 'selected' : '' ?>>
+                                    <?= e($c['nome']) ?>
+                                </option>
                             <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="produto-col">
+                    <div class="campo">
+                        <label for="preco">Preço (R$)</label>
+                        <input type="text" id="preco" name="preco" inputmode="decimal"
+                               value="<?= e(centavos_para_input((int) $produto['preco_centavos'])) ?>"
+                               placeholder="Ex.: 35,90">
+                        <small>Para produtos personalizáveis, o preço é opcional.</small>
+                    </div>
+                    <div class="campo">
+                        <label for="dias_producao">Dias de produção</label>
+                        <input type="number" id="dias_producao" name="dias_producao" min="0"
+                               value="<?= (int) $produto['dias_producao'] ?>">
+                    </div>
+                    <div class="campo campo-inline">
+                        <input type="checkbox" id="destaque" name="destaque" value="1"
+                               <?= $produto['destaque'] ? 'checked' : '' ?>>
+                        <label for="destaque">Destaque (aparece na home)</label>
+                    </div>
+                    <div class="campo campo-inline">
+                        <input type="checkbox" id="permite_personalizacao" name="permite_personalizacao" value="1"
+                               <?= $produto['permite_personalizacao'] ? 'checked' : '' ?>>
+                        <label for="permite_personalizacao">Permitir personalização (mostra botão que leva ao WhatsApp)</label>
+                    </div>
+                    <div class="campo campo-inline">
+                        <input type="checkbox" id="ativo" name="ativo" value="1"
+                               <?= $produto['ativo'] ? 'checked' : '' ?>>
+                        <label for="ativo">Ativo (aparece na loja)</label>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Linha 2: fotos (largura total) -->
-        <div class="campo mt-1">
-            <label for="imagens">Fotos do produto (JPG, PNG ou WebP)</label>
-            <input type="file" id="imagens" name="imagens[]" accept="image/jpeg,image/png,image/webp" multiple>
+        <!-- Bloco 2: Descrição e informações nutricionais -->
+        <div class="card-bloco">
+            <h2>Descrição e informações nutricionais</h2>
+            <div class="produto-form-grid">
+                <div class="produto-col">
+                    <div class="campo">
+                        <label for="descricao">Descrição</label>
+                        <textarea id="descricao" name="descricao" rows="8"><?= e($produto['descricao']) ?></textarea>
+                    </div>
+                    <div class="campo">
+                        <label for="regras_produto">Regras/observações deste produto</label>
+                        <textarea id="regras_produto" name="regras_produto" rows="6"><?= e($produto['regras_produto']) ?></textarea>
+                    </div>
+                </div>
+
+                <div class="produto-col">
+                    <div class="campo">
+                        <label>Tabelas nutricionais</label>
+                        <?php if (empty($tabelas_nutri)): ?>
+                            <small>Nenhuma tabela nutricional cadastrada.</small>
+                        <?php else: ?>
+                            <div class="checklist">
+                                <?php foreach ($tabelas_nutri as $tn): ?>
+                                    <label class="checklist-item">
+                                        <input type="checkbox" name="tabelas[]" value="<?= (int) $tn['id'] ?>"
+                                               <?= in_array((int) $tn['id'], $tabelas_sel, true) ? 'checked' : '' ?>>
+                                        <?= e($tn['nome']) ?>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Bloco 3: Fotos do produto (input + galeria juntos; fora do form para não aninhar) -->
+    <div class="card-bloco">
+        <h2>Fotos do produto</h2>
+        <div class="campo">
+            <label for="imagens">Escolher arquivos (JPG, PNG ou WebP)</label>
+            <input type="file" id="imagens" name="imagens[]" form="form-produto"
+                   accept="image/jpeg,image/png,image/webp" multiple>
             <small>As fotos são enviadas ao salvar. A primeira vira a capa (se ainda não houver).</small>
         </div>
 
-        <button class="btn" type="submit">Salvar</button>
-    </form>
+        <?php if ($produto['id'] > 0 && !empty($imagens)): ?>
+            <p class="mt-1"><small>Arraste as fotos para reordenar. A primeira é sempre a capa.</small></p>
+            <div class="grade-fotos" id="fotos-galeria">
+                <?php foreach ($imagens as $img): ?>
+                    <div class="foto-card" data-img-id="<?= (int) $img['id'] ?>">
+                        <span class="foto-handle" title="Arraste para reordenar" aria-hidden="true">&#9776;</span>
+                        <span class="foto-capa etiqueta">Capa</span>
+                        <img class="card-img"
+                             src="<?= e(url('assets/uploads/' . imagem_miniatura($img['arquivo']))) ?>" alt="">
+                        <form method="post" action="<?= e(url('admin/produtos')) ?>"
+                              onsubmit="return confirm('Remover esta imagem?');">
+                            <?= csrf_input() ?>
+                            <input type="hidden" name="produto_id" value="<?= (int) $produto['id'] ?>">
+                            <input type="hidden" name="imagem_id" value="<?= (int) $img['id'] ?>">
+                            <input type="hidden" name="op" value="img_remover">
+                            <button class="btn sec" type="submit">Remover</button>
+                        </form>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <div id="fotos-feedback" class="reorder-feedback" hidden></div>
 
-    <?php if ($produto['id'] > 0 && !empty($imagens)): ?>
-        <!-- Linha 3: miniaturas (largura total) -->
-        <h2 class="mt-1">Imagens</h2>
-        <div class="grade">
-            <?php foreach ($imagens as $img): ?>
-                <?php $eh_capa = ($produto['imagem'] === $img['arquivo']); ?>
-                <div class="pedido">
-                    <img class="card-img"
-                         src="<?= e(url('assets/uploads/' . imagem_miniatura($img['arquivo']))) ?>" alt="">
-                    <?php if ($eh_capa): ?><span class="etiqueta">Capa</span><?php endif; ?>
-                    <form method="post" action="<?= e(url('admin/produtos')) ?>" class="mt-1">
-                        <?= csrf_input() ?>
-                        <input type="hidden" name="produto_id" value="<?= (int) $produto['id'] ?>">
-                        <input type="hidden" name="imagem_id" value="<?= (int) $img['id'] ?>">
-                        <div class="campo-inline">
-                            <label>Ordem</label>
-                            <input type="number" name="ordem" value="<?= (int) $img['ordem'] ?>" style="width:70px;">
-                            <button class="btn sec" type="submit" name="op" value="img_salvar_ordem">Salvar</button>
-                        </div>
-                        <div class="produto-acoes mt-1">
-                            <?php if (!$eh_capa): ?>
-                                <button class="btn sec" type="submit" name="op" value="img_capa">Definir capa</button>
-                            <?php endif; ?>
-                            <button class="btn" type="submit" name="op" value="img_remover"
-                                    onclick="return confirm('Remover esta imagem?');">Remover</button>
-                        </div>
-                    </form>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
+            <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+            <script>
+            (function () {
+                var cont = document.getElementById('fotos-galeria');
+                if (!cont) { return; }
+                var endpoint = <?= json_encode(url('admin/produtos')) ?>;
+                var csrf = <?= json_encode(csrf_token()) ?>;
+                var pid = <?= (int) $produto['id'] ?>;
+                var feedback = document.getElementById('fotos-feedback');
+
+                function ids() {
+                    return Array.prototype.map.call(
+                        cont.querySelectorAll('[data-img-id]'),
+                        function (el) { return el.getAttribute('data-img-id'); }
+                    );
+                }
+                function fb(ok) {
+                    if (!feedback) { return; }
+                    feedback.textContent = ok ? 'Ordem salva ✓' : 'Erro ao salvar';
+                    feedback.classList.toggle('erro', !ok);
+                    feedback.hidden = false;
+                    clearTimeout(feedback._t);
+                    feedback._t = setTimeout(function () { feedback.hidden = true; }, 1800);
+                }
+                function salvar() {
+                    var body = new URLSearchParams();
+                    body.append('op', 'img_reordenar');
+                    body.append('_csrf', csrf);
+                    body.append('produto_id', pid);
+                    ids().forEach(function (id) { body.append('ids[]', id); });
+                    fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'fetch' },
+                        credentials: 'same-origin',
+                        body: body
+                    })
+                        .then(function (r) { return r.json(); })
+                        .then(function (d) { fb(!!(d && d.ok)); })
+                        .catch(function () { fb(false); });
+                }
+                if (window.Sortable) {
+                    Sortable.create(cont, { handle: '.foto-handle', animation: 150, onEnd: salvar });
+                }
+            })();
+            </script>
+        <?php elseif ($produto['id'] > 0): ?>
+            <p class="mt-1"><small>Nenhuma imagem ainda. A primeira enviada vira a capa.</small></p>
+        <?php endif; ?>
+    </div>
+
+    <!-- Rodapé: salvar (submete o formulário principal) -->
+    <div class="form-rodape">
+        <button class="btn" type="submit" form="form-produto">Salvar produto</button>
+    </div>
     <?php
     view('admin_layout', ['titulo' => $titulo, 'conteudo' => ob_get_clean()]);
     return;
