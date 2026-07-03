@@ -75,7 +75,7 @@ if ($pin !== '') {
                         <li>
                             <a href="<?= e($link) ?>" target="_blank" rel="noopener">
                                 <span class="rodape-social-ico"><?= $icones[$nome] /* SVG fixo */ ?></span>
-                                <?= e($nome) ?>
+                                <span class="rodape-social-nome"><?= e($nome) ?></span>
                             </a>
                         </li>
                     <?php endforeach; ?>
