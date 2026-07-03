@@ -921,8 +921,11 @@ body.menu-aberto {
     font-weight: 700;
     color: var(--cor-texto);
     white-space: nowrap;
-    padding-left: 1rem;
+    padding-left: 1.2rem;
 }
+/* Espaço maior entre "por 100 g" e "por porção" */
+.nutri-tabela th:last-child,
+.nutri-tabela td:last-child { padding-left: 2.5rem; }
 
 /* Abas do kit em chips (pílulas) */
 .nutri-abas { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
