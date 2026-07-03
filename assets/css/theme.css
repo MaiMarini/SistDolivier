@@ -539,7 +539,7 @@ body.menu-aberto {
 .btn.btn-personalizar {
     background: var(--cor-acento);
     border-color: var(--cor-acento);
-    color: var(--cor-primaria);
+    color: var(--cor-fundo);
 }
 
 /* --- Banner -------------------------------------------------------------- */
@@ -666,26 +666,112 @@ body.menu-aberto {
     margin-top: 1rem;
 }
 
-/* Galeria do produto */
-.galeria-thumbs {
+/* Galeria do produto (miniaturas em pé à esquerda + foto quadrada) */
+.galeria { display: flex; gap: .6rem; align-items: flex-start; }
+.galeria-miniaturas {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: .5rem;
-    margin-top: .6rem;
-}
-
-.galeria-thumb {
+    flex: 0 0 64px;
     width: 64px;
-    height: 64px;
-    object-fit: cover;
-    border-radius: 8px;
-    cursor: pointer;
+}
+.galeria-mini {
+    padding: 0;
     border: 2px solid transparent;
+    border-radius: 8px;
+    background: var(--cor-fundo);
+    cursor: pointer;
+    overflow: hidden;
+    line-height: 0;
+}
+.galeria-mini img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
+.galeria-mini.ativa { border-color: var(--cor-pop); }
+
+.galeria-palco {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    aspect-ratio: 1 / 1;
+    border-radius: var(--raio);
+    overflow: hidden;
     background: var(--cor-fundo);
 }
+.galeria-foto {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    pointer-events: none;        /* só as zonas capturam clique; foto invisível não rouba */
+    transition: opacity .25s ease;
+    z-index: 1;
+}
+.galeria-foto.ativa { opacity: 1; }
 
-.galeria-thumb.ativa {
-    border-color: var(--cor-pop);
+/* Zonas de clique (metades) sobre a foto, com setinha discreta no hover */
+.galeria-zona {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0 .5rem;
+    z-index: 2;
+}
+.galeria-zona-esq { left: 0; justify-content: flex-start; }
+.galeria-zona-dir { right: 0; justify-content: flex-end; }
+.galeria-seta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, .35);
+    color: #fff;
+    font-size: 1.4rem;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity .2s ease;
+}
+.galeria-zona:hover .galeria-seta { opacity: 1; }
+
+.galeria-dots {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: .6rem;
+    display: flex;
+    justify-content: center;
+    gap: .4rem;
+    z-index: 3;
+}
+.galeria-dot {
+    width: 9px;
+    height: 9px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .6);
+    cursor: pointer;
+}
+.galeria-dot.ativa { background: #fff; }
+
+/* Mobile: miniaturas viram uma linha horizontal abaixo da foto */
+@media (max-width: 600px) {
+    .galeria { flex-direction: column-reverse; }
+    .galeria-miniaturas {
+        flex-direction: row;
+        width: auto;
+        flex: none;
+        overflow-x: auto;
+    }
+    .galeria-mini { flex: 0 0 56px; width: 56px; }
 }
 
 /* Carrossel de banners da home (full-width, slides sobrepostos com fade) */

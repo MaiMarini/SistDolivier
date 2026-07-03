@@ -52,39 +52,61 @@ if ($mostrar_personalizar) {
     $link_personalizar = 'https://wa.me/' . $whats_numero . '?text=' . rawurlencode($mensagem);
 }
 
-// Galeria: imagens do produto (ordenadas). Capa como imagem inicial.
-$imagens = [];
+// Galeria: capa (products.imagem) + imagens de product_images, capa primeiro,
+// sem duplicar. Se não houver nenhuma, fica vazio (placeholder).
 $stmt = db()->prepare(
     'SELECT arquivo FROM product_images WHERE product_id = ? ORDER BY ordem ASC, id ASC'
 );
 $stmt->execute([(int) $produto['id']]);
 $imagens = array_column($stmt->fetchAll(), 'arquivo');
 
-if (empty($imagens) && !empty($produto['imagem'])) {
-    $imagens = [$produto['imagem']];
+$capa = (string) ($produto['imagem'] ?? '');
+if ($capa !== '') {
+    array_unshift($imagens, $capa);
 }
-$principal = !empty($produto['imagem']) ? $produto['imagem'] : ($imagens[0] ?? null);
+$imagens = array_values(array_unique(array_filter($imagens, 'strlen')));
 
 ob_start();
 ?>
 <div class="produto">
     <div>
-        <?php if ($principal !== null): ?>
-            <img class="produto-img" id="galeria-principal"
-                 src="<?= e(url('assets/uploads/' . $principal)) ?>"
-                 alt="<?= e($produto['nome']) ?>">
-            <?php if (count($imagens) > 1): ?>
-                <div class="galeria-thumbs">
-                    <?php foreach ($imagens as $arq): ?>
-                        <img class="galeria-thumb<?= $arq === $principal ? ' ativa' : '' ?>"
-                             src="<?= e(url('assets/uploads/' . imagem_miniatura($arq))) ?>"
-                             data-src="<?= e(url('assets/uploads/' . $arq)) ?>"
-                             data-galeria-img alt="">
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+        <?php if (empty($imagens)): ?>
+            <div class="galeria-palco"></div>
         <?php else: ?>
-            <div class="produto-img" style="aspect-ratio:1/1;"></div>
+            <div class="galeria" data-galeria>
+                <?php if (count($imagens) > 1): ?>
+                    <div class="galeria-miniaturas">
+                        <?php foreach ($imagens as $i => $arq): ?>
+                            <button type="button" class="galeria-mini<?= $i === 0 ? ' ativa' : '' ?>"
+                                    data-galeria-mini="<?= (int) $i ?>" aria-label="Ver foto <?= (int) $i + 1 ?>">
+                                <img src="<?= e(url('assets/uploads/' . imagem_miniatura($arq))) ?>" alt="">
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="galeria-palco">
+                    <?php foreach ($imagens as $i => $arq): ?>
+                        <img class="galeria-foto<?= $i === 0 ? ' ativa' : '' ?>"
+                             data-galeria-foto="<?= (int) $i ?>"
+                             src="<?= e(url('assets/uploads/' . $arq)) ?>"
+                             alt="<?= e($produto['nome']) ?>">
+                    <?php endforeach; ?>
+
+                    <?php if (count($imagens) > 1): ?>
+                        <button type="button" class="galeria-zona galeria-zona-esq"
+                                data-galeria-prev aria-label="Foto anterior"><span class="galeria-seta">&lsaquo;</span></button>
+                        <button type="button" class="galeria-zona galeria-zona-dir"
+                                data-galeria-next aria-label="Próxima foto"><span class="galeria-seta">&rsaquo;</span></button>
+                        <div class="galeria-dots">
+                            <?php foreach ($imagens as $i => $arq): ?>
+                                <button type="button" class="galeria-dot<?= $i === 0 ? ' ativa' : '' ?>"
+                                        data-galeria-dot="<?= (int) $i ?>" aria-label="Foto <?= (int) $i + 1 ?>"></button>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
         <?php endif; ?>
     </div>
 

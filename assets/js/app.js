@@ -279,18 +279,41 @@
             iniciar();
         });
 
-        // --- Galeria do produto (troca a imagem principal) ------------------
-        var galeriaPrincipal = document.getElementById('galeria-principal');
-        var galeriaThumbs = document.querySelectorAll('[data-galeria-img]');
-        if (galeriaPrincipal && galeriaThumbs.length) {
-            galeriaThumbs.forEach(function (thumb) {
-                thumb.addEventListener('click', function () {
-                    var src = thumb.getAttribute('data-src');
-                    if (src) { galeriaPrincipal.src = src; }
-                    galeriaThumbs.forEach(function (x) { x.classList.remove('ativa'); });
-                    thumb.classList.add('ativa');
+        // --- Galeria do produto (fotos empilhadas + miniaturas + zonas + dots) ---
+        var galeria = document.querySelector('[data-galeria]');
+        if (galeria) {
+            var fotos = galeria.querySelectorAll('[data-galeria-foto]');
+            var minis = galeria.querySelectorAll('[data-galeria-mini]');
+            var dots  = galeria.querySelectorAll('[data-galeria-dot]');
+            var totalFotos = fotos.length;
+
+            if (totalFotos > 0) {
+                var atualFoto = 0;
+                var irFoto = function (i) {
+                    atualFoto = (i + totalFotos) % totalFotos;
+                    fotos.forEach(function (el, idx) { el.classList.toggle('ativa', idx === atualFoto); });
+                    minis.forEach(function (el, idx) { el.classList.toggle('ativa', idx === atualFoto); });
+                    dots.forEach(function (el, idx) { el.classList.toggle('ativa', idx === atualFoto); });
+                };
+
+                var galPrev = galeria.querySelector('[data-galeria-prev]');
+                var galNext = galeria.querySelector('[data-galeria-next]');
+                if (galPrev) { galPrev.addEventListener('click', function () { irFoto(atualFoto - 1); }); }
+                if (galNext) { galNext.addEventListener('click', function () { irFoto(atualFoto + 1); }); }
+
+                minis.forEach(function (m) {
+                    m.addEventListener('click', function () {
+                        irFoto(parseInt(m.getAttribute('data-galeria-mini'), 10) || 0);
+                    });
                 });
-            });
+                dots.forEach(function (d) {
+                    d.addEventListener('click', function () {
+                        irFoto(parseInt(d.getAttribute('data-galeria-dot'), 10) || 0);
+                    });
+                });
+
+                irFoto(0);
+            }
         }
 
         // --- Aceite de termos habilita o botão de finalizar -----------------
