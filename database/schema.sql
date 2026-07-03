@@ -75,6 +75,7 @@ CREATE TABLE products (
     dias_producao  INT UNSIGNED NOT NULL DEFAULT 0,
     personalizavel TINYINT(1) NOT NULL DEFAULT 0,
     destaque       TINYINT(1) NOT NULL DEFAULT 0,
+    permite_personalizacao TINYINT(1) NOT NULL DEFAULT 0,
     ativo          TINYINT(1) NOT NULL DEFAULT 1,
     criado_em      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),

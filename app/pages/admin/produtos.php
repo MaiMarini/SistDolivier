@@ -68,7 +68,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $descricao      = trim($_POST['descricao'] ?? '');
         $regras         = trim($_POST['regras_produto'] ?? '');
         $dias           = (int) ($_POST['dias_producao'] ?? 0);
-        $personalizavel = isset($_POST['personalizavel']) ? 1 : 0;
         $destaque       = isset($_POST['destaque']) ? 1 : 0;
         $permite_pers   = isset($_POST['permite_personalizacao']) ? 1 : 0;
         $ativo          = isset($_POST['ativo']) ? 1 : 0;
@@ -84,8 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect($destino_erro);
         }
         // Preço obrigatório quando NÃO for personalizável.
-        if (!$personalizavel && $preco_centavos <= 0) {
-            flash('erro', 'Informe um preço válido (ou marque como personalizável).');
+        if (!$permite_pers && $preco_centavos <= 0) {
+            flash('erro', 'Informe um preço válido (ou marque "Permitir personalização").');
             redirect($destino_erro);
         }
 
@@ -97,13 +96,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'UPDATE products
                     SET nome = ?, slug = ?, descricao = ?, regras_produto = ?,
                         preco_centavos = ?, category_id = ?, dias_producao = ?,
-                        personalizavel = ?, destaque = ?, permite_personalizacao = ?, ativo = ?
+                        destaque = ?, permite_personalizacao = ?, ativo = ?
                   WHERE id = ?'
             );
             $stmt->execute([
                 $nome, $slug, ($descricao !== '' ? $descricao : null),
                 ($regras !== '' ? $regras : null), $preco_centavos, $category_id,
-                $dias, $personalizavel, $destaque, $permite_pers, $ativo, $id,
+                $dias, $destaque, $permite_pers, $ativo, $id,
             ]);
             flash('sucesso', 'Produto atualizado.');
             redirect('admin/produtos/editar/' . $id);
@@ -112,13 +111,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = db()->prepare(
             'INSERT INTO products
                 (slug, nome, descricao, regras_produto, preco_centavos, category_id,
-                 dias_producao, personalizavel, destaque, permite_personalizacao, ativo)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                 dias_producao, destaque, permite_personalizacao, ativo)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $slug, $nome, ($descricao !== '' ? $descricao : null),
             ($regras !== '' ? $regras : null), $preco_centavos, $category_id,
-            $dias, $personalizavel, $destaque, $permite_pers, $ativo,
+            $dias, $destaque, $permite_pers, $ativo,
         ]);
         $novo_id = (int) db()->lastInsertId();
         flash('sucesso', 'Produto criado. Agora adicione as imagens.');
@@ -255,7 +254,7 @@ if ($acao === 'novo' || $acao === 'editar') {
     $produto = [
         'id' => 0, 'nome' => '', 'slug' => '', 'descricao' => '', 'regras_produto' => '',
         'preco_centavos' => 0, 'category_id' => null, 'dias_producao' => 0,
-        'personalizavel' => 0, 'destaque' => 0, 'permite_personalizacao' => 0,
+        'destaque' => 0, 'permite_personalizacao' => 0,
         'ativo' => 1, 'imagem' => null,
     ];
     $imagens = [];
@@ -264,7 +263,7 @@ if ($acao === 'novo' || $acao === 'editar') {
         $id = (int) ($params[1] ?? 0);
         $stmt = db()->prepare(
             'SELECT id, nome, slug, descricao, regras_produto, preco_centavos, category_id,
-                    dias_producao, personalizavel, destaque, permite_personalizacao, ativo, imagem
+                    dias_producao, destaque, permite_personalizacao, ativo, imagem
                FROM products WHERE id = ? LIMIT 1'
         );
         $stmt->execute([$id]);
@@ -295,12 +294,14 @@ if ($acao === 'novo' || $acao === 'editar') {
 
         <div class="campo">
             <label for="nome">Nome</label>
-            <input type="text" id="nome" name="nome" value="<?= e($produto['nome']) ?>" required>
+            <input type="text" id="nome" name="nome" value="<?= e($produto['nome']) ?>"
+                   required data-slug-source>
         </div>
         <div class="campo">
             <label for="slug">Slug (endereço)</label>
             <input type="text" id="slug" name="slug" value="<?= e($produto['slug']) ?>"
-                   placeholder="Deixe vazio para gerar a partir do nome">
+                   placeholder="Gerado a partir do nome" data-slug-target>
+            <small>Gerado automaticamente do nome. Edite só se souber o que está fazendo.</small>
         </div>
         <div class="campo">
             <label for="descricao">Descrição</label>
@@ -329,11 +330,6 @@ if ($acao === 'novo' || $acao === 'editar') {
             <label for="dias_producao">Dias de produção</label>
             <input type="number" id="dias_producao" name="dias_producao" min="0"
                    value="<?= (int) $produto['dias_producao'] ?>">
-        </div>
-        <div class="campo campo-inline">
-            <input type="checkbox" id="personalizavel" name="personalizavel" value="1"
-                   <?= $produto['personalizavel'] ? 'checked' : '' ?>>
-            <label for="personalizavel">Produto personalizável (venda via WhatsApp)</label>
         </div>
         <div class="campo campo-inline">
             <input type="checkbox" id="destaque" name="destaque" value="1"
@@ -417,7 +413,7 @@ if ($acao === 'novo' || $acao === 'editar') {
 
 // ----------------------------------------------------------------- LISTAGEM
 $produtos = db()->query(
-    'SELECT p.id, p.nome, p.imagem, p.preco_centavos, p.personalizavel, p.ativo,
+    'SELECT p.id, p.nome, p.imagem, p.preco_centavos, p.ativo,
             c.nome AS categoria
        FROM products p
        LEFT JOIN categories c ON c.id = p.category_id
@@ -449,10 +445,10 @@ ob_start();
                     <td><?= e($p['nome']) ?></td>
                     <td><?= e($p['categoria'] ?? '—') ?></td>
                     <td>
-                        <?php if ($p['personalizavel']): ?>
-                            Sob consulta
-                        <?php else: ?>
+                        <?php if ((int) $p['preco_centavos'] > 0): ?>
                             <?= e(money((int) $p['preco_centavos'])) ?>
+                        <?php else: ?>
+                            Sob consulta
                         <?php endif; ?>
                     </td>
                     <td><?= $p['ativo'] ? 'Sim' : 'Não' ?></td>

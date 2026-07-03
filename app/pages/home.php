@@ -18,7 +18,7 @@ try {
 $destaques = [];
 try {
     $destaques = db()->query(
-        'SELECT slug, nome, preco_centavos, personalizavel, imagem
+        'SELECT slug, nome, preco_centavos, permite_personalizacao, imagem
            FROM products WHERE ativo = 1 AND destaque = 1 ORDER BY id DESC LIMIT 8'
     )->fetchAll();
 } catch (PDOException $e) {

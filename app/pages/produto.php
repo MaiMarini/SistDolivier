@@ -10,7 +10,7 @@ $produto = null;
 if ($slug !== '') {
     $stmt = db()->prepare(
         'SELECT id, slug, nome, descricao, regras_produto, preco_centavos, imagem,
-                dias_producao, personalizavel, permite_personalizacao
+                dias_producao, permite_personalizacao
            FROM products
           WHERE slug = ? AND ativo = 1
           LIMIT 1'
@@ -31,8 +31,6 @@ if (!$produto) {
     view('layout', ['titulo' => 'Não encontrado', 'conteudo' => ob_get_clean()]);
     return;
 }
-
-$personalizavel = !empty($produto['personalizavel']);
 
 // Botão "Personalizar" (WhatsApp): só com permite_personalizacao = 1 e número
 // configurado em settings. Monta o link com a mensagem-modelo.
@@ -91,14 +89,16 @@ ob_start();
     </div>
 
     <div>
-        <?php if ($personalizavel): ?>
+        <?php if ($mostrar_personalizar): ?>
             <span class="etiqueta">Personalizável</span>
         <?php endif; ?>
 
         <h1><?= e($produto['nome']) ?></h1>
 
-        <?php if (!$personalizavel): ?>
+        <?php if ((int) $produto['preco_centavos'] > 0): ?>
             <div class="produto-preco"><?= e(money((int) $produto['preco_centavos'])) ?></div>
+        <?php else: ?>
+            <div class="produto-preco">Sob consulta</div>
         <?php endif; ?>
 
         <?php if ((int) $produto['dias_producao'] > 0): ?>
@@ -115,10 +115,7 @@ ob_start();
                 <a class="btn btn-personalizar" href="<?= e($link_personalizar) ?>"
                    target="_blank" rel="noopener">Personalizar</a>
             <?php endif; ?>
-            <?php if ($personalizavel): ?>
-                <a class="btn wpp" href="<?= e(whatsapp_link($produto)) ?>"
-                   target="_blank" rel="noopener">Pedir pelo WhatsApp</a>
-            <?php else: ?>
+            <?php if ((int) $produto['preco_centavos'] > 0): ?>
                 <form class="campo-inline" method="post" action="<?= e(url('carrinho')) ?>">
                     <?= csrf_input() ?>
                     <input type="hidden" name="acao" value="adicionar">
@@ -128,8 +125,6 @@ ob_start();
                            value="1" min="1" max="99" style="width:80px;">
                     <button class="btn" type="submit">Adicionar ao carrinho</button>
                 </form>
-                <a class="btn wpp" href="<?= e(whatsapp_link($produto)) ?>"
-                   target="_blank" rel="noopener">Tirar dúvida no WhatsApp</a>
             <?php endif; ?>
         </div>
 
