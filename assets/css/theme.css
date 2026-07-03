@@ -723,53 +723,39 @@ body.menu-aberto {
     .produto-form-grid { grid-template-columns: 1fr 1fr; }
 }
 
-/* Seleção de tabelas nutricionais em "chips" (checkbox real escondido) */
-.chips { display: flex; flex-wrap: wrap; gap: .5rem; }
-.chip-input {
+/* Seleção de tabelas nutricionais: lista clicável pelo nome (checkbox escondido) */
+.tn-lista {
+    border: 1px solid rgba(107, 74, 44, .3);
+    border-radius: var(--raio);
+    overflow: hidden;
+    background: #fff;
+}
+.tn-input {
     position: absolute;
     width: 1px;
     height: 1px;
     opacity: 0;
     pointer-events: none;
 }
-.chip {
-    display: inline-flex;
+.tn-item {
+    display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: .5rem;
-    padding: .4rem .9rem;
-    border-radius: 999px;
-    border: 1px solid rgba(107, 74, 44, .4);   /* marrom translúcido */
-    background: #fff;
+    padding: .6rem .85rem;
+    cursor: pointer;
     color: var(--cor-primaria);
     font-weight: 600;
-    cursor: pointer;
+    border-top: 1px solid rgba(107, 74, 44, .15);
 }
-.chip::before {
-    content: "";
-    flex: 0 0 auto;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 2px solid currentColor;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    line-height: 1;
-}
-.chip-input:checked + .chip {
+.tn-item:first-of-type { border-top: 0; }
+.tn-check { width: 18px; height: 18px; flex: 0 0 auto; opacity: 0; }
+.tn-input:checked + .tn-item {
     background: var(--cor-acento);           /* verde-oliva da marca */
-    border-color: var(--cor-acento);
     color: #fff;
 }
-.chip-input:checked + .chip::before {
-    content: "✓";
-    border: 0;
-    background: #fff;
-    color: var(--cor-acento);
-    font-weight: 700;
-}
-.chip-input:focus + .chip { outline: 2px solid var(--cor-destaque); outline-offset: 1px; }
+.tn-input:checked + .tn-item .tn-check { opacity: 1; }
+.tn-input:focus + .tn-item { outline: 2px solid var(--cor-destaque); outline-offset: -2px; }
 
 /* Botão estilizado para escolher fotos (esconde o input cru) */
 .input-arquivo {
@@ -1349,12 +1335,15 @@ body.menu-aberto {
 
 .campo-inline {
     display: flex;
-    align-items: center;
+    align-items: flex-start;   /* quadradinho alinhado à 1ª linha do texto */
     gap: .5rem;
 }
 
 .campo-inline input {
     width: auto;
+}
+.campo-inline input[type="checkbox"] {
+    margin-top: 2px;   /* casa o quadradinho com a 1ª linha do texto */
 }
 
 /* --- Abas (ex.: Entrar / Criar conta) ------------------------------------ */

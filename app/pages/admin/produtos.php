@@ -477,13 +477,18 @@ if ($acao === 'novo' || $acao === 'editar') {
                         <?php if (empty($tabelas_nutri)): ?>
                             <small>Nenhuma tabela nutricional cadastrada.</small>
                         <?php else: ?>
-                            <div class="chips">
+                            <div class="tn-lista">
                                 <?php foreach ($tabelas_nutri as $tn): ?>
                                     <?php $tnid = (int) $tn['id']; ?>
-                                    <input class="chip-input" type="checkbox" id="tn-<?= $tnid ?>"
+                                    <input class="tn-input" type="checkbox" id="tn-<?= $tnid ?>"
                                            name="tabelas[]" value="<?= $tnid ?>"
                                            <?= in_array($tnid, $tabelas_sel, true) ? 'checked' : '' ?>>
-                                    <label class="chip" for="tn-<?= $tnid ?>"><?= e($tn['nome']) ?></label>
+                                    <label class="tn-item" for="tn-<?= $tnid ?>">
+                                        <span><?= e($tn['nome']) ?></span>
+                                        <svg class="tn-check" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                                             aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                                    </label>
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
