@@ -10,7 +10,7 @@ $produto = null;
 if ($slug !== '') {
     $stmt = db()->prepare(
         'SELECT id, slug, nome, descricao, regras_produto, preco_centavos, imagem,
-                dias_producao, personalizavel
+                dias_producao, personalizavel, permite_personalizacao
            FROM products
           WHERE slug = ? AND ativo = 1
           LIMIT 1'
@@ -33,6 +33,26 @@ if (!$produto) {
 }
 
 $personalizavel = !empty($produto['personalizavel']);
+
+// Botão "Personalizar" (WhatsApp): só com permite_personalizacao = 1 e número
+// configurado em settings. Monta o link com a mensagem-modelo.
+$whats_numero = preg_replace('/\D+/', '', (string) cfg('whatsapp_numero', ''));
+$mostrar_personalizar = !empty($produto['permite_personalizacao']) && $whats_numero !== '';
+$link_personalizar = '';
+if ($mostrar_personalizar) {
+    // URL ABSOLUTA da página do produto (base_url do site).
+    $url_produto = url('produto/' . $produto['slug']);
+    $template = (string) cfg(
+        'personalizar_msg_template',
+        'Olá! Quero personalizar o produto {produto}. Link: {link}'
+    );
+    $mensagem = str_replace(
+        ['{produto}', '{link}'],
+        [$produto['nome'], $url_produto],
+        $template
+    );
+    $link_personalizar = 'https://wa.me/' . $whats_numero . '?text=' . rawurlencode($mensagem);
+}
 
 // Galeria: imagens do produto (ordenadas). Capa como imagem inicial.
 $imagens = [];
@@ -91,6 +111,10 @@ ob_start();
         <?php endif; ?>
 
         <div class="produto-acoes">
+            <?php if ($mostrar_personalizar): ?>
+                <a class="btn btn-personalizar" href="<?= e($link_personalizar) ?>"
+                   target="_blank" rel="noopener">Personalizar</a>
+            <?php endif; ?>
             <?php if ($personalizavel): ?>
                 <a class="btn wpp" href="<?= e(whatsapp_link($produto)) ?>"
                    target="_blank" rel="noopener">Pedir pelo WhatsApp</a>

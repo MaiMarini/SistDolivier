@@ -19,7 +19,7 @@ $abas_campos = [
         'inteiro'  => ['parcelamento_max'],
     ],
     'config' => [
-        'texto' => ['regras_texto', 'whatsapp_msg', 'sobre_texto'],
+        'texto' => ['regras_texto', 'whatsapp_msg', 'personalizar_msg_template', 'sobre_texto'],
     ],
 ];
 
@@ -42,6 +42,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $grupo = $abas_campos[$aba];
     foreach (($grupo['texto'] ?? []) as $k) {
         $v = trim($_POST[$k] ?? '');
+        // Garante que a mensagem de personalização nunca perca {produto} e {link}.
+        if ($k === 'personalizar_msg_template') {
+            if (strpos($v, '{produto}') === false) {
+                $v = trim($v . ' {produto}');
+            }
+            if (strpos($v, '{link}') === false) {
+                $v = trim($v . ' {link}');
+            }
+        }
         $stmt->execute([$k, $v, $v]);
     }
     foreach (($grupo['dinheiro'] ?? []) as $k) {
@@ -160,6 +169,13 @@ ob_start();
         <label for="whatsapp_msg">Mensagem padrão do WhatsApp</label>
         <input type="text" id="whatsapp_msg" name="whatsapp_msg" value="<?= e(cfg('whatsapp_msg', '')) ?>">
         <small>Use <code>{produto}</code> para inserir o nome do produto na mensagem.</small>
+    </div>
+    <div class="campo">
+        <label for="personalizar_msg_template">Mensagem de personalização (WhatsApp)</label>
+        <small>Escreva a mensagem que o cliente enviará. Use <code>{produto}</code> onde deve
+               aparecer o nome do produto e <code>{link}</code> onde deve aparecer o link — eles
+               serão preenchidos automaticamente e não podem ser alterados pelo cliente.</small>
+        <textarea id="personalizar_msg_template" name="personalizar_msg_template" rows="4"><?= e(cfg('personalizar_msg_template', '')) ?></textarea>
     </div>
     <div class="campo">
         <label for="sobre_texto">Sobre nós</label>

@@ -376,6 +376,12 @@ body.menu-aberto { overflow: hidden; }
     border-color: #25D366;
     color: #fff;
 }
+/* Botão "Personalizar" em destaque (dourado da marca) */
+.btn.btn-personalizar {
+    background: var(--cor-destaque);
+    border-color: var(--cor-destaque);
+    color: var(--cor-primaria);
+}
 
 /* --- Banner -------------------------------------------------------------- */
 .banner {
