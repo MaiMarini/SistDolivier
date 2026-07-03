@@ -258,36 +258,37 @@ ob_start();
                 Regras e prazos
             </button>
         </div>
-
-        <?php if (!empty($tabelas_nutri)): ?>
-            <div class="acordeon" data-acordeon>
-                <button type="button" class="acordeon-cabeca" data-acordeon-toggle aria-expanded="false">
-                    Informações nutricionais
-                    <span class="acordeon-seta" aria-hidden="true">&#9662;</span>
-                </button>
-                <div class="acordeon-corpo" data-acordeon-corpo>
-                    <div class="acordeon-conteudo">
-                        <?php if (count($tabelas_nutri) === 1): ?>
-                            <?= _tabela_nutri_html($tabelas_nutri[0]) ?>
-                        <?php else: ?>
-                            <div class="nutri-abas" role="tablist">
-                                <?php foreach ($tabelas_nutri as $i => $t): ?>
-                                    <button type="button" class="nutri-aba<?= $i === 0 ? ' ativa' : '' ?>"
-                                            data-nutri-aba="<?= (int) $i ?>"><?= e($t['nome']) ?></button>
-                                <?php endforeach; ?>
-                            </div>
-                            <?php foreach ($tabelas_nutri as $i => $t): ?>
-                                <div class="nutri-painel<?= $i === 0 ? ' ativo' : '' ?>" data-nutri-painel="<?= (int) $i ?>">
-                                    <?= _tabela_nutri_html($t) ?>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        <?php endif; ?>
     </div>
 </div>
+
+<?php if (!empty($tabelas_nutri)): ?>
+    <!-- Informações nutricionais: largura total, abaixo das duas colunas -->
+    <div class="acordeon" data-acordeon>
+        <button type="button" class="acordeon-cabeca" data-acordeon-toggle aria-expanded="false">
+            Informações nutricionais
+            <span class="acordeon-seta" aria-hidden="true">&#9662;</span>
+        </button>
+        <div class="acordeon-corpo" data-acordeon-corpo>
+            <div class="acordeon-conteudo">
+                <?php if (count($tabelas_nutri) === 1): ?>
+                    <?= _tabela_nutri_html($tabelas_nutri[0]) ?>
+                <?php else: ?>
+                    <div class="nutri-abas" role="tablist">
+                        <?php foreach ($tabelas_nutri as $i => $t): ?>
+                            <button type="button" class="nutri-aba<?= $i === 0 ? ' ativa' : '' ?>"
+                                    data-nutri-aba="<?= (int) $i ?>"><?= e($t['nome']) ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php foreach ($tabelas_nutri as $i => $t): ?>
+                        <div class="nutri-painel<?= $i === 0 ? ' ativo' : '' ?>" data-nutri-painel="<?= (int) $i ?>">
+                            <?= _tabela_nutri_html($t) ?>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 
 <?php
 // Conteúdo do modal informativo: regras específicas (se houver, em destaque) +
