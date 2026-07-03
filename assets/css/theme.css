@@ -1064,27 +1064,39 @@ body.menu-aberto { overflow: hidden; }
 .rodape-social-ico { display: inline-flex; }
 .rodape-social-ico svg { width: 20px; height: 20px; }
 
-/* Footer no celular: blocos centralizados e separados */
+/* Footer no celular: compacto, em duas linhas */
 @media (max-width: 767px) {
-    .rodape-grid { text-align: center; gap: 0; }
-    /* Divisória sutil + respiro entre os três blocos */
-    .rodape-grid > * {
-        padding: 1.3rem 0;
-        border-bottom: 1px solid rgba(255, 255, 255, .15);
+    /* Linha 1: marca (esquerda) + navegação (direita) */
+    .rodape-grid {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: .5rem 1rem;
     }
-    .rodape-grid > *:last-child { border-bottom: 0; }
 
-    /* 1) Marca: logo acima do nome/slogan, tudo centralizado */
-    .rodape-marca-bloco { flex-direction: column; align-items: center; gap: .5rem; }
-    .rodape-marca-texto { align-items: center; }
+    /* 1) Marca: logo + textos lado a lado, menores */
+    .rodape-marca-bloco { gap: .5rem; }
+    .rodape-logo-img { height: 36px; }
+    .rodape-marca { font-size: 1.15rem; }
+    .rodape-slogan { font-size: .78rem; }
 
-    /* 2) Navegação: links centralizados */
-    .rodape-nav { align-items: center; }
+    /* 2) Navegação: links à direita, um por linha */
+    .rodape-nav { align-items: flex-end; text-align: right; gap: .3rem; }
 
-    /* 3) Redes: linha de ícones centralizada (sem os rótulos) */
-    .rodape-social { flex-direction: row; justify-content: center; flex-wrap: wrap; gap: 1.2rem; }
+    /* 3) Redes: quebram para a 2ª linha, ícones centralizados, com divisória acima */
+    .rodape-social {
+        flex-basis: 100%;
+        flex-direction: row;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1.2rem;
+        margin-top: .8rem;
+        padding-top: .9rem;
+        border-top: 1px solid rgba(255, 255, 255, .15);
+    }
     .rodape-social-nome { display: none; }
-    .rodape-social-ico svg { width: 26px; height: 26px; }
+    .rodape-social-ico svg { width: 24px; height: 24px; }
 
     .rodape .copyright { text-align: center; }
 }
