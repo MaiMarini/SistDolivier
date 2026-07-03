@@ -666,17 +666,33 @@ body.menu-aberto {
     margin-top: 1rem;
 }
 
-/* Formulário de produto em 2 colunas (dados à esquerda, imagens à direita) */
+/* Formulário de produto — linha 1 em 2 colunas (vira 1 no mobile) */
 .produto-form-grid {
     display: grid;
     grid-template-columns: 1fr;   /* mobile: 1 coluna */
-    gap: 1.5rem;
+    gap: 0 1.5rem;
     align-items: start;
 }
 @media (min-width: 992px) {
-    .produto-form-grid { grid-template-columns: 1.3fr 1fr; }
+    .produto-form-grid { grid-template-columns: 1fr 1fr; }
 }
-.produto-form-grid .formulario { max-width: none; }  /* preenche a coluna */
+
+/* Lista de seleção (checkboxes) de tabelas nutricionais */
+.checklist {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    border-radius: var(--raio);
+    padding: .5rem .7rem;
+    background: #fff;
+}
+.checklist-item {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .2rem 0;
+    font-weight: 400;
+}
 
 /* Área de compra (coluna direita) */
 .produto-desc { margin: .6rem 0 1rem; }
