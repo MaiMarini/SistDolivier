@@ -182,7 +182,7 @@ ob_start();
 <?php else: ?>
     <table class="tabela">
         <thead>
-            <tr><th>Nome</th><th>Última atualização</th><th>Ações</th></tr>
+            <tr><th style="width:100%">Nome</th><th>Última atualização</th><th style="text-align:right">Ações</th></tr>
         </thead>
         <tbody>
             <?php foreach ($tabelas as $r): ?>
@@ -193,7 +193,7 @@ ob_start();
                             ? e(date('d/m/Y H:i', strtotime($r['updated_at'])))
                             : '—' ?>
                     </td>
-                    <td>
+                    <td style="text-align:right; white-space:nowrap;">
                         <a class="btn sec" href="<?= e(url('admin/tabelas-nutricionais/editar/' . $r['id'])) ?>">Editar</a>
                         <form method="post" action="<?= e(url('admin/tabelas-nutricionais')) ?>" style="display:inline"
                               onsubmit="return confirm('Excluir esta tabela nutricional? Ela será removida de todos os produtos que a utilizam.');">
