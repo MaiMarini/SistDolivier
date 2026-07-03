@@ -753,6 +753,7 @@ body.menu-aberto {
     border-radius: var(--raio);
     overflow: hidden;
     background: var(--cor-fundo);
+    cursor: zoom-in;             /* clicar na foto amplia (lightbox) */
 }
 .galeria-foto {
     position: absolute;
@@ -767,12 +768,13 @@ body.menu-aberto {
 }
 .galeria-foto.ativa { opacity: 1; }
 
-/* Zonas de clique (metades) sobre a foto, com setinha discreta no hover */
+/* Zonas de clique ESTREITAS nas bordas (o centro abre o lightbox) */
 .galeria-zona {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 50%;
+    width: 64px;
+    max-width: 22%;
     border: 0;
     background: none;
     cursor: pointer;
@@ -819,26 +821,6 @@ body.menu-aberto {
     cursor: pointer;
 }
 .galeria-dot.ativa { background: #fff; }
-
-/* Botão de ampliar (abre o lightbox) */
-.galeria-expandir {
-    position: absolute;
-    top: .5rem;
-    right: .5rem;
-    z-index: 3;
-    width: 36px;
-    height: 36px;
-    border: 0;
-    border-radius: 8px;
-    background: rgba(0, 0, 0, .4);
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.galeria-expandir:hover { background: rgba(0, 0, 0, .6); }
-.galeria-expandir svg { width: 18px; height: 18px; }
 
 /* Lightbox (foto em tela cheia) */
 .lightbox {

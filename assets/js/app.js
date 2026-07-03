@@ -332,8 +332,9 @@
 
                 var galPrev = galeria.querySelector('[data-galeria-prev]');
                 var galNext = galeria.querySelector('[data-galeria-next]');
-                if (galPrev) { galPrev.addEventListener('click', function () { irFoto(atualFoto - 1); }); }
-                if (galNext) { galNext.addEventListener('click', function () { irFoto(atualFoto + 1); }); }
+                // Zonas de navegação (nas bordas): stopPropagation p/ não abrir o lightbox.
+                if (galPrev) { galPrev.addEventListener('click', function (ev) { ev.stopPropagation(); irFoto(atualFoto - 1); }); }
+                if (galNext) { galNext.addEventListener('click', function (ev) { ev.stopPropagation(); irFoto(atualFoto + 1); }); }
 
                 minis.forEach(function (m) {
                     m.addEventListener('click', function () {
@@ -341,7 +342,8 @@
                     });
                 });
                 dots.forEach(function (d) {
-                    d.addEventListener('click', function () {
+                    d.addEventListener('click', function (ev) {
+                        ev.stopPropagation();
                         irFoto(parseInt(d.getAttribute('data-galeria-dot'), 10) || 0);
                     });
                 });
@@ -358,8 +360,9 @@
                         document.body.classList.remove('menu-aberto');
                     };
 
-                    var expandir = galeria.querySelector('[data-galeria-expandir]');
-                    if (expandir) { expandir.addEventListener('click', abrirLightbox); }
+                    // Clicar na foto (centro do palco) amplia.
+                    var palco = galeria.querySelector('.galeria-palco');
+                    if (palco) { palco.addEventListener('click', abrirLightbox); }
                     var lbFechar = galeria.querySelector('[data-lightbox-fechar]');
                     if (lbFechar) { lbFechar.addEventListener('click', fecharLightbox); }
                     var lbPrev = galeria.querySelector('[data-lightbox-prev]');
