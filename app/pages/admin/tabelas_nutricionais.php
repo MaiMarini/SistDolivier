@@ -170,7 +170,7 @@ if ($acao === 'novo' || $acao === 'editar') {
 
 // Listagem
 $tabelas = db()->query(
-    'SELECT id, nome FROM tabelas_nutricionais ORDER BY nome ASC'
+    'SELECT id, nome, updated_at FROM tabelas_nutricionais ORDER BY nome ASC'
 )->fetchAll();
 
 ob_start();
@@ -182,12 +182,17 @@ ob_start();
 <?php else: ?>
     <table class="tabela">
         <thead>
-            <tr><th>Nome</th><th>Ações</th></tr>
+            <tr><th>Nome</th><th>Última atualização</th><th>Ações</th></tr>
         </thead>
         <tbody>
             <?php foreach ($tabelas as $r): ?>
                 <tr>
                     <td><?= e($r['nome']) ?></td>
+                    <td>
+                        <?= !empty($r['updated_at'])
+                            ? e(date('d/m/Y H:i', strtotime($r['updated_at'])))
+                            : '—' ?>
+                    </td>
                     <td>
                         <a class="btn sec" href="<?= e(url('admin/tabelas-nutricionais/editar/' . $r['id'])) ?>">Editar</a>
                         <form method="post" action="<?= e(url('admin/tabelas-nutricionais')) ?>" style="display:inline"
