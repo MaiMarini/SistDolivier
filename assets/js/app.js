@@ -101,6 +101,35 @@
             });
         }
 
+        // --- Slug automático (nome -> slug) ---------------------------------
+        var slugSource = document.querySelector('[data-slug-source]');
+        var slugTarget = document.querySelector('[data-slug-target]');
+        if (slugSource && slugTarget) {
+            var mapaAcentos = {
+                'á': 'a', 'à': 'a', 'ã': 'a', 'â': 'a', 'ä': 'a', 'å': 'a',
+                'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+                'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
+                'ó': 'o', 'ò': 'o', 'õ': 'o', 'ô': 'o', 'ö': 'o',
+                'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+                'ç': 'c', 'ñ': 'n', 'ý': 'y', 'ÿ': 'y'
+            };
+            var gerarSlug = function (texto) {
+                texto = (texto || '').toLowerCase();
+                for (var k in mapaAcentos) {
+                    if (Object.prototype.hasOwnProperty.call(mapaAcentos, k)) {
+                        texto = texto.split(k).join(mapaAcentos[k]);
+                    }
+                }
+                return texto
+                    .replace(/[^a-z0-9]+/g, '-')   // não-alfanumérico -> hífen (colapsa)
+                    .replace(/^-+|-+$/g, '');       // remove hífens das pontas
+            };
+            // Ao digitar o nome, regenera o slug (inclusive ao renomear).
+            slugSource.addEventListener('input', function () {
+                slugTarget.value = gerarSlug(slugSource.value);
+            });
+        }
+
         // --- Mini-menu do perfil (header) -----------------------------------
         var perfilToggle = document.querySelector('[data-perfil-toggle]');
         var perfilMenu = document.querySelector('[data-perfil-menu]');

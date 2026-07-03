@@ -339,17 +339,28 @@ function admin_menu_ativo(string $secao): string
 // Slugs
 // =============================================================================
 
-/** Gera um slug a partir de um texto (sem acentos, minúsculo, com hifens). */
+/**
+ * Gera um slug a partir de um texto: minúsculo, sem acentos, espaços -> hífen,
+ * só [a-z0-9-], hífens colapsados e sem hífen nas pontas.
+ * Remoção de acentos em PHP puro (não depende de iconv//TRANSLIT nem Normalizer,
+ * que podem faltar em hospedagem compartilhada).
+ */
 function gerar_slug(string $texto): string
 {
-    $texto = trim($texto);
-    if (function_exists('iconv')) {
-        $convertido = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto);
-        if ($convertido !== false) {
-            $texto = $convertido;
-        }
-    }
-    $texto = strtolower($texto);
+    $texto = mb_strtolower(trim($texto), 'UTF-8');
+
+    // Mapa de acentos/caracteres comuns -> ASCII.
+    $mapa = [
+        'á' => 'a', 'à' => 'a', 'ã' => 'a', 'â' => 'a', 'ä' => 'a', 'å' => 'a',
+        'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+        'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
+        'ó' => 'o', 'ò' => 'o', 'õ' => 'o', 'ô' => 'o', 'ö' => 'o',
+        'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u',
+        'ç' => 'c', 'ñ' => 'n', 'ý' => 'y', 'ÿ' => 'y',
+    ];
+    $texto = strtr($texto, $mapa);
+
+    // Troca tudo que não for a-z/0-9 por hífen (já colapsa repetições) e limpa as pontas.
     $texto = preg_replace('/[^a-z0-9]+/', '-', $texto);
     return trim($texto, '-');
 }

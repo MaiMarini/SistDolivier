@@ -139,12 +139,13 @@ if ($acao === 'novo' || $acao === 'editar') {
         <div class="campo">
             <label for="nome">Nome</label>
             <input type="text" id="nome" name="nome"
-                   value="<?= e($categoria['nome']) ?>" required>
+                   value="<?= e($categoria['nome']) ?>" required data-slug-source>
         </div>
         <div class="campo">
             <label for="slug">Slug (endereço)</label>
             <input type="text" id="slug" name="slug" value="<?= e($categoria['slug']) ?>"
-                   placeholder="Deixe vazio para gerar a partir do nome">
+                   placeholder="Gerado a partir do nome" data-slug-target>
+            <small>Gerado automaticamente do nome. Edite só se souber o que está fazendo.</small>
         </div>
         <div class="campo campo-inline">
             <input type="checkbox" id="ativo" name="ativo" value="1"
