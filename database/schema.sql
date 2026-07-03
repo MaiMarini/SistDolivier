@@ -10,6 +10,8 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS order_status_history;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS produto_tabelas_nutricionais;
+DROP TABLE IF EXISTS tabelas_nutricionais;
 DROP TABLE IF EXISTS product_images;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS categories;
@@ -100,6 +102,41 @@ CREATE TABLE product_images (
     CONSTRAINT fk_product_images_product
         FOREIGN KEY (product_id) REFERENCES products (id)
         ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+-- Tabelas nutricionais ("receitas") + ligação com produtos (N:N)
+-- -----------------------------------------------------------------------------
+CREATE TABLE tabelas_nutricionais (
+    id                     INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    nome                   VARCHAR(120) NOT NULL,
+    alergenicos            TEXT NULL,
+    nutri_porcao           VARCHAR(60)  NULL,
+    nutri_medida_caseira   VARCHAR(60)  NULL,
+    nutri_valor_energetico DECIMAL(8,2) NULL,
+    nutri_carboidratos     DECIMAL(8,2) NULL,
+    nutri_acucares_totais  DECIMAL(8,2) NULL,
+    nutri_acucares_add     DECIMAL(8,2) NULL,
+    nutri_proteinas        DECIMAL(8,2) NULL,
+    nutri_gorduras_totais  DECIMAL(8,2) NULL,
+    nutri_gorduras_sat     DECIMAL(8,2) NULL,
+    nutri_gorduras_trans   DECIMAL(8,2) NULL,
+    nutri_fibra            DECIMAL(8,2) NULL,
+    nutri_sodio            DECIMAL(8,2) NULL,
+    created_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE produto_tabelas_nutricionais (
+    produto_id            INT UNSIGNED NOT NULL,
+    tabela_nutricional_id INT UNSIGNED NOT NULL,
+    ordem                 INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (produto_id, tabela_nutricional_id),
+    KEY idx_ptn_tabela (tabela_nutricional_id),
+    CONSTRAINT fk_ptn_produto FOREIGN KEY (produto_id)
+        REFERENCES products (id) ON DELETE CASCADE,
+    CONSTRAINT fk_ptn_tabela FOREIGN KEY (tabela_nutricional_id)
+        REFERENCES tabelas_nutricionais (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------

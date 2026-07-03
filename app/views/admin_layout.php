@@ -15,6 +15,7 @@ $ehAdmin  = ($u !== null && !empty($u['is_admin']));
 $menu = [
     'Painel'        => ['', 'admin'],
     'Produtos'      => ['produtos', 'admin/produtos'],
+    'Tabelas nutricionais' => ['receitas', 'admin/receitas'],
     'Categorias'    => ['categorias', 'admin/categorias'],
     'Home'          => ['banners', 'admin/banners'],
     'Configurações' => ['configuracoes', 'admin/configuracoes'],
