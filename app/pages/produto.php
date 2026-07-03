@@ -118,11 +118,11 @@ if (!function_exists('_tabela_nutri_html')) {
                 <div><strong>Alérgenos:</strong> <?= nl2br(e($t['alergenicos'])) ?></div>
             </div>
         <?php endif; ?>
-        <?php if (!empty($t['nutri_porcao']) || !empty($t['nutri_medida_caseira'])): ?>
+        <?php if (!empty($t['nutri_porcao']) || !empty($t['nutri_porcao_individual'])): ?>
             <p class="nutri-porcao">
                 <?php if (!empty($t['nutri_porcao'])): ?>Porção: <strong><?= e($t['nutri_porcao']) ?></strong><?php endif; ?>
-                <?php if (!empty($t['nutri_porcao']) && !empty($t['nutri_medida_caseira'])): ?> &middot; <?php endif; ?>
-                <?php if (!empty($t['nutri_medida_caseira'])): ?>Medida caseira: <strong><?= e($t['nutri_medida_caseira']) ?></strong><?php endif; ?>
+                <?php if (!empty($t['nutri_porcao']) && !empty($t['nutri_porcao_individual'])): ?> &middot; <?php endif; ?>
+                <?php if (!empty($t['nutri_porcao_individual'])): ?>Porção individual: <strong><?= e($t['nutri_porcao_individual']) ?></strong><?php endif; ?>
             </p>
         <?php endif; ?>
         <?php

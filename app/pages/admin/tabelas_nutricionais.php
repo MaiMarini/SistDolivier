@@ -13,7 +13,7 @@ exigir_admin();
 // Campos: rótulos e tipo (texto x número). Todos opcionais, exceto "nome".
 $campos_texto = [
     'nutri_porcao'         => 'Porção (ex.: 30 g)',
-    'nutri_medida_caseira' => 'Medida caseira (ex.: 1 unidade)',
+    'nutri_porcao_individual' => 'Porção individual (ex.: 1 unidade)',
 ];
 $campos_num = [
     'nutri_valor_energetico' => 'Valor energético (kcal)',

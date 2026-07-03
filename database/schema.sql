@@ -112,7 +112,7 @@ CREATE TABLE tabelas_nutricionais (
     nome                   VARCHAR(120) NOT NULL,
     alergenicos            TEXT NULL,
     nutri_porcao           VARCHAR(60)  NULL,
-    nutri_medida_caseira   VARCHAR(60)  NULL,
+    nutri_porcao_individual VARCHAR(60) NULL,
     nutri_valor_energetico DECIMAL(8,2) NULL,
     nutri_carboidratos     DECIMAL(8,2) NULL,
     nutri_acucares_totais  DECIMAL(8,2) NULL,
