@@ -890,6 +890,48 @@ body.menu-aberto { overflow: hidden; }
     .admin-menu a, .admin-menu .menu-breve { justify-content: flex-start; gap: .4rem; }
 }
 
+/* --- Reordenação de categorias (admin) ----------------------------------- */
+.col-mover { width: 64px; white-space: nowrap; }
+.arrastar-handle {
+    cursor: grab;
+    font-size: 1.2rem;
+    color: #999;
+    user-select: none;
+}
+.ordenar-setas { display: none; }
+.btn-seta {
+    background: var(--cor-fundo);
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+    cursor: pointer;
+    color: var(--cor-texto);
+}
+.btn-seta:disabled { opacity: .4; cursor: not-allowed; }
+
+/* No celular: esconde a alça (evita brigar com a rolagem) e mostra as setas. */
+@media (max-width: 767px) {
+    .arrastar-handle { display: none; }
+    .ordenar-setas { display: inline-flex; gap: .3rem; }
+}
+
+/* Aviso rápido de "ordem salva" */
+.reorder-feedback {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 1400;
+    background: var(--cor-acento);
+    color: #fff;
+    padding: .55rem 1rem;
+    border-radius: var(--raio);
+    box-shadow: var(--sombra);
+    font-weight: 700;
+}
+.reorder-feedback.erro { background: #9a2a1a; }
+
 /* --- Mensagens flash ----------------------------------------------------- */
 .flash {
     border-radius: var(--raio);

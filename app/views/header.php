@@ -11,7 +11,7 @@ $usuario = usuario_atual();
 $categorias = [];
 try {
     $stmt = db()->query(
-        'SELECT slug, nome FROM categories WHERE ativo = 1 ORDER BY ordem ASC, nome ASC'
+        'SELECT slug, nome FROM categories WHERE ativo = 1 ORDER BY ordem ASC, id ASC'
     );
     $categorias = $stmt->fetchAll();
 } catch (PDOException $e) {

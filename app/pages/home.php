@@ -37,7 +37,7 @@ try {
                   ORDER BY p.id DESC LIMIT 1) AS capa
            FROM categories c
           WHERE c.ativo = 1
-          ORDER BY c.ordem ASC, c.nome ASC"
+          ORDER BY c.ordem ASC, c.id ASC"
     )->fetchAll();
 } catch (PDOException $e) {
     $colecoes = [];
