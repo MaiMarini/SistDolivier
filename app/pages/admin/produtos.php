@@ -287,6 +287,7 @@ if ($acao === 'novo' || $acao === 'editar') {
     ?>
     <p><a href="<?= e(url('admin/produtos')) ?>">&larr; Voltar para produtos</a></p>
 
+    <div class="produto-form-grid">
     <form class="formulario" method="post" action="<?= e(url('admin/produtos')) ?>">
         <?= csrf_input() ?>
         <input type="hidden" name="op" value="salvar">
@@ -354,8 +355,9 @@ if ($acao === 'novo' || $acao === 'editar') {
         <button class="btn" type="submit">Salvar</button>
     </form>
 
+    <div class="produto-form-lado">
     <?php if ($produto['id'] > 0): ?>
-        <h2 class="mt-1">Imagens</h2>
+        <h2 style="margin-top:0;">Imagens</h2>
 
         <form class="formulario" method="post" action="<?= e(url('admin/produtos')) ?>"
               enctype="multipart/form-data">
@@ -405,7 +407,11 @@ if ($acao === 'novo' || $acao === 'editar') {
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
+    <?php else: ?>
+        <p><small>As imagens ficam disponíveis após salvar o produto.</small></p>
     <?php endif; ?>
+    </div><!-- .produto-form-lado -->
+    </div><!-- .produto-form-grid -->
     <?php
     view('admin_layout', ['titulo' => $titulo, 'conteudo' => ob_get_clean()]);
     return;

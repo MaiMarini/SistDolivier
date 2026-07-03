@@ -666,6 +666,18 @@ body.menu-aberto {
     margin-top: 1rem;
 }
 
+/* Formulário de produto em 2 colunas (dados à esquerda, imagens à direita) */
+.produto-form-grid {
+    display: grid;
+    grid-template-columns: 1fr;   /* mobile: 1 coluna */
+    gap: 1.5rem;
+    align-items: start;
+}
+@media (min-width: 992px) {
+    .produto-form-grid { grid-template-columns: 1.3fr 1fr; }
+}
+.produto-form-grid .formulario { max-width: none; }  /* preenche a coluna */
+
 /* Área de compra (coluna direita) */
 .produto-desc { margin: .6rem 0 1rem; }
 
