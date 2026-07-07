@@ -1608,31 +1608,33 @@ body.menu-aberto {
     margin: .4rem 0 0;
 }
 
-/* --- Showcase rotativo de destaques (/mais-vendidos) --------------------- */
-/* Faixa creme arredondada, largura total do conteúdo. Mobile: empilha.       */
+/* --- Showcase imersivo de destaques (/mais-vendidos) --------------------- */
+/* Faixa panorâmica largura total: foto de fundo + escurecido + texto.        */
 .showcase {
-    background: #F1E6CD;
-    /* creme da marca, um tom mais quente que o fundo, para destacar */
-    border-radius: 1.5rem;
-    padding: 2rem 1.5rem;
+    position: relative;
+    left: 50%;
+    width: 100vw;
+    margin-left: -50vw;
+    /* full-bleed: ocupa a largura inteira da tela */
     margin-bottom: 2.5rem;
-    box-shadow: var(--sombra);
+    overflow: hidden;
+    background: var(--cor-primaria);
+    /* fundo de segurança atrás das fotos */
 }
 
 .showcase-palco {
     display: grid;
-    /* todos os slides empilhados na mesma célula: a altura acompanha o maior */
+    /* slides empilhados na mesma célula */
+    height: 420px;
+    /* mobile: faixa mais alta para o texto respirar */
 }
 
 .showcase-slide {
     grid-area: 1 / 1;
-    display: flex;
-    flex-direction: column;
-    /* mobile: foto em cima, info embaixo */
-    align-items: center;
-    gap: 1.5rem;
+    position: relative;
+    background: var(--cor-primaria);
     opacity: 0;
-    /* Entra saindo de desfocado (blur ~14px) para focado; foto + texto juntos. */
+    /* Entra de desfocado (blur ~14px) para focado; foto e texto juntos. */
     filter: blur(14px);
     transition: opacity .9s ease, filter .9s ease;
     pointer-events: none;
@@ -1651,37 +1653,44 @@ body.menu-aberto {
     }
 }
 
-.showcase-foto {
-    width: 100%;
-    max-width: 300px;
-    aspect-ratio: 1 / 1;
-    border-radius: 1.2rem;
-    overflow: hidden;
-    box-shadow: var(--sombra);
-    background: var(--cor-superficie);
-    flex-shrink: 0;
-}
-
-.showcase-foto img,
-.showcase-foto-vazia {
+/* Foto de capa preenchendo toda a faixa (corta topo/base por ser 1:1). */
+.showcase-bg {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center;
     display: block;
+    -webkit-user-drag: none;
 }
 
-.showcase-info {
+/* Escurecido da esquerda (mais escuro) para a direita, para o texto ler bem. */
+.showcase-grad {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(74, 51, 32, .66), rgba(74, 51, 32, .12));
+}
+
+.showcase-conteudo {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    max-width: var(--largura-max);
+    margin: 0 auto;
+    padding: 0 1.5rem;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
+    justify-content: center;
+    align-items: flex-start;
     gap: .6rem;
+    color: #fff;
 }
 
 .showcase-selo {
     display: inline-block;
-    background: var(--cor-destaque);
-    color: var(--cor-texto);
+    background: rgba(255, 255, 255, .9);
+    color: var(--cor-primaria);
     font-size: .72rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -1692,27 +1701,45 @@ body.menu-aberto {
 
 .showcase-nome {
     font-family: var(--fonte-titulo);
-    color: var(--cor-primaria);
+    color: #fff;
     font-size: 2rem;
     margin: 0;
+    max-width: 18ch;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, .35);
 }
 
 .showcase-preco {
     font-weight: 700;
-    color: var(--cor-pop);
-    /* terracota da marca */
+    color: #fff;
     font-size: 1.3rem;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, .35);
 }
 
-.showcase-info .btn {
+/* Botão "Ver mais" pequeno e discreto: fundo branco, texto terracota. */
+.showcase-vermais {
     margin-top: .4rem;
+    background: #fff;
+    color: var(--cor-pop);
+    border-color: #fff;
+    padding: .35rem .8rem;
+    font-size: 12.5px;
 }
 
+.showcase-vermais:hover {
+    background: #fff;
+    opacity: .9;
+}
+
+/* Dots na base, claros sobre a foto. */
 .showcase-dots {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 14px;
+    z-index: 2;
     display: flex;
     justify-content: center;
     gap: .5rem;
-    margin-top: 1.6rem;
 }
 
 .showcase-dot {
@@ -1721,39 +1748,25 @@ body.menu-aberto {
     padding: 0;
     border: 0;
     border-radius: 999px;
-    background: rgba(107, 74, 44, .25);
+    background: rgba(255, 255, 255, .5);
     cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
     transition: background .2s ease, transform .2s ease;
 }
 
 .showcase-dot.ativo {
-    background: var(--cor-pop);
+    background: #fff;
     transform: scale(1.2);
 }
 
 @media (min-width: 768px) {
-    .showcase {
-        padding: 2.8rem 3rem;
-    }
-
-    .showcase-slide {
-        flex-direction: row;
-        /* desktop: foto à esquerda, info à direita */
-        gap: 2.5rem;
-    }
-
-    .showcase-foto {
-        flex: 0 0 300px;
-    }
-
-    .showcase-info {
-        flex: 1;
-        align-items: flex-start;
-        text-align: left;
+    .showcase-palco {
+        height: 340px;
+        /* desktop: faixa panorâmica ~21:9 */
     }
 
     .showcase-nome {
-        font-size: 2.4rem;
+        font-size: 2.8rem;
     }
 }
 

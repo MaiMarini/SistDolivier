@@ -27,17 +27,14 @@ ob_start();
              aria-roledescription="carrossel" aria-label="Produtos em destaque">
         <div class="showcase-palco">
             <?php foreach ($produtos as $i => $p): ?>
-                <?php $capa = imagem_miniatura($p['imagem'] ?? ''); ?>
+                <?php $arq = $p['imagem'] ?? ''; ?>
                 <div class="showcase-slide<?= $i === 0 ? ' ativo' : '' ?>" data-showcase-slide="<?= (int) $i ?>">
-                    <div class="showcase-foto">
-                        <?php if ($capa !== ''): ?>
-                            <img src="<?= e(url('assets/uploads/' . $capa)) ?>"
-                                 alt="<?= e($p['nome'] ?? '') ?>" draggable="false">
-                        <?php else: ?>
-                            <span class="showcase-foto-vazia" aria-hidden="true"></span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="showcase-info">
+                    <?php if ($arq !== ''): ?>
+                        <img class="showcase-bg" src="<?= e(url('assets/uploads/' . $arq)) ?>"
+                             alt="<?= e($p['nome'] ?? '') ?>" draggable="false">
+                    <?php endif; ?>
+                    <span class="showcase-grad" aria-hidden="true"></span>
+                    <div class="showcase-conteudo">
                         <span class="showcase-selo">Destaque</span>
                         <h2 class="showcase-nome"><?= e($p['nome'] ?? '') ?></h2>
                         <?php if ((int) ($p['preco_centavos'] ?? 0) > 0): ?>
@@ -45,7 +42,7 @@ ob_start();
                         <?php else: ?>
                             <span class="showcase-preco">Sob consulta</span>
                         <?php endif; ?>
-                        <a class="btn" href="<?= e(url('produto/' . ($p['slug'] ?? ''))) ?>">Ver mais</a>
+                        <a class="btn showcase-vermais" href="<?= e(url('produto/' . ($p['slug'] ?? ''))) ?>">Ver mais</a>
                     </div>
                 </div>
             <?php endforeach; ?>
