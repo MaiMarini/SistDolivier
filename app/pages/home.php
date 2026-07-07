@@ -92,12 +92,38 @@ ob_start();
 <?php view('tarja'); ?>
 
 <?php if (!empty($destaques)): ?>
-    <section class="secao">
-        <p class="eyebrow">Os queridinhos</p>
-        <h2 class="secao-titulo">Mais vendidos</h2>
-        <div class="grade">
+    <section class="secao mais-vendidos" data-carrossel-h>
+        <div class="mv-cabeca">
+            <p class="eyebrow">Os queridinhos</p>
+            <h2 class="secao-titulo">Mais vendidos</h2>
+            <a class="btn sec" href="<?= e(url('#colecoes')) ?>">Ver todos</a>
+            <div class="mv-setas">
+                <button class="mv-seta" type="button" data-mv-prev
+                        aria-label="Anterior" disabled>&lsaquo;</button>
+                <button class="mv-seta" type="button" data-mv-next
+                        aria-label="Próximo">&rsaquo;</button>
+            </div>
+        </div>
+
+        <div class="mv-trilho" data-mv-trilho>
             <?php foreach ($destaques as $p): ?>
-                <?php view('_card_produto', ['p' => $p]); ?>
+                <?php $capa = imagem_miniatura($p['imagem'] ?? ''); ?>
+                <a class="mv-card" href="<?= e(url('produto/' . ($p['slug'] ?? ''))) ?>">
+                    <?php if ($capa !== ''): ?>
+                        <img class="mv-card-img" src="<?= e(url('assets/uploads/' . $capa)) ?>"
+                             alt="<?= e($p['nome'] ?? '') ?>" draggable="false">
+                    <?php else: ?>
+                        <span class="mv-card-img"></span>
+                    <?php endif; ?>
+                    <span class="mv-card-corpo">
+                        <span class="mv-card-nome"><?= e($p['nome'] ?? '') ?></span>
+                        <?php if ((int) ($p['preco_centavos'] ?? 0) > 0): ?>
+                            <span class="mv-card-preco"><?= e(money((int) $p['preco_centavos'])) ?></span>
+                        <?php else: ?>
+                            <span class="mv-card-preco">Sob consulta</span>
+                        <?php endif; ?>
+                    </span>
+                </a>
             <?php endforeach; ?>
         </div>
     </section>
@@ -106,7 +132,7 @@ ob_start();
 <?php view('_bloco_destaque'); ?>
 
 <?php if (!empty($colecoes)): ?>
-    <section class="secao">
+    <section class="secao" id="colecoes">
         <p class="eyebrow">Explore</p>
         <h2 class="secao-titulo">Coleções</h2>
         <div class="grade-colecoes">

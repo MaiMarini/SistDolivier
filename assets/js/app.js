@@ -385,6 +385,84 @@
             iniciar();
         });
 
+        // --- "Mais vendidos": carrossel horizontal (setas + arraste) --------
+        document.querySelectorAll('[data-carrossel-h]').forEach(function (raiz) {
+            var trilho = raiz.querySelector('[data-mv-trilho]');
+            if (!trilho) { return; }
+            var btnPrev = raiz.querySelector('[data-mv-prev]');
+            var btnNext = raiz.querySelector('[data-mv-next]');
+
+            // Atualiza o estado (habilitado/desabilitado) das setas conforme a posição.
+            var atualizarSetas = function () {
+                var max = trilho.scrollWidth - trilho.clientWidth;
+                var x = trilho.scrollLeft;
+                if (btnPrev) { btnPrev.disabled = x <= 1; }
+                if (btnNext) { btnNext.disabled = x >= max - 1; }
+            };
+
+            // Quanto rolar por clique: ~90% da área visível.
+            var passo = function () { return Math.max(160, trilho.clientWidth * 0.9); };
+            if (btnPrev) {
+                btnPrev.addEventListener('click', function () {
+                    trilho.scrollBy({ left: -passo(), behavior: 'smooth' });
+                });
+            }
+            if (btnNext) {
+                btnNext.addEventListener('click', function () {
+                    trilho.scrollBy({ left: passo(), behavior: 'smooth' });
+                });
+            }
+
+            trilho.addEventListener('scroll', atualizarSetas, { passive: true });
+            window.addEventListener('resize', atualizarSetas);
+
+            // Arrastar/deslizar (swipe no celular já é nativo; aqui habilita o drag no desktop).
+            var baixo = false, xIni = 0, scrollIni = 0, moveu = false;
+            trilho.addEventListener('pointerdown', function (e) {
+                // Só arraste "de mouse"; toque usa o scroll nativo do navegador.
+                if (e.pointerType === 'touch') { return; }
+                baixo = true;
+                moveu = false;
+                xIni = e.clientX;
+                scrollIni = trilho.scrollLeft;
+                trilho.classList.add('arrastando');
+            });
+            trilho.addEventListener('pointermove', function (e) {
+                if (!baixo) { return; }
+                var dx = e.clientX - xIni;
+                if (Math.abs(dx) > 4) { moveu = true; }
+                trilho.scrollLeft = scrollIni - dx;
+            });
+            var fim = function (e) {
+                if (!baixo) { return; }
+                baixo = false;
+                trilho.classList.remove('arrastando');
+                // Evita que o "soltar" após arrastar dispare o clique no card (navegação).
+                if (moveu && e && e.target) {
+                    var link = e.target.closest('a');
+                    if (link) {
+                        var suprimir = function (ev) {
+                            ev.preventDefault();
+                            link.removeEventListener('click', suprimir, true);
+                        };
+                        link.addEventListener('click', suprimir, true);
+                    }
+                }
+                atualizarSetas();
+            };
+            trilho.addEventListener('pointerup', fim);
+            trilho.addEventListener('pointercancel', function () {
+                baixo = false;
+                trilho.classList.remove('arrastando');
+            });
+            // Não bloquear a seleção/arraste de imagens durante o drag.
+            trilho.addEventListener('dragstart', function (e) {
+                if (baixo) { e.preventDefault(); }
+            });
+
+            atualizarSetas();
+        });
+
         // --- Seletor de quantidade em pílula (− num +) ----------------------
         var qtdPilula = document.querySelector('[data-qtd]');
         if (qtdPilula) {

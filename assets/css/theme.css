@@ -1596,6 +1596,153 @@ body.menu-aberto {
     box-shadow: 0 8px 22px rgba(0, 0, 0, .12);
 }
 
+/* --- "Mais vendidos": carrossel horizontal ------------------------------- */
+/* Mobile: cabeça (título + botão + setas) em cima, produtos correm embaixo.  */
+.mais-vendidos {
+    display: block;
+}
+
+.mv-cabeca .secao-titulo {
+    margin-bottom: .8rem;
+}
+
+.mv-setas {
+    display: flex;
+    gap: .5rem;
+    margin: 1rem 0 1.2rem;
+}
+
+.mv-seta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    border: 2px solid var(--cor-primaria);
+    background: transparent;
+    color: var(--cor-primaria);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: opacity .15s ease, background .15s ease, color .15s ease;
+}
+
+.mv-seta:hover:not([disabled]) {
+    background: var(--cor-primaria);
+    color: #fff;
+}
+
+.mv-seta[disabled] {
+    opacity: .3;
+    cursor: default;
+}
+
+/* Trilho rolável: os cards ficam numa fileira que desliza na horizontal. */
+.mv-trilho {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: .8rem;
+    /* espaço para a sombra dos cards não ser cortada */
+    scrollbar-width: thin;
+}
+
+.mv-trilho::-webkit-scrollbar {
+    height: 6px;
+}
+
+.mv-trilho::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, .18);
+    border-radius: 999px;
+}
+
+.mv-trilho.arrastando {
+    scroll-behavior: auto;
+    cursor: grabbing;
+    scroll-snap-type: none;
+    /* enquanto arrasta, sem "puxão" do snap */
+}
+
+.mv-card {
+    flex: 0 0 auto;
+    width: 200px;
+    /* largura fixa: o próximo card aparece cortado, indicando que há mais */
+    scroll-snap-align: start;
+    background: var(--cor-superficie);
+    border-radius: var(--raio);
+    box-shadow: var(--sombra);
+    overflow: hidden;
+    color: var(--cor-texto);
+    display: flex;
+    flex-direction: column;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.mv-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .12);
+    text-decoration: none;
+}
+
+.mv-card-img {
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    object-fit: cover;
+    background: var(--cor-fundo);
+    display: block;
+}
+
+.mv-card-corpo {
+    padding: .7rem .8rem;
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+}
+
+.mv-card-nome {
+    font-family: var(--fonte-titulo);
+    color: var(--cor-primaria);
+    font-size: 1rem;
+    line-height: 1.25;
+}
+
+.mv-card-preco {
+    font-weight: 700;
+    color: var(--cor-pop);
+    /* terracota da marca */
+}
+
+@media (min-width: 768px) {
+    /* Desktop: cabeça fixa à esquerda; produtos rolam à direita. */
+    .mais-vendidos {
+        display: flex;
+        align-items: flex-start;
+        gap: 2rem;
+    }
+
+    .mv-cabeca {
+        flex: 0 0 210px;
+    }
+
+    .mv-setas {
+        margin-bottom: 0;
+    }
+
+    .mv-trilho {
+        flex: 1 1 auto;
+        min-width: 0;
+        /* permite o trilho encolher dentro do flex e ativar o scroll */
+    }
+
+    .mv-card {
+        width: 220px;
+    }
+}
+
 /* Coleções (categorias) na home */
 .grade-colecoes {
     display: grid;
