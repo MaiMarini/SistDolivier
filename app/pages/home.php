@@ -52,7 +52,7 @@ ob_start();
                 <div class="carrossel-slide<?= $i === 0 ? ' ativo' : '' ?>">
                     <?php
                     $img = '<img src="' . e(url('assets/uploads/' . $b['imagem'])) . '"'
-                         . ' alt="' . e($b['titulo'] ?? '') . '" draggable="false">';
+                        . ' alt="' . e($b['titulo'] ?? '') . '" draggable="false">';
                     ?>
                     <?php if (!empty($b['link'])): ?>
                         <a href="<?= e($b['link']) ?>"><?= $img ?></a>
@@ -67,15 +67,12 @@ ob_start();
         </div>
 
         <?php if (count($banners) > 1): ?>
-            <button class="carrossel-seta prev" type="button"
-                    data-carrossel-prev aria-label="Banner anterior">&lsaquo;</button>
-            <button class="carrossel-seta next" type="button"
-                    data-carrossel-next aria-label="Próximo banner">&rsaquo;</button>
+            <button class="carrossel-seta prev" type="button" data-carrossel-prev aria-label="Banner anterior">&lsaquo;</button>
+            <button class="carrossel-seta next" type="button" data-carrossel-next aria-label="Próximo banner">&rsaquo;</button>
             <div class="carrossel-dots">
                 <?php foreach ($banners as $i => $b): ?>
-                    <button class="carrossel-dot" type="button"
-                            data-carrossel-dot="<?= (int) $i ?>"
-                            aria-label="Ir para o slide <?= (int) $i + 1 ?>"></button>
+                    <button class="carrossel-dot" type="button" data-carrossel-dot="<?= (int) $i ?>"
+                        aria-label="Ir para o slide <?= (int) $i + 1 ?>"></button>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
@@ -98,10 +95,8 @@ ob_start();
             <h2 class="secao-titulo">Mais vendidos</h2>
             <a class="btn sec" href="<?= e(url('mais-vendidos')) ?>">Ver todos</a>
             <div class="mv-setas">
-                <button class="mv-seta" type="button" data-mv-prev
-                        aria-label="Anterior" disabled>&lsaquo;</button>
-                <button class="mv-seta" type="button" data-mv-next
-                        aria-label="Próximo">&rsaquo;</button>
+                <button class="mv-seta" type="button" data-mv-prev aria-label="Anterior" disabled>&lsaquo;</button>
+                <button class="mv-seta" type="button" data-mv-next aria-label="Próximo">&rsaquo;</button>
             </div>
         </div>
 
@@ -111,8 +106,8 @@ ob_start();
                     <?php $capa = imagem_miniatura($p['imagem'] ?? ''); ?>
                     <a class="mv-card" href="<?= e(url('produto/' . ($p['slug'] ?? ''))) ?>">
                         <?php if ($capa !== ''): ?>
-                            <img class="mv-card-img" src="<?= e(url('assets/uploads/' . $capa)) ?>"
-                                 alt="<?= e($p['nome'] ?? '') ?>" draggable="false">
+                            <img class="mv-card-img" src="<?= e(url('assets/uploads/' . $capa)) ?>" alt="<?= e($p['nome'] ?? '') ?>"
+                                draggable="false">
                         <?php else: ?>
                             <span class="mv-card-img"></span>
                         <?php endif; ?>
@@ -145,8 +140,7 @@ ob_start();
             <div class="grade-colecoes">
                 <?php foreach ($colecoes as $c): ?>
                     <?php $capa = imagem_miniatura($c['capa'] ?? ''); ?>
-                    <a class="colecao<?= $capa !== '' ? ' tem-capa' : '' ?>"
-                       href="<?= e(url('categoria/' . $c['slug'])) ?>">
+                    <a class="colecao<?= $capa !== '' ? ' tem-capa' : '' ?>" href="<?= e(url('categoria/' . $c['slug'])) ?>">
                         <?php if ($capa !== ''): ?>
                             <img class="colecao-capa" src="<?= e(url('assets/uploads/' . $capa)) ?>" alt="">
                         <?php endif; ?>
@@ -157,12 +151,15 @@ ob_start();
 
             <?php if ($tem_col_img): ?>
                 <aside class="colecoes-lateral">
-                    <img class="colecoes-lateral-img"
-                         src="<?= e(asset('assets/uploads/' . $col_img)) ?>" alt="">
+                    <img class="colecoes-lateral-img" src="<?= e(asset('assets/uploads/' . $col_img)) ?>" alt="">
                 </aside>
             <?php endif; ?>
         </div>
     </section>
+    <!-- LightWidget WIDGET -->
+    <script src="https://cdn.lightwidget.com/widgets/lightwidget.js"></script><iframe
+        src="//lightwidget.com/widgets/ec33c7aba9c15ac6ad023adb68c7a044.html" scrolling="no" allowtransparency="true"
+        class="lightwidget-widget" style="width:100%;border:0;overflow:hidden;"></iframe>
 <?php endif; ?>
 <?php
 view('layout', ['titulo' => 'Início', 'conteudo' => ob_get_clean()]);
