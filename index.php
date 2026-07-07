@@ -40,6 +40,7 @@ $rotas = [
     ''             => 'home',
     'home'         => 'home',
     'categoria'    => 'categoria',
+    'mais-vendidos' => 'mais_vendidos',
     'produto'      => 'produto',
     'carrinho'     => 'carrinho',
     'sobre'        => 'sobre',

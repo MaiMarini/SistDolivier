@@ -463,6 +463,51 @@
             atualizarSetas();
         });
 
+        // --- Showcase rotativo de destaques (fade em loop + dots) -----------
+        document.querySelectorAll('[data-showcase]').forEach(function (raiz) {
+            var slides = raiz.querySelectorAll('[data-showcase-slide]');
+            var dots = raiz.querySelectorAll('[data-showcase-dot]');
+            var total = slides.length;
+            if (total === 0) { return; }
+
+            var atual = 0;
+            function ir(i) {
+                atual = (i + total) % total;
+                slides.forEach(function (s, idx) { s.classList.toggle('ativo', idx === atual); });
+                dots.forEach(function (d, idx) {
+                    d.classList.toggle('ativo', idx === atual);
+                    d.setAttribute('aria-current', idx === atual ? 'true' : 'false');
+                });
+            }
+
+            // Dots navegáveis (existem só quando há mais de um produto).
+            dots.forEach(function (d) {
+                d.addEventListener('click', function () {
+                    ir(parseInt(d.getAttribute('data-showcase-dot'), 10) || 0);
+                    reiniciar();
+                });
+            });
+
+            ir(0);
+
+            // 1 produto (estático) ou preferência por menos movimento: sem rotação.
+            var reduz = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var timer = null;
+            function parar() { if (timer) { clearInterval(timer); timer = null; } }
+            function iniciar() {
+                if (raiz.hasAttribute('data-showcase-estatico') || total <= 1 || reduz) { return; }
+                parar();
+                timer = setInterval(function () { ir(atual + 1); }, 4500);
+            }
+            function reiniciar() { parar(); iniciar(); }
+
+            // Pausa o loop com o mouse sobre a seção.
+            raiz.addEventListener('mouseenter', parar);
+            raiz.addEventListener('mouseleave', iniciar);
+
+            iniciar();
+        });
+
         // --- Seletor de quantidade em pílula (− num +) ----------------------
         var qtdPilula = document.querySelector('[data-qtd]');
         if (qtdPilula) {

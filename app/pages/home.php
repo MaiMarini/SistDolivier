@@ -96,7 +96,7 @@ ob_start();
         <div class="mv-cabeca">
             <p class="eyebrow">Os queridinhos</p>
             <h2 class="secao-titulo">Mais vendidos</h2>
-            <a class="btn sec" href="<?= e(url('#colecoes')) ?>">Ver todos</a>
+            <a class="btn sec" href="<?= e(url('mais-vendidos')) ?>">Ver todos</a>
             <div class="mv-setas">
                 <button class="mv-seta" type="button" data-mv-prev
                         aria-label="Anterior" disabled>&lsaquo;</button>
