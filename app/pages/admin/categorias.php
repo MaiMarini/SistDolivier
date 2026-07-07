@@ -177,12 +177,18 @@ ob_start();
     <p><small>Arraste pela alça (☰) para reordenar; no celular, use as setas ↑↓.</small></p>
     <table class="tabela">
         <thead>
-            <tr><th></th><th>Nome</th><th>Slug</th><th>Ativa</th><th>Ações</th></tr>
+            <tr>
+                <th class="t-centro"></th>
+                <th>Nome</th>
+                <th>Slug</th>
+                <th class="t-centro">Ativa</th>
+                <th class="col-acoes">Ações</th>
+            </tr>
         </thead>
         <tbody id="cats-tbody">
             <?php foreach ($categorias as $c): ?>
                 <tr data-id="<?= (int) $c['id'] ?>">
-                    <td class="col-mover">
+                    <td class="col-mover t-centro">
                         <span class="arrastar-handle" title="Arraste para reordenar" aria-hidden="true">&#9776;</span>
                         <span class="ordenar-setas">
                             <button type="button" class="btn-seta" data-subir aria-label="Mover para cima">&uarr;</button>
@@ -191,8 +197,8 @@ ob_start();
                     </td>
                     <td><?= e($c['nome']) ?></td>
                     <td><?= e($c['slug']) ?></td>
-                    <td><?= $c['ativo'] ? 'Sim' : 'Não' ?></td>
-                    <td>
+                    <td class="t-centro"><?= $c['ativo'] ? 'Sim' : 'Não' ?></td>
+                    <td class="col-acoes">
                         <a class="btn sec" href="<?= e(url('admin/categorias/editar/' . $c['id'])) ?>">Editar</a>
                         <form method="post" action="<?= e(url('admin/categorias')) ?>"
                               style="display:inline"

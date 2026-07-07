@@ -605,6 +605,20 @@
             iniciar();
         });
 
+        // --- Nome do arquivo escolhido em uploads simples -------------------
+        // Para inputs [data-arquivo-nome], mostra "arquivo.ext selecionado" no
+        // .arquivo-info do mesmo .campo (mantendo o texto padrão quando vazio).
+        document.querySelectorAll('input[type="file"][data-arquivo-nome]').forEach(function (input) {
+            var campo = input.closest('.campo');
+            var alvo = campo ? campo.querySelector('[data-arquivo-nome-alvo]') : null;
+            if (!alvo) { return; }
+            var padrao = alvo.textContent;
+            input.addEventListener('change', function () {
+                var f = input.files && input.files[0];
+                alvo.textContent = f ? (f.name + ' selecionado') : padrao;
+            });
+        });
+
         // --- Frases do marquee (editar tudo; adicionar/remover linhas) ------
         var marqueeForm = document.querySelector('[data-marquee-form]');
         if (marqueeForm) {

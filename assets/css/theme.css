@@ -2190,6 +2190,20 @@ body.menu-aberto {
     border-bottom: 0;
 }
 
+/* Alinhamento por coluna: aplicar a MESMA classe no <th> e na <td> da coluna,
+   para o cabeçalho casar exatamente com o conteúdo. Padrão (sem classe) = left.
+   Padding horizontal é o mesmo em th/td (regra acima), então tudo alinha. */
+.tabela th.t-centro,
+.tabela td.t-centro {
+    text-align: center;
+}
+
+.tabela th.col-acoes,
+.tabela td.col-acoes {
+    text-align: right;
+    white-space: nowrap;
+}
+
 /* --- Passos de acompanhamento do pedido ---------------------------------- */
 .passos {
     list-style: none;

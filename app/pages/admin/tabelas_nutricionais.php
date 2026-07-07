@@ -176,24 +176,24 @@ ob_start();
 <?php if (empty($tabelas)): ?>
     <p>Nenhuma tabela nutricional cadastrada.</p>
 <?php else: ?>
-    <table class="tabela" style="table-layout:fixed;">
+    <table class="tabela">
         <thead>
             <tr>
-                <th style="width:34%">Nome</th>
-                <th style="width:33%">Última atualização</th>
-                <th style="width:33%; text-align:right">Ações</th>
+                <th>Nome</th>
+                <th class="t-centro">Última atualização</th>
+                <th class="col-acoes">Ações</th>
             </tr>
         </thead>
         <tbody>
             <?php foreach ($tabelas as $r): ?>
                 <tr>
                     <td><?= e($r['nome']) ?></td>
-                    <td>
+                    <td class="t-centro">
                         <?= !empty($r['updated_at'])
                             ? e(date('d/m/Y H:i', strtotime($r['updated_at'])))
                             : '—' ?>
                     </td>
-                    <td style="text-align:right; white-space:nowrap;">
+                    <td class="col-acoes">
                         <a class="btn sec" href="<?= e(url('admin/tabelas-nutricionais/editar/' . $r['id'])) ?>">Editar</a>
                         <form method="post" action="<?= e(url('admin/tabelas-nutricionais')) ?>" style="display:inline"
                               onsubmit="return confirm('Excluir esta tabela nutricional? Ela será removida de todos os produtos que a utilizam.');">

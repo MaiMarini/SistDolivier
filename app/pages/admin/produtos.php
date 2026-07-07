@@ -707,18 +707,18 @@ ob_start();
     <table class="tabela">
         <thead>
             <tr>
-                <th></th>
+                <th class="t-centro"></th>
                 <th>Nome</th>
                 <th>Categoria</th>
-                <th>Preço</th>
-                <th>Ativo</th>
-                <th>Ações</th>
+                <th class="t-centro">Preço</th>
+                <th class="t-centro">Ativo</th>
+                <th class="col-acoes">Ações</th>
             </tr>
         </thead>
         <tbody>
             <?php foreach ($produtos as $p): ?>
                 <tr>
-                    <td style="width:60px;">
+                    <td class="t-centro" style="width:60px;">
                         <?php if (!empty($p['imagem'])): ?>
                             <img src="<?= e(url('assets/uploads/' . imagem_miniatura($p['imagem']))) ?>" alt=""
                                 style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
@@ -728,15 +728,15 @@ ob_start();
                     </td>
                     <td><?= e($p['nome']) ?></td>
                     <td><?= e($p['categoria'] ?? '—') ?></td>
-                    <td>
+                    <td class="t-centro">
                         <?php if ((int) $p['preco_centavos'] > 0): ?>
                             <?= e(money((int) $p['preco_centavos'])) ?>
                         <?php else: ?>
                             Sob consulta
                         <?php endif; ?>
                     </td>
-                    <td><?= $p['ativo'] ? 'Sim' : 'Não' ?></td>
-                    <td>
+                    <td class="t-centro"><?= $p['ativo'] ? 'Sim' : 'Não' ?></td>
+                    <td class="col-acoes">
                         <a class="btn sec" href="<?= e(url('admin/produtos/editar/' . $p['id'])) ?>">Editar</a>
                         <form method="post" action="<?= e(url('admin/produtos')) ?>" style="display:inline"
                             onsubmit="return confirm('Excluir este produto e suas imagens?');">

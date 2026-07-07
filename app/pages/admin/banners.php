@@ -392,12 +392,18 @@ ob_start();
 <?php else: ?>
     <table class="tabela">
         <thead>
-            <tr><th></th><th>Título</th><th>Ordem</th><th>Ativo</th><th>Ações</th></tr>
+            <tr>
+                <th class="t-centro"></th>
+                <th>Título</th>
+                <th class="t-centro">Ordem</th>
+                <th class="t-centro">Ativo</th>
+                <th class="col-acoes">Ações</th>
+            </tr>
         </thead>
         <tbody>
             <?php foreach ($banners as $b): ?>
                 <tr>
-                    <td style="width:90px;">
+                    <td class="t-centro" style="width:90px;">
                         <?php if (!empty($b['imagem'])): ?>
                             <img src="<?= e(url('assets/uploads/' . imagem_miniatura($b['imagem']))) ?>"
                                  alt="" style="width:80px;height:45px;object-fit:cover;border-radius:6px;">
@@ -406,9 +412,9 @@ ob_start();
                         <?php endif; ?>
                     </td>
                     <td><?= e($b['titulo'] ?: '—') ?></td>
-                    <td><?= (int) $b['ordem'] ?></td>
-                    <td><?= $b['ativo'] ? 'Sim' : 'Não' ?></td>
-                    <td>
+                    <td class="t-centro"><?= (int) $b['ordem'] ?></td>
+                    <td class="t-centro"><?= $b['ativo'] ? 'Sim' : 'Não' ?></td>
+                    <td class="col-acoes">
                         <a class="btn sec" href="<?= e(url('admin/banners/editar/' . $b['id'])) ?>">Editar</a>
                         <form method="post" action="<?= e(url('admin/banners')) ?>" style="display:inline"
                               onsubmit="return confirm('Excluir este banner?');">
@@ -522,8 +528,20 @@ $bloco_video = cfg('bloco_editorial_video', '');
         <?php endif; ?>
         <div class="campo">
             <label for="bloco_editorial_video">Vídeo ou GIF (deixe vazio para manter o atual)</label>
-            <input type="file" id="bloco_editorial_video" name="bloco_editorial_video"
-                   accept="video/mp4,video/webm,image/gif">
+            <input class="input-arquivo" type="file" id="bloco_editorial_video" name="bloco_editorial_video"
+                   accept="video/mp4,video/webm,image/gif" data-arquivo-nome>
+            <div class="arquivo-linha">
+                <label for="bloco_editorial_video" class="btn btn-arquivo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14l4-4h6" />
+                        <line x1="18" y1="14" x2="18" y2="20" />
+                        <line x1="15" y1="17" x2="21" y2="17" />
+                    </svg>
+                    Escolher arquivo
+                </label>
+                <span class="arquivo-info" data-arquivo-nome-alvo>Nenhum arquivo escolhido</span>
+            </div>
             <small>Use um vídeo curto (5–10 segundos) ou GIF, sem som. Toca sozinho em loop,
                    como um fundo animado. Máx. 15 MB.</small>
         </div>
@@ -591,8 +609,20 @@ $bloco_video = cfg('bloco_editorial_video', '');
     <?php endif; ?>
     <div class="campo">
         <label for="colecoes_imagem_lateral">Imagem lateral (deixe vazio para manter a atual)</label>
-        <input type="file" id="colecoes_imagem_lateral" name="colecoes_imagem_lateral"
-               accept="image/jpeg,image/png,image/webp">
+        <input class="input-arquivo" type="file" id="colecoes_imagem_lateral" name="colecoes_imagem_lateral"
+               accept="image/jpeg,image/png,image/webp" data-arquivo-nome>
+        <div class="arquivo-linha">
+            <label for="colecoes_imagem_lateral" class="btn btn-arquivo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14l4-4h6" />
+                    <line x1="18" y1="14" x2="18" y2="20" />
+                    <line x1="15" y1="17" x2="21" y2="17" />
+                </svg>
+                Escolher arquivo
+            </label>
+            <span class="arquivo-info" data-arquivo-nome-alvo>Nenhum arquivo escolhido</span>
+        </div>
         <small>A imagem é otimizada automaticamente (máx. 1200px, JPEG).</small>
     </div>
 
