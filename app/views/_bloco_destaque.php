@@ -36,9 +36,13 @@ if ($titulo === '' && $subtitulo === '' && !$tem_midia && !$tem_botao) {
         </div>
     <?php elseif ($tem_video): ?>
         <div class="bloco-foto">
-            <video src="<?= e(asset('assets/uploads/' . $video)) ?>"
-                   autoplay loop muted playsinline
-                   aria-hidden="true"></video>
+            <?php if (strtolower(pathinfo($video, PATHINFO_EXTENSION)) === 'gif'): ?>
+                <img src="<?= e(asset('assets/uploads/' . $video)) ?>" alt="<?= e($titulo) ?>">
+            <?php else: ?>
+                <video src="<?= e(asset('assets/uploads/' . $video)) ?>"
+                       autoplay loop muted playsinline
+                       aria-hidden="true"></video>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 

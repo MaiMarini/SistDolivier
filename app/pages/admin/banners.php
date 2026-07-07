@@ -22,7 +22,7 @@ function _apagar_upload(string $nome): void
     }
 }
 
-/** Upload de vídeo do bloco editorial: MP4/WebM, tipo real validado, máx. 15 MB. */
+/** Upload da mídia animada do bloco editorial: MP4/WebM/GIF, tipo real validado, máx. 15 MB. */
 function _bloco_upload_video(array $arquivo): array
 {
     $max = 15 * 1024 * 1024; // 15 MB
@@ -47,11 +47,11 @@ function _bloco_upload_video(array $arquivo): array
         return ['ok' => false, 'erro' => 'Arquivo de upload inválido.'];
     }
 
-    // 1) Extensão (MP4 ou WebM).
+    // 1) Extensão (MP4, WebM ou GIF).
     $ext = strtolower(pathinfo($arquivo['name'] ?? '', PATHINFO_EXTENSION));
-    $exts_ok = ['mp4' => 'video/mp4', 'webm' => 'video/webm'];
-    if (!isset($exts_ok[$ext])) {
-        return ['ok' => false, 'erro' => 'Formato não suportado. Envie um vídeo MP4 (ou WebM).'];
+    $exts_ok = ['mp4', 'webm', 'gif'];
+    if (!in_array($ext, $exts_ok, true)) {
+        return ['ok' => false, 'erro' => 'Formato não suportado. Envie um vídeo MP4/WebM ou um GIF.'];
     }
 
     // 2) Tipo MIME real do arquivo.
@@ -63,13 +63,14 @@ function _bloco_upload_video(array $arquivo): array
     } elseif (function_exists('mime_content_type')) {
         $mime = (string) mime_content_type($tmp);
     }
-    // Aceita os MIME de vídeo esperados. application/octet-stream é tolerado
-    // porque alguns servidores não identificam o container MP4/WebM — mas só
-    // quando a extensão já foi validada acima.
-    $mimes_video = ['video/mp4', 'video/webm', 'video/x-m4v'];
-    $mime_ok = in_array($mime, $mimes_video, true) || $mime === 'application/octet-stream';
+    // Aceita os MIME esperados. application/octet-stream é tolerado apenas para
+    // vídeo (mp4/webm), porque alguns servidores não identificam o container;
+    // o GIF é sempre detectado corretamente como image/gif.
+    $mimes_ok = ['video/mp4', 'video/webm', 'video/x-m4v', 'image/gif'];
+    $mime_ok = in_array($mime, $mimes_ok, true)
+        || ($mime === 'application/octet-stream' && $ext !== 'gif');
     if (!$mime_ok) {
-        return ['ok' => false, 'erro' => 'Formato não suportado. Envie um vídeo MP4 (ou WebM).'];
+        return ['ok' => false, 'erro' => 'Formato não suportado. Envie um vídeo MP4/WebM ou um GIF.'];
     }
 
     $dir = ROOT_PATH . '/assets/uploads';
@@ -477,16 +478,21 @@ $bloco_video = cfg('bloco_editorial_video', '');
     <div data-bloco-midia="video"<?= $bloco_tipo === 'video' ? '' : ' hidden' ?>>
         <?php if ($bloco_video !== '' && is_file(ROOT_PATH . '/assets/uploads/' . $bloco_video)): ?>
             <div class="campo">
-                <label>Vídeo atual</label>
-                <video src="<?= e(asset('assets/uploads/' . $bloco_video)) ?>" muted loop autoplay playsinline
-                       style="max-width:100%;border-radius:var(--raio);"></video>
+                <label>Mídia atual</label>
+                <?php if (strtolower(pathinfo($bloco_video, PATHINFO_EXTENSION)) === 'gif'): ?>
+                    <img src="<?= e(asset('assets/uploads/' . $bloco_video)) ?>" alt=""
+                         style="max-width:100%;border-radius:var(--raio);">
+                <?php else: ?>
+                    <video src="<?= e(asset('assets/uploads/' . $bloco_video)) ?>" muted loop autoplay playsinline
+                           style="max-width:100%;border-radius:var(--raio);"></video>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
         <div class="campo">
-            <label for="bloco_editorial_video">Vídeo (deixe vazio para manter o atual)</label>
+            <label for="bloco_editorial_video">Vídeo ou GIF (deixe vazio para manter o atual)</label>
             <input type="file" id="bloco_editorial_video" name="bloco_editorial_video"
-                   accept="video/mp4,video/webm">
-            <small>Use um vídeo curto (5–10 segundos), sem som. Ele toca sozinho em loop,
+                   accept="video/mp4,video/webm,image/gif">
+            <small>Use um vídeo curto (5–10 segundos) ou GIF, sem som. Toca sozinho em loop,
                    como um fundo animado. Máx. 15 MB.</small>
         </div>
     </div>
