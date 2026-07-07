@@ -47,7 +47,14 @@ function _bloco_upload_video(array $arquivo): array
         return ['ok' => false, 'erro' => 'Arquivo de upload inválido.'];
     }
 
-    // Tipo real do arquivo.
+    // 1) Extensão (MP4 ou WebM).
+    $ext = strtolower(pathinfo($arquivo['name'] ?? '', PATHINFO_EXTENSION));
+    $exts_ok = ['mp4' => 'video/mp4', 'webm' => 'video/webm'];
+    if (!isset($exts_ok[$ext])) {
+        return ['ok' => false, 'erro' => 'Formato não suportado. Envie um vídeo MP4 (ou WebM).'];
+    }
+
+    // 2) Tipo MIME real do arquivo.
     $mime = '';
     if (function_exists('finfo_open')) {
         $fi = finfo_open(FILEINFO_MIME_TYPE);
@@ -56,8 +63,12 @@ function _bloco_upload_video(array $arquivo): array
     } elseif (function_exists('mime_content_type')) {
         $mime = (string) mime_content_type($tmp);
     }
-    $permitidos = ['video/mp4' => 'mp4', 'video/webm' => 'webm'];
-    if (!isset($permitidos[$mime])) {
+    // Aceita os MIME de vídeo esperados. application/octet-stream é tolerado
+    // porque alguns servidores não identificam o container MP4/WebM — mas só
+    // quando a extensão já foi validada acima.
+    $mimes_video = ['video/mp4', 'video/webm', 'video/x-m4v'];
+    $mime_ok = in_array($mime, $mimes_video, true) || $mime === 'application/octet-stream';
+    if (!$mime_ok) {
         return ['ok' => false, 'erro' => 'Formato não suportado. Envie um vídeo MP4 (ou WebM).'];
     }
 
@@ -65,7 +76,7 @@ function _bloco_upload_video(array $arquivo): array
     if (!is_dir($dir) || !is_writable($dir)) {
         return ['ok' => false, 'erro' => 'A pasta de uploads não tem permissão de escrita.'];
     }
-    $nome = uniqid('vid_', false) . '.' . $permitidos[$mime];
+    $nome = uniqid('vid_', false) . '.' . $ext;
     if (!move_uploaded_file($tmp, $dir . '/' . $nome)) {
         return ['ok' => false, 'erro' => 'Não foi possível salvar o vídeo.'];
     }
