@@ -97,12 +97,15 @@ ob_start();
             <p class="eyebrow">Os queridinhos</p>
             <h2 class="secao-titulo">Mais vendidos</h2>
             <a class="btn sec" href="<?= e(url('mais-vendidos')) ?>">Ver todos</a>
+            <div class="mv-setas">
+                <button class="mv-seta" type="button" data-mv-prev
+                        aria-label="Anterior" disabled>&lsaquo;</button>
+                <button class="mv-seta" type="button" data-mv-next
+                        aria-label="Próximo">&rsaquo;</button>
+            </div>
         </div>
 
         <div class="mv-carrossel">
-            <button class="mv-seta prev" type="button" data-mv-prev
-                    aria-label="Anterior" disabled>&lsaquo;</button>
-
             <div class="mv-trilho" data-mv-trilho>
                 <?php foreach ($destaques as $p): ?>
                     <?php $capa = imagem_miniatura($p['imagem'] ?? ''); ?>
@@ -124,9 +127,6 @@ ob_start();
                     </a>
                 <?php endforeach; ?>
             </div>
-
-            <button class="mv-seta next" type="button" data-mv-next
-                    aria-label="Próximo">&rsaquo;</button>
         </div>
     </section>
 <?php endif; ?>

@@ -1773,21 +1773,28 @@ body.menu-aberto {
     display: block;
 }
 
+.mv-cabeca .eyebrow {
+    font-size: 15px;
+}
+
 .mv-cabeca .secao-titulo {
+    font-size: 40px;
     margin-bottom: .8rem;
 }
 
-/* Faixa do carrossel: referência para posicionar as setas nas laterais. */
+/* Faixa do carrossel (referência de layout no desktop). */
 .mv-carrossel {
     position: relative;
 }
 
+/* Setas na cabeça (abaixo do "Ver todos"). */
+.mv-setas {
+    display: flex;
+    gap: .5rem;
+    margin-top: 1rem;
+}
+
 .mv-seta {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 3;
-    /* acima dos cards; só a área da seta (42px) captura clique */
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1795,21 +1802,12 @@ body.menu-aberto {
     height: 42px;
     border-radius: 999px;
     border: 2px solid var(--cor-primaria);
-    background: var(--cor-superficie);
+    background: transparent;
     color: var(--cor-primaria);
     font-size: 1.5rem;
     line-height: 1;
     cursor: pointer;
-    box-shadow: var(--sombra);
     transition: opacity .15s ease, background .15s ease, color .15s ease;
-}
-
-.mv-seta.prev {
-    left: 6px;
-}
-
-.mv-seta.next {
-    right: 6px;
 }
 
 .mv-seta:hover:not([disabled]) {
@@ -1817,11 +1815,10 @@ body.menu-aberto {
     color: #fff;
 }
 
-/* Sem mais conteúdo para aquele lado: some (não ocupa nem captura clique). */
+/* Sem mais conteúdo para aquele lado: seta apagada e sem clique. */
 .mv-seta[disabled] {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
+    opacity: .3;
+    cursor: default;
 }
 
 /* Trilho rolável: fileira que desliza na horizontal, SEM barra de rolagem. */
