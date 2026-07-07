@@ -1768,7 +1768,7 @@ body.menu-aberto {
 }
 
 /* --- "Mais vendidos": carrossel horizontal ------------------------------- */
-/* Mobile: cabeça (título + botão + setas) em cima, produtos correm embaixo.  */
+/* Mobile: cabeça (título + botão) em cima, produtos correm embaixo.          */
 .mais-vendidos {
     display: block;
 }
@@ -1777,13 +1777,17 @@ body.menu-aberto {
     margin-bottom: .8rem;
 }
 
-.mv-setas {
-    display: flex;
-    gap: .5rem;
-    margin: 1rem 0 1.2rem;
+/* Faixa do carrossel: referência para posicionar as setas nas laterais. */
+.mv-carrossel {
+    position: relative;
 }
 
 .mv-seta {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    /* acima dos cards; só a área da seta (42px) captura clique */
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1791,12 +1795,21 @@ body.menu-aberto {
     height: 42px;
     border-radius: 999px;
     border: 2px solid var(--cor-primaria);
-    background: transparent;
+    background: var(--cor-superficie);
     color: var(--cor-primaria);
     font-size: 1.5rem;
     line-height: 1;
     cursor: pointer;
+    box-shadow: var(--sombra);
     transition: opacity .15s ease, background .15s ease, color .15s ease;
+}
+
+.mv-seta.prev {
+    left: 6px;
+}
+
+.mv-seta.next {
+    right: 6px;
 }
 
 .mv-seta:hover:not([disabled]) {
@@ -1804,12 +1817,14 @@ body.menu-aberto {
     color: #fff;
 }
 
+/* Sem mais conteúdo para aquele lado: some (não ocupa nem captura clique). */
 .mv-seta[disabled] {
-    opacity: .3;
-    cursor: default;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
-/* Trilho rolável: os cards ficam numa fileira que desliza na horizontal. */
+/* Trilho rolável: fileira que desliza na horizontal, SEM barra de rolagem. */
 .mv-trilho {
     display: flex;
     gap: 1rem;
@@ -1817,18 +1832,17 @@ body.menu-aberto {
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: .8rem;
-    /* espaço para a sombra dos cards não ser cortada */
-    scrollbar-width: thin;
+    padding-bottom: .5rem;
+    /* Esconde a barra de rolagem mantendo a rolagem funcional. */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE / Edge antigo */
 }
 
 .mv-trilho::-webkit-scrollbar {
-    height: 6px;
-}
-
-.mv-trilho::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, .18);
-    border-radius: 999px;
+    display: none;
+    /* Chrome / Safari */
 }
 
 .mv-trilho.arrastando {
@@ -1899,14 +1913,10 @@ body.menu-aberto {
         flex: 0 0 210px;
     }
 
-    .mv-setas {
-        margin-bottom: 0;
-    }
-
-    .mv-trilho {
+    .mv-carrossel {
         flex: 1 1 auto;
         min-width: 0;
-        /* permite o trilho encolher dentro do flex e ativar o scroll */
+        /* permite o carrossel encolher dentro do flex e ativar o scroll */
     }
 
     .mv-card {

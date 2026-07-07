@@ -385,41 +385,137 @@
             iniciar();
         });
 
-        // --- "Mais vendidos": carrossel horizontal (setas + arraste) --------
+        // --- "Mais vendidos": carrossel horizontal (auto + setas + arraste) --
         document.querySelectorAll('[data-carrossel-h]').forEach(function (raiz) {
             var trilho = raiz.querySelector('[data-mv-trilho]');
             if (!trilho) { return; }
             var btnPrev = raiz.querySelector('[data-mv-prev]');
             var btnNext = raiz.querySelector('[data-mv-next]');
+            var cards = trilho.querySelectorAll('.mv-card');
+
+            var reduz = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            // Easing cubic-bezier(.33, 1, .68, 1): desacelera suave no fim.
+            var easing = (function (x1, y1, x2, y2) {
+                function calc(t, a, b) {
+                    var A = 1 - 3 * b + 3 * a, B = 3 * b - 6 * a, C = 3 * a;
+                    return ((A * t + B) * t + C) * t;
+                }
+                function slope(t, a, b) {
+                    var A = 1 - 3 * b + 3 * a, B = 3 * b - 6 * a, C = 3 * a;
+                    return (3 * A * t + 2 * B) * t + C;
+                }
+                return function (x) {
+                    if (x <= 0) { return 0; }
+                    if (x >= 1) { return 1; }
+                    var t = x;
+                    for (var i = 0; i < 5; i++) {
+                        var s = slope(t, x1, x2);
+                        if (s === 0) { break; }
+                        t -= (calc(t, x1, x2) - x) / s;
+                    }
+                    return calc(t, y1, y2);
+                };
+            })(0.33, 1, 0.68, 1);
+
+            var maxScroll = function () { return trilho.scrollWidth - trilho.clientWidth; };
 
             // Atualiza o estado (habilitado/desabilitado) das setas conforme a posição.
             var atualizarSetas = function () {
-                var max = trilho.scrollWidth - trilho.clientWidth;
-                var x = trilho.scrollLeft;
+                var max = maxScroll(), x = trilho.scrollLeft;
                 if (btnPrev) { btnPrev.disabled = x <= 1; }
                 if (btnNext) { btnNext.disabled = x >= max - 1; }
             };
 
-            // Quanto rolar por clique: ~90% da área visível.
-            var passo = function () { return Math.max(160, trilho.clientWidth * 0.9); };
-            if (btnPrev) {
-                btnPrev.addEventListener('click', function () {
-                    trilho.scrollBy({ left: -passo(), behavior: 'smooth' });
-                });
+            // Scroll animado por rAF (controla duração e easing; o nativo não deixa).
+            var animId = null;
+            function limparAnim() {
+                if (animId) { cancelAnimationFrame(animId); animId = null; }
+                trilho.style.scrollSnapType = '';
+                trilho.style.scrollBehavior = '';
             }
-            if (btnNext) {
-                btnNext.addEventListener('click', function () {
-                    trilho.scrollBy({ left: passo(), behavior: 'smooth' });
-                });
+            function animarPara(destino, dur) {
+                limparAnim();
+                var origem = trilho.scrollLeft, dist = destino - origem;
+                if (Math.abs(dist) < 1) { return; }
+                // Durante a animação, sem snap/smooth nativo brigando com o rAF.
+                trilho.style.scrollSnapType = 'none';
+                trilho.style.scrollBehavior = 'auto';
+                var inicio = null;
+                function frame(ts) {
+                    if (inicio === null) { inicio = ts; }
+                    var p = Math.min(1, (ts - inicio) / dur);
+                    trilho.scrollLeft = origem + dist * easing(p);
+                    if (p < 1) { animId = requestAnimationFrame(frame); }
+                    else { animId = null; trilho.style.scrollSnapType = ''; trilho.style.scrollBehavior = ''; }
+                }
+                animId = requestAnimationFrame(frame);
             }
 
+            // Largura de avanço de um card (distância entre dois cards vizinhos).
+            var passoCard = function () {
+                if (cards.length > 1) { return cards[1].offsetLeft - cards[0].offsetLeft; }
+                return Math.max(160, trilho.clientWidth * 0.9);
+            };
+
+            // --- Transição automática: um card por vez, em loop -----------
+            var autoTimer = null;
+            var pausadoHover = false;
+            var PAUSA = 2000, DESLIZE = 1200;
+
+            function podeAuto() { return !reduz && cards.length > 1 && maxScroll() > 1; }
+            function pararAuto() {
+                if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+                limparAnim();
+            }
+            function avancar() {
+                var max = maxScroll();
+                var destino = (trilho.scrollLeft >= max - 1)
+                    ? 0                                              // fim -> volta ao começo
+                    : Math.min(trilho.scrollLeft + passoCard(), max);
+                animarPara(destino, DESLIZE);
+            }
+            function agendarAuto() {
+                pararAuto();
+                if (!podeAuto() || pausadoHover) { return; }
+                autoTimer = setTimeout(function ciclo() {
+                    avancar();
+                    autoTimer = setTimeout(ciclo, PAUSA + DESLIZE);
+                }, PAUSA);
+            }
+
+            // Setas: deslizam um "trecho" e pausam/retomam o automático.
+            function deslizar(dir) {
+                pararAuto();
+                var max = maxScroll();
+                var destino = dir > 0
+                    ? Math.min(trilho.scrollLeft + passoCard(), max)
+                    : Math.max(trilho.scrollLeft - passoCard(), 0);
+                animarPara(destino, 700);
+                if (!pausadoHover) { agendarAuto(); }   // retoma depois (se não estiver no hover)
+            }
+            if (btnPrev) { btnPrev.addEventListener('click', function () { deslizar(-1); }); }
+            if (btnNext) { btnNext.addEventListener('click', function () { deslizar(1); }); }
+
             trilho.addEventListener('scroll', atualizarSetas, { passive: true });
-            window.addEventListener('resize', atualizarSetas);
+            window.addEventListener('resize', function () { atualizarSetas(); });
+
+            // Pausa no hover (mouse/caneta); retoma ao sair. Toque não conta como hover.
+            raiz.addEventListener('pointerenter', function (e) {
+                if (e.pointerType === 'touch') { return; }
+                pausadoHover = true;
+                pararAuto();
+            });
+            raiz.addEventListener('pointerleave', function (e) {
+                if (e.pointerType === 'touch') { return; }
+                pausadoHover = false;
+                agendarAuto();
+            });
 
             // Arrastar/deslizar (swipe no celular já é nativo; aqui habilita o drag no desktop).
             var baixo = false, xIni = 0, scrollIni = 0, moveu = false;
             trilho.addEventListener('pointerdown', function (e) {
-                // Só arraste "de mouse"; toque usa o scroll nativo do navegador.
+                pararAuto();                              // não deixa o card "fugir" ao interagir
                 if (e.pointerType === 'touch') { return; }
                 baixo = true;
                 moveu = false;
@@ -434,33 +530,33 @@
                 trilho.scrollLeft = scrollIni - dx;
             });
             var fim = function (e) {
-                if (!baixo) { return; }
-                baixo = false;
-                trilho.classList.remove('arrastando');
-                // Evita que o "soltar" após arrastar dispare o clique no card (navegação).
-                if (moveu && e && e.target) {
-                    var link = e.target.closest('a');
-                    if (link) {
-                        var suprimir = function (ev) {
-                            ev.preventDefault();
-                            link.removeEventListener('click', suprimir, true);
-                        };
-                        link.addEventListener('click', suprimir, true);
+                if (baixo) {
+                    baixo = false;
+                    trilho.classList.remove('arrastando');
+                    // Evita que o "soltar" após arrastar dispare o clique no card (navegação).
+                    if (moveu && e && e.target) {
+                        var link = e.target.closest('a');
+                        if (link) {
+                            var suprimir = function (ev) {
+                                ev.preventDefault();
+                                link.removeEventListener('click', suprimir, true);
+                            };
+                            link.addEventListener('click', suprimir, true);
+                        }
                     }
+                    atualizarSetas();
                 }
-                atualizarSetas();
+                if (!pausadoHover) { agendarAuto(); }     // toque/drag: retoma o automático
             };
             trilho.addEventListener('pointerup', fim);
-            trilho.addEventListener('pointercancel', function () {
-                baixo = false;
-                trilho.classList.remove('arrastando');
-            });
+            trilho.addEventListener('pointercancel', fim);
             // Não bloquear a seleção/arraste de imagens durante o drag.
             trilho.addEventListener('dragstart', function (e) {
                 if (baixo) { e.preventDefault(); }
             });
 
             atualizarSetas();
+            agendarAuto();
         });
 
         // --- Showcase rotativo de destaques (fade em loop + dots) -----------
