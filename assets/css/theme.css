@@ -2065,6 +2065,15 @@ body.menu-aberto {
     margin: 0;
 }
 
+/* Linha de frase do marquee: input + botão remover centralizados na vertical. */
+.marquee-linha {
+    align-items: center;
+}
+
+.marquee-linha .btn {
+    flex: 0 0 auto;
+}
+
 /* --- Formulários --------------------------------------------------------- */
 .formulario {
     background: var(--cor-superficie);

@@ -605,6 +605,52 @@
             iniciar();
         });
 
+        // --- Frases do marquee (editar tudo; adicionar/remover linhas) ------
+        var marqueeForm = document.querySelector('[data-marquee-form]');
+        if (marqueeForm) {
+            var mqLista = marqueeForm.querySelector('[data-marquee-lista]');
+            var mqModelo = marqueeForm.querySelector('[data-marquee-modelo]');
+            var mqAdd = marqueeForm.querySelector('[data-marquee-adicionar]');
+            var mqAviso = marqueeForm.querySelector('[data-marquee-limite]');
+            var MQ_MAX = 5;
+
+            var mqContar = function () {
+                return mqLista.querySelectorAll('[data-marquee-linha]').length;
+            };
+            var mqAtualizar = function () {
+                var n = mqContar();
+                if (mqAdd) { mqAdd.disabled = n >= MQ_MAX; }
+                if (mqAviso) { mqAviso.hidden = n < MQ_MAX; }
+            };
+            var mqLigarRemover = function (linha) {
+                var x = linha.querySelector('[data-marquee-remover]');
+                if (x) {
+                    x.addEventListener('click', function () {
+                        linha.remove();          // some só no navegador; grava ao Salvar
+                        mqAtualizar();
+                    });
+                }
+            };
+
+            // Liga as linhas que já vieram do banco.
+            mqLista.querySelectorAll('[data-marquee-linha]').forEach(mqLigarRemover);
+
+            if (mqAdd && mqModelo) {
+                mqAdd.addEventListener('click', function () {
+                    if (mqContar() >= MQ_MAX) { return; }
+                    var frag = mqModelo.content.cloneNode(true);
+                    var linha = frag.querySelector('[data-marquee-linha]');
+                    mqLista.appendChild(frag);   // linha nova VAZIA, sem recarregar
+                    mqLigarRemover(linha);
+                    var inp = linha.querySelector('input');
+                    if (inp) { inp.focus(); }
+                    mqAtualizar();
+                });
+            }
+
+            mqAtualizar();
+        }
+
         // --- Seletor de quantidade em pílula (− num +) ----------------------
         var qtdPilula = document.querySelector('[data-qtd]');
         if (qtdPilula) {

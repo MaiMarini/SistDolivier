@@ -311,36 +311,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($op === 'img_remover') {
+        // Chamada via fetch (AJAX) responde JSON; sem JS, mantém o redirect.
+        $ajax = ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== '';
         $imagem_id = (int) ($_POST['imagem_id'] ?? 0);
         $img = _produto_imagem($imagem_id, $pid);
-        if ($img) {
-            imagem_apagar($img['arquivo']);
-            db()->prepare('DELETE FROM product_images WHERE id = ? AND product_id = ?')
-                ->execute([$imagem_id, $pid]);
 
-            // Renumera o restante (1..N) e define a capa = primeira (ou limpa).
-            $rest = db()->prepare(
-                'SELECT id, arquivo FROM product_images WHERE product_id = ? ORDER BY ordem ASC, id ASC'
-            );
-            $rest->execute([$pid]);
-            $rows = $rest->fetchAll();
-            $pdo = db();
-            $pdo->beginTransaction();
-            try {
-                $up = $pdo->prepare('UPDATE product_images SET ordem = ? WHERE id = ?');
-                $pos = 1;
-                foreach ($rows as $im) {
-                    $up->execute([$pos, $im['id']]);
-                    $pos++;
-                }
-                $capa = $rows[0]['arquivo'] ?? null;
-                $pdo->prepare('UPDATE products SET imagem = ? WHERE id = ?')->execute([$capa, $pid]);
-                $pdo->commit();
-            } catch (Throwable $e) {
-                $pdo->rollBack();
+        if (!$img) {
+            if ($ajax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'erro' => 'nao_encontrada']);
+                return;
             }
-            flash('sucesso', 'Imagem removida.');
+            redirect('admin/produtos/editar/' . $pid);
         }
+
+        imagem_apagar($img['arquivo']);
+        db()->prepare('DELETE FROM product_images WHERE id = ? AND product_id = ?')
+            ->execute([$imagem_id, $pid]);
+
+        // Renumera o restante (1..N) e define a capa = primeira (ou limpa).
+        $rest = db()->prepare(
+            'SELECT id, arquivo FROM product_images WHERE product_id = ? ORDER BY ordem ASC, id ASC'
+        );
+        $rest->execute([$pid]);
+        $rows = $rest->fetchAll();
+        $capa = $rows[0]['arquivo'] ?? null;
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            $up = $pdo->prepare('UPDATE product_images SET ordem = ? WHERE id = ?');
+            $pos = 1;
+            foreach ($rows as $im) {
+                $up->execute([$pos, $im['id']]);
+                $pos++;
+            }
+            $pdo->prepare('UPDATE products SET imagem = ? WHERE id = ?')->execute([$capa, $pid]);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            if ($ajax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'erro' => 'db']);
+                return;
+            }
+            flash('erro', 'Não foi possível remover a imagem.');
+            redirect('admin/produtos/editar/' . $pid);
+        }
+
+        if ($ajax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => true, 'capa' => $capa]);
+            return;
+        }
+        flash('sucesso', 'Imagem removida.');
         redirect('admin/produtos/editar/' . $pid);
     }
 
@@ -554,8 +577,7 @@ if ($acao === 'novo' || $acao === 'editar') {
                         <span class="foto-handle" title="Arraste para reordenar" aria-hidden="true">&#9776;</span>
                         <span class="foto-capa etiqueta">Capa</span>
                         <img class="card-img" src="<?= e(url('assets/uploads/' . imagem_miniatura($img['arquivo']))) ?>" alt="">
-                        <form method="post" action="<?= e(url('admin/produtos')) ?>"
-                            onsubmit="return confirm('Remover esta imagem?');">
+                        <form method="post" action="<?= e(url('admin/produtos')) ?>" data-img-remover-form>
                             <?= csrf_input() ?>
                             <input type="hidden" name="produto_id" value="<?= (int) $produto['id'] ?>">
                             <input type="hidden" name="imagem_id" value="<?= (int) $img['id'] ?>">
@@ -583,14 +605,54 @@ if ($acao === 'novo' || $acao === 'editar') {
                             function (el) { return el.getAttribute('data-img-id'); }
                         );
                     }
-                    function fb(ok) {
+                    function fb(ok, msg) {
                         if (!feedback) { return; }
-                        feedback.textContent = ok ? 'Ordem salva ✓' : 'Erro ao salvar';
+                        feedback.textContent = msg || (ok ? 'Ordem salva ✓' : 'Erro ao salvar');
                         feedback.classList.toggle('erro', !ok);
                         feedback.hidden = false;
                         clearTimeout(feedback._t);
                         feedback._t = setTimeout(function () { feedback.hidden = true; }, 1800);
                     }
+
+                    // Remover foto via AJAX: some da galeria sem recarregar a página.
+                    cont.querySelectorAll('[data-img-remover-form]').forEach(function (form) {
+                        form.addEventListener('submit', function (ev) {
+                            ev.preventDefault();
+                            if (!confirm('Remover esta imagem?')) { return; }
+                            var card = form.closest('[data-img-id]');
+                            var idInput = form.querySelector('[name="imagem_id"]');
+                            var btn = form.querySelector('button');
+                            if (btn) { btn.disabled = true; }
+
+                            var body = new URLSearchParams();
+                            body.append('op', 'img_remover');
+                            body.append('_csrf', csrf);
+                            body.append('produto_id', pid);
+                            body.append('imagem_id', idInput ? idInput.value : '');
+
+                            fetch(endpoint, {
+                                method: 'POST',
+                                headers: { 'X-Requested-With': 'fetch' },
+                                credentials: 'same-origin',
+                                body: body
+                            })
+                                .then(function (r) { return r.json(); })
+                                .then(function (d) {
+                                    if (d && d.ok) {
+                                        // A etiqueta "Capa" segue o :first-child no CSS,
+                                        // então a nova capa aparece sozinha ao remover o card.
+                                        if (card) { card.remove(); }
+                                    } else {
+                                        if (btn) { btn.disabled = false; }
+                                        fb(false, 'Erro ao remover a foto');
+                                    }
+                                })
+                                .catch(function () {
+                                    if (btn) { btn.disabled = false; }
+                                    fb(false, 'Erro ao remover a foto');
+                                });
+                        });
+                    });
                     function salvar() {
                         var body = new URLSearchParams();
                         body.append('op', 'img_reordenar');

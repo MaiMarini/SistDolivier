@@ -195,40 +195,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/banners');
     }
 
-    // ----- Frases do marquee (máx. 5) -----
-    if ($op === 'frase_adicionar') {
-        $total = (int) db()->query('SELECT COUNT(*) FROM marquee_frases')->fetchColumn();
-        if ($total >= 5) {
-            flash('erro', 'Limite de 5 frases atingido.');
-        } else {
-            $ordem = (int) db()->query('SELECT COALESCE(MAX(ordem), 0) FROM marquee_frases')->fetchColumn() + 1;
-            $stmt = db()->prepare('INSERT INTO marquee_frases (texto, ordem) VALUES (?, ?)');
-            $stmt->execute(['', $ordem]);
-            flash('sucesso', 'Frase adicionada. Edite o texto e salve.');
+    // ----- Frases do marquee (edita tudo e salva de uma vez; máx. 5) -----
+    if ($op === 'frases_salvar') {
+        $textos = $_POST['frase'] ?? [];
+        if (!is_array($textos)) {
+            $textos = [];
         }
-        redirect('admin/banners');
-    }
 
-    if ($op === 'frase_salvar') {
-        $id = (int) ($_POST['id'] ?? 0);
-        $texto = trim($_POST['texto'] ?? '');
-        if (mb_strlen($texto) > 120) {
-            $texto = mb_substr($texto, 0, 120);
+        // Limpa: apara, ignora linhas vazias, corta a 120 chars, limita a 5.
+        $limpos = [];
+        foreach ($textos as $t) {
+            $t = trim((string) $t);
+            if ($t === '') {
+                continue;
+            }
+            if (mb_strlen($t) > 120) {
+                $t = mb_substr($t, 0, 120);
+            }
+            $limpos[] = $t;
+            if (count($limpos) >= 5) {
+                break;
+            }
         }
-        if ($id > 0) {
-            $stmt = db()->prepare('UPDATE marquee_frases SET texto = ? WHERE id = ?');
-            $stmt->execute([$texto, $id]);
-            flash('sucesso', 'Frase atualizada.');
-        }
-        redirect('admin/banners');
-    }
 
-    if ($op === 'frase_excluir') {
-        $id = (int) ($_POST['id'] ?? 0);
-        if ($id > 0) {
-            $stmt = db()->prepare('DELETE FROM marquee_frases WHERE id = ?');
-            $stmt->execute([$id]);
-            flash('sucesso', 'Frase excluída.');
+        // Sincroniza a tabela com a lista final, numa transação (sem FKs: o
+        // caminho seguro é limpar e reinserir na ordem enviada = ordem).
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            $pdo->exec('DELETE FROM marquee_frases');
+            $ins = $pdo->prepare('INSERT INTO marquee_frases (texto, ordem) VALUES (?, ?)');
+            foreach ($limpos as $i => $t) {
+                $ins->execute([$t, $i + 1]);
+            }
+            $pdo->commit();
+            flash('sucesso', 'Frases do marquee salvas.');
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            flash('erro', 'Não foi possível salvar as frases. Tente novamente.');
         }
         redirect('admin/banners');
     }
@@ -423,34 +427,37 @@ ob_start();
 <hr class="mt-1">
 
 <h2 class="mt-1">Frases do marquee</h2>
-<p>Frases curtas que passam na faixa da home. Máximo de 5.</p>
+<p>Frases curtas que passam na faixa da home. Máximo de 5. Edite tudo e salve de uma vez.</p>
 
-<?php if (empty($frases)): ?>
-    <p>Nenhuma frase cadastrada.</p>
-<?php else: ?>
-    <?php foreach ($frases as $f): ?>
-        <form method="post" action="<?= e(url('admin/banners')) ?>"
-              class="campo-inline" style="margin-bottom:.5rem; max-width:640px;">
-            <?= csrf_input() ?>
-            <input type="hidden" name="id" value="<?= (int) $f['id'] ?>">
-            <input type="text" name="texto" value="<?= e($f['texto']) ?>"
-                   maxlength="120" style="flex:1;" placeholder="Texto da frase">
-            <button class="btn sec" type="submit" name="op" value="frase_salvar">Salvar</button>
-            <button class="btn" type="submit" name="op" value="frase_excluir"
-                    onclick="return confirm('Excluir esta frase?');">Excluir</button>
-        </form>
-    <?php endforeach; ?>
-<?php endif; ?>
+<form class="formulario" method="post" action="<?= e(url('admin/banners')) ?>"
+      style="max-width:640px;" data-marquee-form>
+    <?= csrf_input() ?>
+    <input type="hidden" name="op" value="frases_salvar">
 
-<?php if ($total_frases < 5): ?>
-    <form method="post" action="<?= e(url('admin/banners')) ?>" style="margin-top:.5rem;">
-        <?= csrf_input() ?>
-        <input type="hidden" name="op" value="frase_adicionar">
-        <button class="btn" type="submit">Adicionar frase</button>
-    </form>
-<?php else: ?>
-    <p><em>Limite de 5 frases atingido.</em></p>
-<?php endif; ?>
+    <div data-marquee-lista>
+        <?php foreach ($frases as $f): ?>
+            <div class="campo campo-inline marquee-linha" data-marquee-linha>
+                <input type="text" name="frase[]" value="<?= e($f['texto']) ?>"
+                       maxlength="120" style="flex:1;" placeholder="Texto da frase">
+                <button type="button" class="btn" data-marquee-remover>Remover</button>
+            </div>
+        <?php endforeach; ?>
+    </div>
+
+    <!-- Modelo de linha nova (inerte: não é enviado no submit). -->
+    <template data-marquee-modelo>
+        <div class="campo campo-inline marquee-linha" data-marquee-linha>
+            <input type="text" name="frase[]" maxlength="120" style="flex:1;" placeholder="Texto da frase">
+            <button type="button" class="btn" data-marquee-remover>Remover</button>
+        </div>
+    </template>
+
+    <div class="campo-inline" style="gap:.5rem;">
+        <button type="button" class="btn" data-marquee-adicionar>Adicionar frase</button>
+        <button type="submit" class="btn">Salvar</button>
+    </div>
+    <p data-marquee-limite hidden><em>Limite de 5 frases atingido.</em></p>
+</form>
 
 <hr class="mt-1">
 
