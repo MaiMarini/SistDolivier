@@ -170,6 +170,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/banners');
     }
 
+    // Imagem lateral (sticky) da seção "Coleções" (registro único em settings).
+    if ($op === 'colecoes_salvar') {
+        // Só troca se uma nova imagem for enviada; senão, mantém a atual.
+        if (!empty($_FILES['colecoes_imagem_lateral']['name'])) {
+            $res = processar_upload_imagem($_FILES['colecoes_imagem_lateral'], ['gerar_miniatura' => false]);
+            if (empty($res['ok'])) {
+                flash('erro', $res['erro'] ?? 'Falha ao enviar a imagem da seção Coleções.');
+                redirect('admin/banners');
+            }
+            $antiga = cfg('colecoes_imagem_lateral', '');
+            if ($antiga !== '') {
+                imagem_apagar($antiga);
+            }
+            $stmt = db()->prepare(
+                'INSERT INTO settings (chave, valor) VALUES (?, ?)
+                 ON DUPLICATE KEY UPDATE valor = ?'
+            );
+            $stmt->execute(['colecoes_imagem_lateral', $res['arquivo'], $res['arquivo']]);
+            flash('sucesso', 'Imagem da seção Coleções salva.');
+        } else {
+            flash('erro', 'Escolha uma imagem para enviar.');
+        }
+        redirect('admin/banners');
+    }
+
     // ----- Frases do marquee (máx. 5) -----
     if ($op === 'frase_adicionar') {
         $total = (int) db()->query('SELECT COUNT(*) FROM marquee_frases')->fetchColumn();
@@ -538,5 +563,33 @@ $bloco_video = cfg('bloco_editorial_video', '');
     aplicar();
 })();
 </script>
+
+<hr class="mt-1">
+
+<h2 class="mt-1">Seção "Coleções"</h2>
+<p>Imagem lateral fixa (sticky) exibida ao lado da grade de coleções na home.</p>
+
+<?php $colecoes_img = cfg('colecoes_imagem_lateral', ''); ?>
+<form class="formulario" method="post" action="<?= e(url('admin/banners')) ?>"
+      enctype="multipart/form-data" style="max-width:640px;">
+    <?= csrf_input() ?>
+    <input type="hidden" name="op" value="colecoes_salvar">
+
+    <?php if ($colecoes_img !== '' && is_file(ROOT_PATH . '/assets/uploads/' . $colecoes_img)): ?>
+        <div class="campo">
+            <label>Imagem atual</label>
+            <img src="<?= e(asset('assets/uploads/' . $colecoes_img)) ?>" alt=""
+                 style="max-width:100%;border-radius:var(--raio);">
+        </div>
+    <?php endif; ?>
+    <div class="campo">
+        <label for="colecoes_imagem_lateral">Imagem lateral (deixe vazio para manter a atual)</label>
+        <input type="file" id="colecoes_imagem_lateral" name="colecoes_imagem_lateral"
+               accept="image/jpeg,image/png,image/webp">
+        <small>A imagem é otimizada automaticamente (máx. 1200px, JPEG).</small>
+    </div>
+
+    <button class="btn" type="submit">Salvar imagem das Coleções</button>
+</form>
 <?php
 view('admin_layout', ['titulo' => 'Home', 'conteudo' => ob_get_clean()]);

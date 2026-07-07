@@ -40,8 +40,10 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    overflow-x: hidden;
-    /* evita rolagem horizontal por causa das faixas full-width */
+    overflow-x: clip;
+    /* evita rolagem horizontal (faixas full-width) SEM virar contêiner de
+       rolagem — assim o position: sticky da seção Coleções continua funcionando.
+       'clip' clipa como 'hidden', mas não cria scroll container. */
 }
 
 img {
@@ -1944,6 +1946,45 @@ body.menu-aberto {
 @media (min-width: 768px) {
     .grade-colecoes {
         grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Imagem lateral (sticky) da seção Coleções. Só existe quando há imagem. */
+.colecoes-lateral {
+    /* mobile: imagem abaixo dos cards, altura fixa, SEM sticky */
+    margin-top: 1.5rem;
+}
+
+.colecoes-lateral-img {
+    width: 100%;
+    height: 240px;
+    object-fit: cover;
+    border-radius: 1.5rem;
+    box-shadow: var(--sombra);
+    display: block;
+}
+
+@media (min-width: 900px) {
+    /* Desktop: duas colunas — cards à esquerda, imagem sticky à direita. */
+    .colecoes-layout.tem-lateral {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 1.5rem;
+        align-items: start;
+        /* itens no topo (não esticam) -> o sticky tem folga para rolar */
+    }
+
+    .colecoes-layout.tem-lateral .colecoes-lateral {
+        margin-top: 0;
+        position: sticky;
+        top: 1.5rem;
+        /* espaço do topo enquanto acompanha a rolagem */
+        align-self: start;
+    }
+
+    .colecoes-layout.tem-lateral .colecoes-lateral-img {
+        height: calc(100vh - 3rem);
+        max-height: 620px;
     }
 }
 

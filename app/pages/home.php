@@ -134,20 +134,33 @@ ob_start();
 <?php view('_bloco_destaque'); ?>
 
 <?php if (!empty($colecoes)): ?>
+    <?php
+    $col_img = cfg('colecoes_imagem_lateral', '');
+    $tem_col_img = $col_img !== '' && is_file(ROOT_PATH . '/assets/uploads/' . $col_img);
+    ?>
     <section class="secao" id="colecoes">
         <p class="eyebrow">Explore</p>
         <h2 class="secao-titulo">Coleções</h2>
-        <div class="grade-colecoes">
-            <?php foreach ($colecoes as $c): ?>
-                <?php $capa = imagem_miniatura($c['capa'] ?? ''); ?>
-                <a class="colecao<?= $capa !== '' ? ' tem-capa' : '' ?>"
-                   href="<?= e(url('categoria/' . $c['slug'])) ?>">
-                    <?php if ($capa !== ''): ?>
-                        <img class="colecao-capa" src="<?= e(url('assets/uploads/' . $capa)) ?>" alt="">
-                    <?php endif; ?>
-                    <span class="colecao-nome"><?= e($c['nome']) ?></span>
-                </a>
-            <?php endforeach; ?>
+        <div class="colecoes-layout<?= $tem_col_img ? ' tem-lateral' : '' ?>">
+            <div class="grade-colecoes">
+                <?php foreach ($colecoes as $c): ?>
+                    <?php $capa = imagem_miniatura($c['capa'] ?? ''); ?>
+                    <a class="colecao<?= $capa !== '' ? ' tem-capa' : '' ?>"
+                       href="<?= e(url('categoria/' . $c['slug'])) ?>">
+                        <?php if ($capa !== ''): ?>
+                            <img class="colecao-capa" src="<?= e(url('assets/uploads/' . $capa)) ?>" alt="">
+                        <?php endif; ?>
+                        <span class="colecao-nome"><?= e($c['nome']) ?></span>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+
+            <?php if ($tem_col_img): ?>
+                <aside class="colecoes-lateral">
+                    <img class="colecoes-lateral-img"
+                         src="<?= e(asset('assets/uploads/' . $col_img)) ?>" alt="">
+                </aside>
+            <?php endif; ?>
         </div>
     </section>
 <?php endif; ?>
