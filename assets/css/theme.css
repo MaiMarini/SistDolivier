@@ -1278,7 +1278,8 @@ body.menu-aberto {
     box-shadow: var(--sombra);
 }
 
-.bloco-foto img {
+.bloco-foto img,
+.bloco-foto video {
     width: 100%;
     height: 100%;
     object-fit: cover;
