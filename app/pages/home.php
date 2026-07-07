@@ -156,9 +156,16 @@ ob_start();
             <?php endif; ?>
         </div>
     </section>
+<?php endif; ?>
+
+<section class="instagram" aria-label="Instagram">
+    <div class="instagram-cabeca">
+        <p class="eyebrow">No nosso Instagram</p>
+        <h2 class="secao-titulo">@dolivier</h2>
+    </div>
     <!-- Elfsight Instagram Feed | Untitled Instagram Feed -->
     <script src="https://elfsightcdn.com/platform.js" async></script>
     <div class="elfsight-app-0ba2decf-78d5-4762-a2cd-93e975a7f03e" data-elfsight-app-lazy></div>
-<?php endif; ?>
+</section>
 <?php
 view('layout', ['titulo' => 'Início', 'conteudo' => ob_get_clean()]);

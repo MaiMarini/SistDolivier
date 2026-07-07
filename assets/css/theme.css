@@ -2041,6 +2041,30 @@ body.menu-aberto {
     transform: scale(1.08);
 }
 
+/* --- Feed do Instagram (Elfsight): faixa full-width ---------------------- */
+.instagram {
+    position: relative;
+    left: 50%;
+    width: 100vw;
+    margin-left: -50vw;
+    /* full-bleed: ocupa a largura inteira da tela (body tem overflow-x: clip,
+       então o 100vw não cria rolagem horizontal) */
+    background: #FCFAF4;
+    /* papel da marca */
+    padding: 2.5rem 0;
+    margin-top: 3.5rem;
+}
+
+.instagram-cabeca {
+    text-align: center;
+    padding: 0 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.instagram-cabeca .secao-titulo {
+    margin: 0;
+}
+
 /* --- Formulários --------------------------------------------------------- */
 .formulario {
     background: var(--cor-superficie);
