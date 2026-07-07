@@ -497,7 +497,8 @@
             function iniciar() {
                 if (raiz.hasAttribute('data-showcase-estatico') || total <= 1 || reduz) { return; }
                 parar();
-                timer = setInterval(function () { ir(atual + 1); }, 4500);
+                // 3s de leitura (produto parado) + 0,9s da animação do blur = 3900ms.
+                timer = setInterval(function () { ir(atual + 1); }, 3900);
             }
             function reiniciar() { parar(); iniciar(); }
 

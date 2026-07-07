@@ -1632,15 +1632,23 @@ body.menu-aberto {
     align-items: center;
     gap: 1.5rem;
     opacity: 0;
-    visibility: hidden;
-    transition: opacity .6s ease;
+    /* Entra saindo de desfocado (blur ~14px) para focado; foto + texto juntos. */
+    filter: blur(14px);
+    transition: opacity .9s ease, filter .9s ease;
     pointer-events: none;
 }
 
 .showcase-slide.ativo {
     opacity: 1;
-    visibility: visible;
+    filter: blur(0);
     pointer-events: auto;
+}
+
+/* Menos movimento: sem animação; o primeiro produto aparece nítido na hora. */
+@media (prefers-reduced-motion: reduce) {
+    .showcase-slide {
+        transition: none;
+    }
 }
 
 .showcase-foto {
