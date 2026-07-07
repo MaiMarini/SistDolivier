@@ -156,10 +156,9 @@ ob_start();
             <?php endif; ?>
         </div>
     </section>
-    <!-- LightWidget WIDGET -->
-    <script src="https://cdn.lightwidget.com/widgets/lightwidget.js"></script><iframe
-        src="//lightwidget.com/widgets/ec33c7aba9c15ac6ad023adb68c7a044.html" scrolling="no" allowtransparency="true"
-        class="lightwidget-widget" style="width:100%;border:0;overflow:hidden;"></iframe>
+    <!-- Elfsight Instagram Feed | Untitled Instagram Feed -->
+    <script src="https://elfsightcdn.com/platform.js" async></script>
+    <div class="elfsight-app-0ba2decf-78d5-4762-a2cd-93e975a7f03e" data-elfsight-app-lazy></div>
 <?php endif; ?>
 <?php
 view('layout', ['titulo' => 'Início', 'conteudo' => ob_get_clean()]);
