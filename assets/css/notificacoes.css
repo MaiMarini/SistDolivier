@@ -57,7 +57,7 @@
 
 .ntf-toast.ntf-erro {
     border-left-color: var(--ntf-erro);
-    background-color: #eef2e4;
+    background: #f7d7cb;
 }
 
 .ntf-toast-icone {
@@ -68,7 +68,7 @@
 
 .ntf-toast.ntf-sucesso .ntf-toast-icone {
     color: var(--ntf-sucesso);
-    background-color: #fbe7e0;
+    background: #dde5c8;
 }
 
 .ntf-toast.ntf-erro .ntf-toast-icone {
