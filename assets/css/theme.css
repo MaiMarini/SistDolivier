@@ -2842,3 +2842,104 @@ body.menu-aberto {
 .mb-1 {
     margin-bottom: 1rem;
 }
+
+/* --- Página de Política de Privacidade ----------------------------------- */
+.politica {
+    max-width: 760px;
+    margin: 0 auto;
+    color: var(--cor-texto);
+    line-height: 1.7;
+    font-size: 16px;
+}
+
+.politica h1 {
+    font-family: var(--fonte-titulo);
+    font-weight: 900;
+    font-size: 34px;
+    color: var(--cor-primaria);
+    margin: 0 0 6px;
+    line-height: 1.1;
+}
+
+.politica .updated {
+    font-size: 13.5px;
+    color: #8a7256;
+    margin-bottom: 30px;
+}
+
+.politica h2 {
+    font-family: var(--fonte-titulo);
+    font-weight: 600;
+    font-size: 21px;
+    color: var(--cor-primaria);
+    margin: 32px 0 10px;
+}
+
+.politica p {
+    margin: 0 0 14px;
+}
+
+.politica ul {
+    margin: 0 0 14px 22px;
+}
+
+.politica li {
+    margin-bottom: 7px;
+}
+
+.politica a {
+    color: var(--cor-pop);
+}
+
+.politica .fill {
+    background: #fdeecd;
+    border-bottom: 2px solid var(--cor-destaque);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #7a5a1e;
+}
+
+.politica .aviso-juridico {
+    background: #fbe7e0;
+    border-left: 4px solid var(--cor-pop);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 30px;
+    font-size: 14px;
+    color: #8a3d22;
+}
+
+.politica .aviso-juridico strong {
+    color: #7a3419;
+}
+
+.politica .nota {
+    background: #eef2e4;
+    border-left: 4px solid var(--cor-acento);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: 18px 0;
+    font-size: 14px;
+    color: #4a5a2a;
+}
+
+.politica .instru {
+    background: var(--cor-fundo);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 34px;
+    font-size: 14px;
+}
+
+.politica .instru b {
+    color: var(--cor-primaria);
+}
+
+.politica .politica-rodape {
+    border-top: 1px solid rgba(74, 51, 32, .14);
+    margin-top: 40px;
+    padding-top: 20px;
+    font-size: 13.5px;
+    color: #8a7256;
+}

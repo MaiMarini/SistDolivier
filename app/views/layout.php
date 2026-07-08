@@ -20,7 +20,7 @@ $conteudo = isset($conteudo) ? $conteudo : '';
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Nunito:wght@400;600;700&display=swap">
+          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=Nunito:wght@400;600;700&display=swap">
 
     <!-- As cores do tema são fixas no theme.css (:root), não vêm mais do banco. -->
     <link rel="stylesheet" href="<?= e(asset('assets/css/theme.css')) ?>">
