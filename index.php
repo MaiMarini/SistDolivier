@@ -45,6 +45,7 @@ $rotas = [
     'carrinho'     => 'carrinho',
     'sobre'        => 'sobre',
     'regras'       => 'regras',
+    'politica-de-privacidade' => 'politica_privacidade',
     'entrar'       => 'entrar',
     'cadastrar'    => 'cadastrar',
     'sair'         => 'sair',

@@ -164,7 +164,9 @@ ob_start();
         <h2 class="secao-titulo">@dolivier</h2>
     </div> -->
     <!-- Elfsight Instagram Feed | Untitled Instagram Feed -->
-    <script src="https://elfsightcdn.com/platform.js" async></script>
+    <!-- Cookie NÃO-ESSENCIAL: o script só é injetado após consentimento "todos". -->
+    <script type="text/plain" data-cookie-src="https://elfsightcdn.com/platform.js"
+            data-cookie-consent="todos"></script>
     <div class="elfsight-app-0ba2decf-78d5-4762-a2cd-93e975a7f03e" data-elfsight-app-lazy></div>
 </section>
 <?php

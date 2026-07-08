@@ -25,6 +25,7 @@ $conteudo = isset($conteudo) ? $conteudo : '';
     <!-- As cores do tema são fixas no theme.css (:root), não vêm mais do banco. -->
     <link rel="stylesheet" href="<?= e(asset('assets/css/theme.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset('assets/css/notificacoes.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset('assets/css/cookies.css')) ?>">
 </head>
 <body>
 
@@ -45,7 +46,11 @@ $conteudo = isset($conteudo) ? $conteudo : '';
 <!-- Modal de regras com aceite (conteúdo vem das configurações) -->
 <?php require __DIR__ . '/modal-regras.php'; ?>
 
+<!-- Banner de consentimento de cookies (LGPD) -->
+<?php require __DIR__ . '/cookie-banner.php'; ?>
+
 <script src="<?= e(asset('assets/js/notificacoes.js')) ?>"></script>
+<script src="<?= e(asset('assets/js/cookies.js')) ?>"></script>
 <script src="<?= e(asset('assets/js/app.js')) ?>"></script>
 <?php if ($flash_sucesso !== null || $flash_erro !== null): ?>
 <script>

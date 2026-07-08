@@ -66,6 +66,8 @@ if ($pin !== '') {
                 <a href="<?= e(url('sobre')) ?>">Sobre nós</a>
                 <a href="<?= e(url('meus-pedidos')) ?>">Meus pedidos</a>
                 <a href="<?= e(url('regras')) ?>">Regras e prazos</a>
+                <a href="<?= e(url('politica-de-privacidade')) ?>">Política de privacidade</a>
+                <a href="#" data-cookie-preferencias>Preferências de cookies</a>
             </nav>
 
             <!-- Coluna 3: redes sociais (de settings) -->
