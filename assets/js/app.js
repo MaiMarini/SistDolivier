@@ -9,6 +9,18 @@
 
     document.addEventListener('DOMContentLoaded', function () {
 
+        // --- Header condensa ao rolar (esconde a linha 1, mantém as categorias) ---
+        var cabecalho = document.querySelector('.cabecalho');
+        if (cabecalho) {
+            var LIMITE_SCROLL = 8;
+            var aplicarScrollHeader = function () {
+                var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+                cabecalho.classList.toggle('scrolled', y > LIMITE_SCROLL);
+            };
+            window.addEventListener('scroll', aplicarScrollHeader, { passive: true });
+            aplicarScrollHeader(); // estado inicial (caso a página abra já rolada)
+        }
+
         // --- Menu mobile (overlay em tela cheia) ----------------------------
         var menuToggle = document.querySelector('[data-menu-toggle]');
         var menuOverlay = document.getElementById('menu-mobile');

@@ -97,12 +97,44 @@ main {
 
 /* --- Cabeçalho / menu ---------------------------------------------------- */
 .cabecalho {
-    position: relative;
-    /* referência para posicionar os ícones na borda */
+    position: sticky;
+    top: 0;
+    /* fixo no topo; condensa ao rolar (classe .scrolled via JS) */
     z-index: 1000;
     /* acima do banner/carrossel da home */
     background: var(--cor-primaria);
     color: #fff;
+    transition: box-shadow .3s ease;
+}
+
+/* Condensado: sombra sutil para destacar do conteúdo. */
+.cabecalho.scrolled {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .18);
+}
+
+/* Colapso da linha 1 (marca + ícones) ao rolar — no desktop, sobra a barra de
+   categorias (linha 2). No mobile a linha 1 permanece (é onde fica o menu). */
+@media (min-width: 768px) {
+    .header-linha1 {
+        max-height: 120px;
+        overflow: hidden;
+        transition: max-height .32s ease, opacity .32s ease, padding .32s ease;
+    }
+
+    .cabecalho.scrolled .header-linha1 {
+        max-height: 0;
+        opacity: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        border-bottom-color: transparent;
+    }
+}
+
+/* Menos movimento: troca instantânea (sem animar o colapso). */
+@media (prefers-reduced-motion: reduce) {
+    .header-linha1 {
+        transition: none;
+    }
 }
 
 .cabecalho-inner {
