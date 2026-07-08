@@ -144,6 +144,23 @@
         if (msg && msg.parentNode) { msg.parentNode.removeChild(msg); }
     }
 
+    /** Valida os campos [required] do formulário com o padrão de erro da marca.
+        Marca os vazios, foca o 1º inválido e retorna true se estiver tudo ok. */
+    function validar(form, opcoes) {
+        opcoes = opcoes || {};
+        var invalidos = [];
+        form.querySelectorAll('[required]').forEach(function (campo) {
+            if ((campo.value || '').trim() === '') {
+                invalidos.push(campo);
+                erroCampo(campo, opcoes.mensagem || 'Preencha este campo.');
+            } else {
+                limparErro(campo);
+            }
+        });
+        if (invalidos.length) { invalidos[0].focus(); }
+        return invalidos.length === 0;
+    }
+
     /** Auto-wiring de [data-confirmar] e de <form data-validar>. */
     function ligar(root) {
         root = root || document;
@@ -177,20 +194,10 @@
         root.querySelectorAll('form[data-validar]').forEach(function (form) {
             if (form._ntfValidar) { return; }
             form._ntfValidar = true;
-            form.setAttribute('novalidate', 'novalidate');
+            form.setAttribute('novalidate', 'novalidate'); // sem balão nativo
             form.addEventListener('submit', function (e) {
-                var invalidos = [];
-                form.querySelectorAll('[required]').forEach(function (campo) {
-                    if ((campo.value || '').trim() === '') {
-                        invalidos.push(campo);
-                        erroCampo(campo, 'Preencha este campo.');
-                    } else {
-                        limparErro(campo);
-                    }
-                });
-                if (invalidos.length) {
+                if (!validar(form)) {
                     e.preventDefault();
-                    invalidos[0].focus();
                     notificar('erro', 'Confira os campos destacados.');
                 }
             });
@@ -209,6 +216,7 @@
         confirmar: confirmar,
         erroCampo: erroCampo,
         limparErro: limparErro,
+        validar: validar,
         ligar: ligar
     };
     global.notificar = notificar;

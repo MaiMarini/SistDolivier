@@ -454,7 +454,7 @@ if ($acao === 'novo' || $acao === 'editar') {
     ?>
     <p><a href="<?= e(url('admin/produtos')) ?>">&larr; Voltar para produtos</a></p>
 
-    <form id="form-produto" method="post" action="<?= e(url('admin/produtos')) ?>" enctype="multipart/form-data">
+    <form id="form-produto" method="post" action="<?= e(url('admin/produtos')) ?>" enctype="multipart/form-data" novalidate>
         <?= csrf_input() ?>
         <input type="hidden" name="op" value="salvar">
         <input type="hidden" name="id" value="<?= (int) $produto['id'] ?>">
@@ -721,11 +721,18 @@ if ($acao === 'novo' || $acao === 'editar') {
             if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
         }
 
-        // Antes de salvar, checa se o nome já existe em OUTRO produto.
+        // Antes de salvar: valida obrigatórios (padrão da marca) e checa se o
+        // nome já existe em OUTRO produto.
         form.addEventListener('submit', function (ev) {
-            if (liberado) { liberado = false; return; }     // já checado: segue
+            if (liberado) { liberado = false; return; }     // já validado: segue
+            // Validação estilizada dos campos obrigatórios (sem balão nativo).
+            if (window.Notificacoes && !Notificacoes.validar(form)) {
+                ev.preventDefault();
+                notificar('erro', 'Confira os campos destacados.');
+                return;
+            }
             var nome = (nomeInput && nomeInput.value ? nomeInput.value : '').trim();
-            if (nome === '') { return; }                    // vazio: validação normal cuida
+            if (nome === '') { return; }
             ev.preventDefault();
 
             var body = new URLSearchParams();
