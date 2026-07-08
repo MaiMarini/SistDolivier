@@ -9,9 +9,22 @@
 
     document.addEventListener('DOMContentLoaded', function () {
 
-        // --- Header condensa ao rolar (esconde a linha 1, mantém as categorias) ---
+        // --- Header condensa ao rolar (a linha 1 sai; a barra de categorias gruda) ---
         var cabecalho = document.querySelector('.cabecalho');
         if (cabecalho) {
+            var linha1 = cabecalho.querySelector('.header-linha1');
+
+            // Mede a altura da linha 1 -> vira o `top` negativo do header (CSS).
+            var medirLinha1 = function () {
+                if (linha1) {
+                    cabecalho.style.setProperty('--h1', linha1.offsetHeight + 'px');
+                }
+            };
+            medirLinha1();
+            window.addEventListener('resize', medirLinha1);
+            window.addEventListener('load', medirLinha1); // após carregar as fontes
+
+            // Sombra sutil quando sai do topo.
             var LIMITE_SCROLL = 8;
             var aplicarScrollHeader = function () {
                 var y = window.pageYOffset || document.documentElement.scrollTop || 0;
