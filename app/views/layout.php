@@ -17,6 +17,14 @@ $conteudo = isset($conteudo) ? $conteudo : '';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($titulo) ?> — <?= e(cfg('site_nome', 'Loja')) ?></title>
 
+    <!-- Favicon (trigo D'Olivier) -->
+    <link rel="icon" href="<?= e(asset('favicon/favicon.ico')) ?>" sizes="any">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?= e(asset('favicon/favicon-16.png')) ?>">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?= e(asset('favicon/favicon-32.png')) ?>">
+    <link rel="icon" type="image/png" sizes="48x48" href="<?= e(asset('favicon/favicon-48.png')) ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?= e(asset('favicon/apple-touch-icon.png')) ?>">
+    <link rel="icon" type="image/png" sizes="512x512" href="<?= e(asset('favicon/favicon-512.png')) ?>">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet"
