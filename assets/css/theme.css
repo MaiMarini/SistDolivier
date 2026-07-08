@@ -1381,7 +1381,9 @@ body.menu-aberto {
     width: 100vw;
     margin-left: -50vw;
     /* full-bleed: ocupa a largura inteira da tela */
-    margin-bottom: 1.5rem;
+    /* Cola no header (cancela o padding-top do main) e na tarja (sem margem embaixo). */
+    margin-top: -1.5rem;
+    margin-bottom: 0;
     overflow: hidden;
     aspect-ratio: 16 / 6;
     /* todos os slides com a mesma área */
