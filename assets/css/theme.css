@@ -1970,10 +1970,15 @@ body.menu-aberto {
     /* Desktop: duas colunas — cards à esquerda, imagem sticky à direita. */
     .colecoes-layout.tem-lateral {
         display: grid;
-        grid-template-columns: 1fr 320px;
+        grid-template-columns: 1fr 300px;
         gap: 1.5rem;
         align-items: start;
         /* itens no topo (não esticam) -> o sticky tem folga para rolar */
+    }
+
+    /* Grade de coleções em 2 colunas ao lado da imagem. */
+    .colecoes-layout.tem-lateral .grade-colecoes {
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .colecoes-layout.tem-lateral .colecoes-lateral {
@@ -1984,9 +1989,11 @@ body.menu-aberto {
         align-self: start;
     }
 
+    /* Foto menor e quadrada: fica mais curta que a coluna de cards, então
+       sobra espaço para o efeito de rolagem (sticky) acontecer. */
     .colecoes-layout.tem-lateral .colecoes-lateral-img {
-        height: calc(100vh - 3rem);
-        max-height: 620px;
+        height: auto;
+        aspect-ratio: 1 / 1;
     }
 }
 
