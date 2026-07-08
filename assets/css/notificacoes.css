@@ -55,6 +55,10 @@
     transform: translateY(-8px);
 }
 
+.ntf-toast.ntf-sucesso {
+    background: #dde5c8;
+}
+
 .ntf-toast.ntf-erro {
     border-left-color: var(--ntf-erro);
     background: #f7d7cb;
@@ -68,7 +72,6 @@
 
 .ntf-toast.ntf-sucesso .ntf-toast-icone {
     color: var(--ntf-sucesso);
-    background: #dde5c8;
 }
 
 .ntf-toast.ntf-erro .ntf-toast-icone {
