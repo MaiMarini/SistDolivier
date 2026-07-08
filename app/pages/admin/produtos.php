@@ -618,39 +618,41 @@ if ($acao === 'novo' || $acao === 'editar') {
                     cont.querySelectorAll('[data-img-remover-form]').forEach(function (form) {
                         form.addEventListener('submit', function (ev) {
                             ev.preventDefault();
-                            if (!confirm('Remover esta imagem?')) { return; }
-                            var card = form.closest('[data-img-id]');
-                            var idInput = form.querySelector('[name="imagem_id"]');
-                            var btn = form.querySelector('button');
-                            if (btn) { btn.disabled = true; }
+                            confirmar('Remover esta imagem?', function () {
+                                var card = form.closest('[data-img-id]');
+                                var idInput = form.querySelector('[name="imagem_id"]');
+                                var btn = form.querySelector('button');
+                                if (btn) { btn.disabled = true; }
 
-                            var body = new URLSearchParams();
-                            body.append('op', 'img_remover');
-                            body.append('_csrf', csrf);
-                            body.append('produto_id', pid);
-                            body.append('imagem_id', idInput ? idInput.value : '');
+                                var body = new URLSearchParams();
+                                body.append('op', 'img_remover');
+                                body.append('_csrf', csrf);
+                                body.append('produto_id', pid);
+                                body.append('imagem_id', idInput ? idInput.value : '');
 
-                            fetch(endpoint, {
-                                method: 'POST',
-                                headers: { 'X-Requested-With': 'fetch' },
-                                credentials: 'same-origin',
-                                body: body
-                            })
-                                .then(function (r) { return r.json(); })
-                                .then(function (d) {
-                                    if (d && d.ok) {
-                                        // A etiqueta "Capa" segue o :first-child no CSS,
-                                        // então a nova capa aparece sozinha ao remover o card.
-                                        if (card) { card.remove(); }
-                                    } else {
-                                        if (btn) { btn.disabled = false; }
-                                        fb(false, 'Erro ao remover a foto');
-                                    }
+                                fetch(endpoint, {
+                                    method: 'POST',
+                                    headers: { 'X-Requested-With': 'fetch' },
+                                    credentials: 'same-origin',
+                                    body: body
                                 })
-                                .catch(function () {
-                                    if (btn) { btn.disabled = false; }
-                                    fb(false, 'Erro ao remover a foto');
-                                });
+                                    .then(function (r) { return r.json(); })
+                                    .then(function (d) {
+                                        if (d && d.ok) {
+                                            // A etiqueta "Capa" segue o :first-child no CSS,
+                                            // então a nova capa aparece sozinha ao remover o card.
+                                            if (card) { card.remove(); }
+                                            notificar('sucesso', 'Foto removida.');
+                                        } else {
+                                            if (btn) { btn.disabled = false; }
+                                            notificar('erro', 'Erro ao remover a foto.');
+                                        }
+                                    })
+                                    .catch(function () {
+                                        if (btn) { btn.disabled = false; }
+                                        notificar('erro', 'Erro ao remover a foto.');
+                                    });
+                            }, { ok: 'Remover', titulo: 'Remover foto' });
                         });
                     });
                     function salvar() {
@@ -739,7 +741,8 @@ ob_start();
                     <td class="col-acoes">
                         <a class="btn sec" href="<?= e(url('admin/produtos/editar/' . $p['id'])) ?>">Editar</a>
                         <form method="post" action="<?= e(url('admin/produtos')) ?>" style="display:inline"
-                            onsubmit="return confirm('Excluir este produto e suas imagens?');">
+                            data-confirmar="Excluir este produto e suas imagens?"
+                            data-confirmar-ok="Excluir" data-confirmar-titulo="Excluir produto">
                             <?= csrf_input() ?>
                             <input type="hidden" name="op" value="excluir">
                             <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">

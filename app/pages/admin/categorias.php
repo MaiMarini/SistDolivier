@@ -131,7 +131,7 @@ if ($acao === 'novo' || $acao === 'editar') {
     ?>
     <p><a href="<?= e(url('admin/categorias')) ?>">&larr; Voltar para categorias</a></p>
 
-    <form class="formulario" method="post" action="<?= e(url('admin/categorias')) ?>">
+    <form class="formulario" method="post" action="<?= e(url('admin/categorias')) ?>" data-validar>
         <?= csrf_input() ?>
         <input type="hidden" name="op" value="salvar">
         <input type="hidden" name="id" value="<?= (int) $categoria['id'] ?>">
@@ -202,7 +202,8 @@ ob_start();
                         <a class="btn sec" href="<?= e(url('admin/categorias/editar/' . $c['id'])) ?>">Editar</a>
                         <form method="post" action="<?= e(url('admin/categorias')) ?>"
                               style="display:inline"
-                              onsubmit="return confirm('Excluir esta categoria? Os produtos dela ficarão sem categoria.');">
+                              data-confirmar="Excluir esta categoria? Os produtos dela ficarão sem categoria."
+                              data-confirmar-ok="Excluir" data-confirmar-titulo="Excluir categoria">
                             <?= csrf_input() ?>
                             <input type="hidden" name="op" value="excluir">
                             <input type="hidden" name="id" value="<?= (int) $c['id'] ?>">

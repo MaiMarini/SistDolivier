@@ -125,7 +125,7 @@ if ($acao === 'novo' || $acao === 'editar') {
     ?>
     <p><a href="<?= e(url('admin/tabelas-nutricionais')) ?>">&larr; Voltar para tabelas nutricionais</a></p>
 
-    <form class="formulario" method="post" action="<?= e(url('admin/tabelas-nutricionais')) ?>" style="max-width:640px;">
+    <form class="formulario" method="post" action="<?= e(url('admin/tabelas-nutricionais')) ?>" style="max-width:640px;" data-validar>
         <?= csrf_input() ?>
         <input type="hidden" name="op" value="salvar">
         <input type="hidden" name="id" value="<?= (int) $rec['id'] ?>">
@@ -196,7 +196,8 @@ ob_start();
                     <td class="col-acoes">
                         <a class="btn sec" href="<?= e(url('admin/tabelas-nutricionais/editar/' . $r['id'])) ?>">Editar</a>
                         <form method="post" action="<?= e(url('admin/tabelas-nutricionais')) ?>" style="display:inline"
-                              onsubmit="return confirm('Excluir esta tabela nutricional? Ela será removida de todos os produtos que a utilizam.');">
+                              data-confirmar="Excluir esta tabela nutricional? Ela será removida de todos os produtos que a utilizam."
+                              data-confirmar-ok="Excluir" data-confirmar-titulo="Excluir tabela nutricional">
                             <?= csrf_input() ?>
                             <input type="hidden" name="op" value="excluir">
                             <input type="hidden" name="id" value="<?= (int) $r['id'] ?>">

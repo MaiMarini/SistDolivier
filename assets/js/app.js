@@ -171,7 +171,11 @@
                 atualizarInfo();
                 render();
                 if (rejeitados > 0) {
-                    alert('Algumas fotos foram ignoradas. Use JPG, PNG ou WebP de até 5 MB.');
+                    if (typeof notificar === 'function') {
+                        notificar('erro', 'Algumas fotos foram ignoradas. Use JPG, PNG ou WebP de até 5 MB.');
+                    } else {
+                        alert('Algumas fotos foram ignoradas. Use JPG, PNG ou WebP de até 5 MB.');
+                    }
                 }
             });
         }

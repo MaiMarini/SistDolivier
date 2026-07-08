@@ -471,7 +471,8 @@ ob_start();
                     <td class="col-acoes">
                         <a class="btn sec" href="<?= e(url('admin/banners/editar/' . $b['id'])) ?>">Editar</a>
                         <form method="post" action="<?= e(url('admin/banners')) ?>" style="display:inline"
-                              onsubmit="return confirm('Excluir este banner?');">
+                              data-confirmar="Excluir este banner?" data-confirmar-ok="Excluir"
+                              data-confirmar-titulo="Excluir banner">
                             <?= csrf_input() ?>
                             <input type="hidden" name="op" value="excluir">
                             <input type="hidden" name="id" value="<?= (int) $b['id'] ?>">

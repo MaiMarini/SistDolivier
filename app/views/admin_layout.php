@@ -34,6 +34,7 @@ $menu = [
           href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Nunito:wght@400;600;700&display=swap">
     <!-- Cores fixas no theme.css (:root). -->
     <link rel="stylesheet" href="<?= e(asset('assets/css/theme.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset('assets/css/notificacoes.css')) ?>">
 </head>
 <body>
 
@@ -69,18 +70,20 @@ $menu = [
         $flash_sucesso = flash_consumir('sucesso');
         $flash_erro    = flash_consumir('erro');
         ?>
-        <?php if ($flash_sucesso !== null): ?>
-            <div class="flash sucesso"><?= e($flash_sucesso) ?></div>
-        <?php endif; ?>
-        <?php if ($flash_erro !== null): ?>
-            <div class="flash erro"><?= e($flash_erro) ?></div>
-        <?php endif; ?>
-
         <h1><?= e($titulo) ?></h1>
         <?= $conteudo ?>
     </main>
 </div>
 
+<script src="<?= e(asset('assets/js/notificacoes.js')) ?>"></script>
 <script src="<?= e(asset('assets/js/app.js')) ?>"></script>
+<?php if ($flash_sucesso !== null || $flash_erro !== null): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    <?php if ($flash_sucesso !== null): ?>notificar('sucesso', <?= json_encode($flash_sucesso) ?>);<?php endif; ?>
+    <?php if ($flash_erro !== null): ?>notificar('erro', <?= json_encode($flash_erro) ?>);<?php endif; ?>
+});
+</script>
+<?php endif; ?>
 </body>
 </html>

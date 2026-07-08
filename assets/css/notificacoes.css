@@ -1,0 +1,209 @@
+/* =============================================================================
+   Notificações reaproveitáveis: toasts, modal de confirmação e erros de campo.
+   Módulo ISOLADO e GENÉRICO — pode ser incluído em qualquer página (admin ou
+   loja) sem alteração. As cores da marca vêm de variáveis com fallback, então
+   funciona mesmo sem o theme.css.
+   ============================================================================= */
+:root {
+    --ntf-sucesso: var(--cor-acento, #8C9A5E);
+    /* verde-oliva */
+    --ntf-erro: var(--cor-pop, #BC5B38);
+    /* terracota */
+    --ntf-escuro: var(--cor-primaria, #6B4A2C);
+    --ntf-superficie: var(--cor-superficie, #ffffff);
+    --ntf-texto: var(--cor-texto, #4A3320);
+    --ntf-raio: var(--raio, 10px);
+    --ntf-sombra: 0 6px 24px rgba(0, 0, 0, .16);
+}
+
+/* --- Toasts (canto superior direito) ------------------------------------- */
+.ntf-toasts {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 4000;
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    width: min(360px, calc(100vw - 2rem));
+    pointer-events: none;
+}
+
+.ntf-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: .6rem;
+    background: var(--ntf-superficie);
+    color: var(--ntf-texto);
+    border-left: 5px solid var(--ntf-sucesso);
+    border-radius: var(--ntf-raio);
+    box-shadow: var(--ntf-sombra);
+    padding: .8rem .9rem;
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity .25s ease, transform .25s ease;
+}
+
+.ntf-toast.ntf-entrando {
+    opacity: 1;
+    transform: none;
+}
+
+.ntf-toast.ntf-saindo {
+    opacity: 0;
+    transform: translateY(-8px);
+}
+
+.ntf-toast.ntf-erro {
+    border-left-color: var(--ntf-erro);
+}
+
+.ntf-toast-icone {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+}
+
+.ntf-toast.ntf-sucesso .ntf-toast-icone {
+    color: var(--ntf-sucesso);
+}
+
+.ntf-toast.ntf-erro .ntf-toast-icone {
+    color: var(--ntf-erro);
+}
+
+.ntf-toast-msg {
+    flex: 1;
+    font-size: .95rem;
+    line-height: 1.4;
+}
+
+.ntf-toast-fechar {
+    flex: 0 0 auto;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: #999;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    line-height: 1;
+}
+
+.ntf-toast-fechar:hover {
+    color: var(--ntf-texto);
+}
+
+.ntf-toast-icone svg,
+.ntf-toast-fechar svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* --- Modal de confirmação ------------------------------------------------ */
+.ntf-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4100;
+    background: rgba(74, 51, 32, .55);
+    /* escurecido no tom marrom da marca */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .2s ease, visibility .2s ease;
+}
+
+.ntf-modal-overlay.ntf-aberto {
+    opacity: 1;
+    visibility: visible;
+}
+
+.ntf-modal {
+    background: var(--ntf-superficie);
+    color: var(--ntf-texto);
+    border-radius: var(--ntf-raio);
+    box-shadow: var(--ntf-sombra);
+    max-width: 420px;
+    width: 100%;
+    padding: 1.4rem;
+    transform: translateY(8px) scale(.98);
+    transition: transform .2s ease;
+}
+
+.ntf-modal-overlay.ntf-aberto .ntf-modal {
+    transform: none;
+}
+
+.ntf-modal-titulo {
+    font-family: var(--fonte-titulo, inherit);
+    color: var(--ntf-escuro);
+    font-size: 1.2rem;
+    margin: 0 0 .5rem;
+}
+
+.ntf-modal-texto {
+    margin: 0 0 1.2rem;
+    line-height: 1.5;
+}
+
+.ntf-modal-acoes {
+    display: flex;
+    justify-content: flex-end;
+    gap: .6rem;
+}
+
+.ntf-btn {
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: var(--ntf-raio);
+    padding: .55rem 1.1rem;
+    border: 2px solid transparent;
+}
+
+.ntf-btn-cancelar {
+    background: transparent;
+    border-color: var(--ntf-escuro);
+    color: var(--ntf-escuro);
+}
+
+.ntf-btn-ok {
+    background: var(--ntf-erro);
+    border-color: var(--ntf-erro);
+    color: #fff;
+}
+
+.ntf-btn-ok:hover,
+.ntf-btn-cancelar:hover {
+    opacity: .9;
+}
+
+/* --- Erros de validação de campo ----------------------------------------- */
+.campo.tem-erro input,
+.campo.tem-erro select,
+.campo.tem-erro textarea,
+.tem-erro>input,
+.tem-erro>select,
+.tem-erro>textarea {
+    border-color: var(--ntf-erro) !important;
+}
+
+.campo-erro-msg {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    color: var(--ntf-erro);
+    font-size: .85rem;
+    margin-top: .3rem;
+}
+
+.campo-erro-msg svg {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+}

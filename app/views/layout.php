@@ -24,6 +24,7 @@ $conteudo = isset($conteudo) ? $conteudo : '';
 
     <!-- As cores do tema são fixas no theme.css (:root), não vêm mais do banco. -->
     <link rel="stylesheet" href="<?= e(asset('assets/css/theme.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset('assets/css/notificacoes.css')) ?>">
 </head>
 <body>
 
@@ -35,13 +36,6 @@ $conteudo = isset($conteudo) ? $conteudo : '';
         $flash_sucesso = flash_consumir('sucesso');
         $flash_erro    = flash_consumir('erro');
         ?>
-        <?php if ($flash_sucesso !== null): ?>
-            <div class="flash sucesso"><?= e($flash_sucesso) ?></div>
-        <?php endif; ?>
-        <?php if ($flash_erro !== null): ?>
-            <div class="flash erro"><?= e($flash_erro) ?></div>
-        <?php endif; ?>
-
         <?= $conteudo /* HTML já escapado/renderizado pela página */ ?>
     </div>
 </main>
@@ -51,6 +45,15 @@ $conteudo = isset($conteudo) ? $conteudo : '';
 <!-- Modal de regras com aceite (conteúdo vem das configurações) -->
 <?php require __DIR__ . '/modal-regras.php'; ?>
 
+<script src="<?= e(asset('assets/js/notificacoes.js')) ?>"></script>
 <script src="<?= e(asset('assets/js/app.js')) ?>"></script>
+<?php if ($flash_sucesso !== null || $flash_erro !== null): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    <?php if ($flash_sucesso !== null): ?>notificar('sucesso', <?= json_encode($flash_sucesso) ?>);<?php endif; ?>
+    <?php if ($flash_erro !== null): ?>notificar('erro', <?= json_encode($flash_erro) ?>);<?php endif; ?>
+});
+</script>
+<?php endif; ?>
 </body>
 </html>
