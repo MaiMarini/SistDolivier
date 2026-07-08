@@ -85,12 +85,50 @@ function _bloco_upload_video(array $arquivo): array
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $op = $_POST['op'] ?? '';
+
+    // --- Reordenação via AJAX (responde JSON, sem redirect) ------------------
+    // Reescreve a coluna `ordem` de TODOS os banners em sequência (1..N).
+    if ($op === 'reordenar') {
+        header('Content-Type: application/json; charset=utf-8');
+        if (!csrf_validar()) {
+            echo json_encode(['ok' => false, 'erro' => 'csrf']);
+            return;
+        }
+        $ids = $_POST['ids'] ?? [];
+        if (!is_array($ids)) {
+            $ids = [];
+        }
+        $ids = array_values(array_filter(array_map('intval', $ids), static function ($v) {
+            return $v > 0;
+        }));
+
+        if (!empty($ids)) {
+            $pdo = db();
+            $pdo->beginTransaction();
+            try {
+                $up = $pdo->prepare('UPDATE banners SET ordem = ? WHERE id = ?');
+                $posicao = 1;
+                foreach ($ids as $id) {
+                    $up->execute([$posicao, $id]);
+                    $posicao++;
+                }
+                $pdo->commit();
+            } catch (Throwable $e) {
+                $pdo->rollBack();
+                echo json_encode(['ok' => false, 'erro' => 'db']);
+                return;
+            }
+        }
+        echo json_encode(['ok' => true]);
+        return;
+    }
+
+    // --- Demais operações (formulário normal) --------------------------------
     if (!csrf_validar()) {
         flash('erro', 'Sua sessão expirou. Tente novamente.');
         redirect('admin/banners');
     }
-
-    $op = $_POST['op'] ?? '';
 
     if ($op === 'excluir') {
         $id = (int) ($_POST['id'] ?? 0);
@@ -241,7 +279,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id     = (int) ($_POST['id'] ?? 0);
         $titulo = trim($_POST['titulo'] ?? '');
         $link   = trim($_POST['link'] ?? '');
-        $ordem  = (int) ($_POST['ordem'] ?? 0);
         $ativo  = isset($_POST['ativo']) ? 1 : 0;
 
         $destino_erro = $id > 0 ? 'admin/banners/editar/' . $id : 'admin/banners/novo';
@@ -258,7 +295,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($id > 0) {
-            // Edição: troca a imagem só se uma nova foi enviada.
+            // Edição não mexe na ordem (definida por arrastar/setas na listagem).
             if ($novo_arquivo !== null) {
                 $stmt = db()->prepare('SELECT imagem FROM banners WHERE id = ?');
                 $stmt->execute([$id]);
@@ -267,24 +304,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     imagem_apagar($antigo);
                 }
                 $stmt = db()->prepare(
-                    'UPDATE banners SET imagem = ?, titulo = ?, link = ?, ordem = ?, ativo = ? WHERE id = ?'
+                    'UPDATE banners SET imagem = ?, titulo = ?, link = ?, ativo = ? WHERE id = ?'
                 );
-                $stmt->execute([$novo_arquivo, $titulo, $link, $ordem, $ativo, $id]);
+                $stmt->execute([$novo_arquivo, $titulo, $link, $ativo, $id]);
             } else {
                 $stmt = db()->prepare(
-                    'UPDATE banners SET titulo = ?, link = ?, ordem = ?, ativo = ? WHERE id = ?'
+                    'UPDATE banners SET titulo = ?, link = ?, ativo = ? WHERE id = ?'
                 );
-                $stmt->execute([$titulo, $link, $ordem, $ativo, $id]);
+                $stmt->execute([$titulo, $link, $ativo, $id]);
             }
             flash('sucesso', 'Banner atualizado.');
             redirect('admin/banners');
         }
 
-        // Criação: imagem é obrigatória.
+        // Criação: imagem é obrigatória. Entra no fim da lista.
         if ($novo_arquivo === null) {
             flash('erro', 'Envie uma imagem para o banner.');
             redirect('admin/banners/novo');
         }
+        $ordem = (int) db()->query('SELECT COALESCE(MAX(ordem), 0) FROM banners')->fetchColumn() + 1;
         $stmt = db()->prepare(
             'INSERT INTO banners (imagem, titulo, link, ordem, ativo) VALUES (?, ?, ?, ?, ?)'
         );
@@ -338,7 +376,20 @@ if ($acao === 'novo' || $acao === 'editar') {
 
         <div class="campo">
             <label for="imagem">Imagem <?= $banner['id'] > 0 ? '(deixe vazio para manter)' : '' ?></label>
-            <input type="file" id="imagem" name="imagem" accept="image/jpeg,image/png,image/webp">
+            <input class="input-arquivo" type="file" id="imagem" name="imagem"
+                   accept="image/jpeg,image/png,image/webp" data-arquivo-nome>
+            <div class="arquivo-linha">
+                <label for="imagem" class="btn btn-arquivo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14l4-4h6" />
+                        <line x1="18" y1="14" x2="18" y2="20" />
+                        <line x1="15" y1="17" x2="21" y2="17" />
+                    </svg>
+                    Escolher foto
+                </label>
+                <span class="arquivo-info" data-arquivo-nome-alvo>Nenhum arquivo escolhido</span>
+            </div>
         </div>
         <div class="campo">
             <label for="titulo">Título (opcional)</label>
@@ -348,10 +399,6 @@ if ($acao === 'novo' || $acao === 'editar') {
             <label for="link">Link (opcional)</label>
             <input type="text" id="link" name="link" value="<?= e($banner['link']) ?>"
                    placeholder="Ex.: /categoria/velas ou https://...">
-        </div>
-        <div class="campo">
-            <label for="ordem">Ordem</label>
-            <input type="number" id="ordem" name="ordem" value="<?= (int) $banner['ordem'] ?>">
         </div>
         <div class="campo campo-inline">
             <input type="checkbox" id="ativo" name="ativo" value="1"
@@ -390,19 +437,27 @@ ob_start();
 <?php if (empty($banners)): ?>
     <p>Nenhum banner cadastrado.</p>
 <?php else: ?>
+    <p><small>Arraste pela alça (☰) para reordenar; no celular, use as setas ↑↓.</small></p>
     <table class="tabela">
         <thead>
             <tr>
                 <th class="t-centro"></th>
+                <th class="t-centro"></th>
                 <th>Título</th>
-                <th class="t-centro">Ordem</th>
                 <th class="t-centro">Ativo</th>
                 <th class="col-acoes">Ações</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="banners-tbody">
             <?php foreach ($banners as $b): ?>
-                <tr>
+                <tr data-id="<?= (int) $b['id'] ?>">
+                    <td class="col-mover t-centro">
+                        <span class="arrastar-handle" title="Arraste para reordenar" aria-hidden="true">&#9776;</span>
+                        <span class="ordenar-setas">
+                            <button type="button" class="btn-seta" data-subir aria-label="Mover para cima">&uarr;</button>
+                            <button type="button" class="btn-seta" data-descer aria-label="Mover para baixo">&darr;</button>
+                        </span>
+                    </td>
                     <td class="t-centro" style="width:90px;">
                         <?php if (!empty($b['imagem'])): ?>
                             <img src="<?= e(url('assets/uploads/' . imagem_miniatura($b['imagem']))) ?>"
@@ -412,7 +467,6 @@ ob_start();
                         <?php endif; ?>
                     </td>
                     <td><?= e($b['titulo'] ?: '—') ?></td>
-                    <td class="t-centro"><?= (int) $b['ordem'] ?></td>
                     <td class="t-centro"><?= $b['ativo'] ? 'Sim' : 'Não' ?></td>
                     <td class="col-acoes">
                         <a class="btn sec" href="<?= e(url('admin/banners/editar/' . $b['id'])) ?>">Editar</a>
@@ -428,6 +482,80 @@ ob_start();
             <?php endforeach; ?>
         </tbody>
     </table>
+
+    <div id="banners-feedback" class="reorder-feedback" hidden></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+    <script>
+    (function () {
+        var tbody = document.getElementById('banners-tbody');
+        if (!tbody) { return; }
+        var endpoint = <?= json_encode(url('admin/banners')) ?>;
+        var csrf = <?= json_encode(csrf_token()) ?>;
+        var feedback = document.getElementById('banners-feedback');
+
+        function ids() {
+            return Array.prototype.map.call(
+                tbody.querySelectorAll('tr[data-id]'),
+                function (tr) { return tr.getAttribute('data-id'); }
+            );
+        }
+        function feedbackMostrar(ok) {
+            if (!feedback) { return; }
+            feedback.textContent = ok ? 'Ordem salva ✓' : 'Erro ao salvar';
+            feedback.classList.toggle('erro', !ok);
+            feedback.hidden = false;
+            clearTimeout(feedback._t);
+            feedback._t = setTimeout(function () { feedback.hidden = true; }, 1800);
+        }
+        function atualizarSetas() {
+            var linhas = tbody.querySelectorAll('tr[data-id]');
+            linhas.forEach(function (tr, i) {
+                var up = tr.querySelector('[data-subir]');
+                var down = tr.querySelector('[data-descer]');
+                if (up) { up.disabled = (i === 0); }
+                if (down) { down.disabled = (i === linhas.length - 1); }
+            });
+        }
+        function salvar() {
+            var body = new URLSearchParams();
+            body.append('op', 'reordenar');
+            body.append('_csrf', csrf);
+            ids().forEach(function (id) { body.append('ids[]', id); });
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'fetch' },
+                credentials: 'same-origin',
+                body: body
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (d) { feedbackMostrar(!!(d && d.ok)); })
+                .catch(function () { feedbackMostrar(false); });
+            atualizarSetas();
+        }
+
+        // Desktop: arrastar pela alça.
+        if (window.Sortable) {
+            Sortable.create(tbody, { handle: '.arrastar-handle', animation: 150, onEnd: salvar });
+        }
+        // Mobile: setas ↑↓.
+        tbody.addEventListener('click', function (ev) {
+            var btn = ev.target.closest('[data-subir], [data-descer]');
+            if (!btn) { return; }
+            var tr = btn.closest('tr[data-id]');
+            if (!tr) { return; }
+            if (btn.hasAttribute('data-subir') && tr.previousElementSibling) {
+                tr.parentNode.insertBefore(tr, tr.previousElementSibling);
+                salvar();
+            } else if (btn.hasAttribute('data-descer') && tr.nextElementSibling) {
+                tr.parentNode.insertBefore(tr.nextElementSibling, tr);
+                salvar();
+            }
+        });
+
+        atualizarSetas();
+    })();
+    </script>
 <?php endif; ?>
 
 <hr class="mt-1">
