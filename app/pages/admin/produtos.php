@@ -160,6 +160,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         return;
     }
 
+    // ------------------------------------------- CHECAR NOME REPETIDO (AJAX/JSON)
+    // Retorna se já existe OUTRO produto com o mesmo nome (ignora o próprio id).
+    if ($op === 'nome_existe') {
+        header('Content-Type: application/json; charset=utf-8');
+        if (!csrf_validar()) {
+            echo json_encode(['ok' => false, 'erro' => 'csrf']);
+            return;
+        }
+        $nome = trim($_POST['nome'] ?? '');
+        $id   = (int) ($_POST['id'] ?? 0);
+        $existe = false;
+        if ($nome !== '') {
+            $stmt = db()->prepare('SELECT COUNT(*) FROM products WHERE nome = ? AND id <> ?');
+            $stmt->execute([$nome, $id]);
+            $existe = ((int) $stmt->fetchColumn()) > 0;
+        }
+        echo json_encode(['ok' => true, 'existe' => $existe]);
+        return;
+    }
+
     if (!csrf_validar()) {
         flash('erro', 'Sua sessão expirou. Tente novamente.');
         redirect('admin/produtos');
@@ -685,6 +705,63 @@ if ($acao === 'novo' || $acao === 'editar') {
     <div class="form-rodape">
         <button class="btn" type="submit" form="form-produto">Salvar produto</button>
     </div>
+
+    <script>
+    (function () {
+        var form = document.getElementById('form-produto');
+        if (!form) { return; }
+        var nomeInput = document.getElementById('nome');
+        var idInput = form.querySelector('input[name="id"]');
+        var endpoint = <?= json_encode(url('admin/produtos')) ?>;
+        var csrf = <?= json_encode(csrf_token()) ?>;
+        var liberado = false;
+
+        function enviar() {
+            liberado = true;
+            if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
+        }
+
+        // Antes de salvar, checa se o nome já existe em OUTRO produto.
+        form.addEventListener('submit', function (ev) {
+            if (liberado) { liberado = false; return; }     // já checado: segue
+            var nome = (nomeInput && nomeInput.value ? nomeInput.value : '').trim();
+            if (nome === '') { return; }                    // vazio: validação normal cuida
+            ev.preventDefault();
+
+            var body = new URLSearchParams();
+            body.append('op', 'nome_existe');
+            body.append('_csrf', csrf);
+            body.append('nome', nome);
+            body.append('id', idInput ? idInput.value : '0');
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'fetch' },
+                credentials: 'same-origin',
+                body: body
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (d && d.existe) {
+                        confirmar(
+                            'Já existe um produto com esse nome. Deseja criar assim mesmo?',
+                            enviar,
+                            {
+                                ok: 'Criar assim mesmo',
+                                titulo: 'Nome repetido',
+                                aoCancelar: function () {
+                                    if (nomeInput) { nomeInput.focus(); nomeInput.select(); }
+                                }
+                            }
+                        );
+                    } else {
+                        enviar();
+                    }
+                })
+                .catch(function () { enviar(); });          // falha na checagem: não trava o salvar
+        });
+    })();
+    </script>
     <?php
     view('admin_layout', ['titulo' => $titulo, 'conteudo' => ob_get_clean()]);
     return;
