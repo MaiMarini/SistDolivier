@@ -953,6 +953,13 @@ body.menu-aberto {
     font-weight: 700;
 }
 
+/* Pílula compacta (ex.: dentro da tabela do carrinho) */
+.qtd-pilula.qtd-sm button {
+    width: 32px;
+    height: 32px;
+    font-size: 1.1rem;
+}
+
 .btn-carrinho {
     width: 100%;
     border-radius: 999px;

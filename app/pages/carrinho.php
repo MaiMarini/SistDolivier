@@ -14,6 +14,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $acao = $_POST['acao'] ?? '';
 
+    // AJAX: define a quantidade de um item (pílula −/+). Responde JSON.
+    if ($acao === 'set_qtd') {
+        $ajax = ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== '';
+        $pid = (int) ($_POST['produto_id'] ?? 0);
+        $qtd = (int) ($_POST['quantidade'] ?? 1);
+        if ($pid > 0) {
+            carrinho_atualizar($pid, $qtd); // teto 99; 0 remove
+        }
+        if ($ajax) {
+            header('Content-Type: application/json; charset=utf-8');
+            $itens = carrinho();
+            $subtotal_geral = 0;
+            $qtd_total = 0;
+            $item_sub = 0;
+            $qtd_item = 0;
+            $existe = false;
+            if (!empty($itens)) {
+                $ids = array_keys($itens);
+                $ph = implode(',', array_fill(0, count($ids), '?'));
+                $st = db()->prepare("SELECT id, preco_centavos FROM products WHERE id IN ($ph) AND ativo = 1");
+                $st->execute($ids);
+                $preco = [];
+                foreach ($st->fetchAll() as $r) {
+                    $preco[(int) $r['id']] = (int) $r['preco_centavos'];
+                }
+                foreach ($itens as $ipid => $iq) {
+                    $ipid = (int) $ipid;
+                    $iq = (int) $iq;
+                    if (!isset($preco[$ipid])) {
+                        carrinho_remover($ipid);
+                        continue;
+                    }
+                    $sub = $preco[$ipid] * $iq;
+                    $subtotal_geral += $sub;
+                    $qtd_total += $iq;
+                    if ($ipid === $pid) {
+                        $item_sub = $sub;
+                        $qtd_item = $iq;
+                        $existe = true;
+                    }
+                }
+            }
+            echo json_encode([
+                'ok' => true,
+                'existe' => $existe,
+                'qtd' => $qtd_item,
+                'item_subtotal' => money($item_sub),
+                'subtotal_geral' => money($subtotal_geral),
+                'qtd_total' => $qtd_total,
+            ]);
+            return;
+        }
+        redirect('carrinho');
+    }
+
     if ($acao === 'adicionar') {
         // Vem da página de produto. Só adiciona se o produto existir e estiver ativo.
         $pid = (int) ($_POST['produto_id'] ?? 0);
@@ -105,57 +160,52 @@ ob_start();
     <p class="mt-1"><a class="btn" href="<?= e(url()) ?>">Ver produtos</a></p>
 <?php else: ?>
 
-    <form method="post" action="<?= e(url('carrinho')) ?>" id="form-atualizar">
-        <?= csrf_input() ?>
-        <input type="hidden" name="acao" value="atualizar">
-
-        <table class="tabela">
-            <thead>
+    <table class="tabela">
+        <thead>
+            <tr>
+                <th>Produto</th>
+                <th class="t-centro">Preço</th>
+                <th class="t-centro">Qtd.</th>
+                <th class="col-acoes">Subtotal</th>
+                <th class="col-acoes"></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($linhas as $linha): $p = $linha['produto']; ?>
                 <tr>
-                    <th>Produto</th>
-                    <th>Preço</th>
-                    <th>Qtd.</th>
-                    <th>Subtotal</th>
-                    <th></th>
+                    <td>
+                        <a href="<?= e(url('produto/' . $p['slug'])) ?>"><?= e($p['nome']) ?></a>
+                    </td>
+                    <td class="t-centro"><?= e(money((int) $p['preco_centavos'])) ?></td>
+                    <td class="t-centro">
+                        <div class="qtd-pilula qtd-sm" data-cart-qtd data-produto-id="<?= (int) $p['id'] ?>">
+                            <button type="button" data-menos aria-label="Diminuir">&minus;</button>
+                            <span class="qtd-num" data-num><?= (int) $linha['qtd'] ?></span>
+                            <button type="button" data-mais aria-label="Aumentar">+</button>
+                        </div>
+                    </td>
+                    <td class="col-acoes" data-subtotal="<?= (int) $p['id'] ?>"><?= e(money($linha['subtotal'])) ?></td>
+                    <td class="col-acoes">
+                        <button class="btn sec" type="submit"
+                                form="form-remover-<?= (int) $p['id'] ?>">Remover</button>
+                    </td>
                 </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($linhas as $linha): $p = $linha['produto']; ?>
-                    <tr>
-                        <td>
-                            <a href="<?= e(url('produto/' . $p['slug'])) ?>"><?= e($p['nome']) ?></a>
-                        </td>
-                        <td><?= e(money((int) $p['preco_centavos'])) ?></td>
-                        <td>
-                            <input type="number" name="qtd[<?= (int) $p['id'] ?>]"
-                                   value="<?= (int) $linha['qtd'] ?>" min="0" max="99"
-                                   style="width:70px;">
-                        </td>
-                        <td><?= e(money($linha['subtotal'])) ?></td>
-                        <td>
-                            <button class="btn sec" type="submit"
-                                    form="form-remover-<?= (int) $p['id'] ?>">Remover</button>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-            <tfoot>
-                <tr>
-                    <th colspan="3">Subtotal</th>
-                    <th colspan="2"><?= e(money($subtotal_geral)) ?></th>
-                </tr>
-            </tfoot>
-        </table>
+            <?php endforeach; ?>
+        </tbody>
+        <tfoot>
+            <tr>
+                <th colspan="3">Subtotal</th>
+                <th colspan="2" class="col-acoes" data-subtotal-geral><?= e(money($subtotal_geral)) ?></th>
+            </tr>
+        </tfoot>
+    </table>
 
-        <div class="produto-acoes mt-1">
-            <button class="btn sec" type="submit">Atualizar quantidades</button>
-            <a class="btn" href="<?= e(url('checkout')) ?>">Ir para o pagamento</a>
-        </div>
-    </form>
+    <div class="produto-acoes mt-1">
+        <a class="btn" href="<?= e(url('checkout')) ?>">Ir para o pagamento</a>
+    </div>
 
     <?php
-    // Formulários de remoção (fora do form de atualizar para não aninhar forms;
-    // os botões "Remover" se ligam a eles via atributo form="...").
+    // Formulários de remoção (os botões "Remover" se ligam via atributo form="...").
     foreach ($linhas as $linha): $p = $linha['produto']; ?>
         <form method="post" action="<?= e(url('carrinho')) ?>" id="form-remover-<?= (int) $p['id'] ?>">
             <?= csrf_input() ?>
@@ -163,6 +213,58 @@ ob_start();
             <input type="hidden" name="produto_id" value="<?= (int) $p['id'] ?>">
         </form>
     <?php endforeach; ?>
+
+    <script>
+    (function () {
+        var csrf = <?= json_encode(csrf_token()) ?>;
+        var endpoint = <?= json_encode(url('carrinho')) ?>;
+        var geral = document.querySelector('[data-subtotal-geral]');
+        var badge = document.querySelector('[data-cart-badge]');
+
+        document.querySelectorAll('[data-cart-qtd]').forEach(function (pill) {
+            var pid = pill.getAttribute('data-produto-id');
+            var num = pill.querySelector('[data-num]');
+            var cell = document.querySelector('[data-subtotal="' + pid + '"]');
+            var timer = null;
+
+            function enviar(v) {
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    var body = new URLSearchParams();
+                    body.append('acao', 'set_qtd');
+                    body.append('_csrf', csrf);
+                    body.append('produto_id', pid);
+                    body.append('quantidade', v);
+                    fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'fetch' },
+                        credentials: 'same-origin',
+                        body: body
+                    })
+                        .then(function (r) { return r.json(); })
+                        .then(function (d) {
+                            if (!d || !d.ok) { return; }
+                            if (!d.existe) { window.location.reload(); return; }
+                            if (d.qtd && d.qtd !== v) { num.textContent = d.qtd; }
+                            if (cell) { cell.textContent = d.item_subtotal; }
+                            if (geral) { geral.textContent = d.subtotal_geral; }
+                            if (badge) { badge.textContent = d.qtd_total; }
+                        })
+                        .catch(function () { window.location.reload(); });
+                }, 300);
+            }
+            function ajustar(delta) {
+                var v = Math.max(1, Math.min(99, (parseInt(num.textContent, 10) || 1) + delta));
+                num.textContent = v;
+                enviar(v);
+            }
+            var menos = pill.querySelector('[data-menos]');
+            var mais = pill.querySelector('[data-mais]');
+            if (menos) { menos.addEventListener('click', function () { ajustar(-1); }); }
+            if (mais) { mais.addEventListener('click', function () { ajustar(1); }); }
+        });
+    })();
+    </script>
 
 <?php endif; ?>
 <?php

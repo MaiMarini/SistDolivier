@@ -42,7 +42,7 @@ $ico_usuario  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
                 <a class="header-icone header-carrinho" href="<?= e(url('carrinho')) ?>" aria-label="Carrinho">
                     <?= $ico_carrinho ?>
                     <?php if ($qtd_carrinho > 0): ?>
-                        <span class="header-badge"><?= (int) $qtd_carrinho ?></span>
+                        <span class="header-badge" data-cart-badge><?= (int) $qtd_carrinho ?></span>
                     <?php endif; ?>
                 </a>
 
