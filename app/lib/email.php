@@ -35,8 +35,15 @@ function enviar_email(string $para, string $assunto, string $html): bool
     $assunto_enc = '=?UTF-8?B?' . base64_encode($assunto) . '?=';
 
     try {
-        return @mail($para, $assunto_enc, $html, implode("\r\n", $headers));
+        // 5º parâmetro: envelope sender (-f). Muitas hospedagens compartilhadas
+        // (HostGator) só entregam quando o Return-Path é um e-mail real do domínio.
+        $ok = @mail($para, $assunto_enc, $html, implode("\r\n", $headers), '-f' . $de);
+        if (!$ok) {
+            error_log('[email] mail() retornou false ao enviar para ' . $para . ' (De: ' . $de . ')');
+        }
+        return $ok;
     } catch (\Throwable $e) {
+        error_log('[email] exceção ao enviar para ' . $para . ': ' . $e->getMessage());
         return false;
     }
 }

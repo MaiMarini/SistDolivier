@@ -32,6 +32,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/configuracoes');
     }
 
+    // Envio de e-mail de teste (diagnóstico do mail() neste servidor).
+    if (($_POST['acao'] ?? '') === 'email_teste') {
+        $u = usuario_atual();
+        $para = trim($u['email'] ?? '');
+        $ok = enviar_email(
+            $para,
+            'Teste de e-mail — ' . cfg('site_nome', 'Loja'),
+            _email_layout('Teste de e-mail', '<p>Se você recebeu esta mensagem, o envio de e-mails está funcionando. 🎉</p>')
+        );
+        flash($ok ? 'sucesso' : 'erro', $ok
+            ? 'mail() retornou sucesso — enviado para ' . $para . '. Confira a caixa de entrada e o SPAM.'
+            : 'Falha no envio (mail() retornou false). Provável: função mail() desabilitada ou remetente inválido. Veja as observações abaixo.');
+        redirect('admin/configuracoes');
+    }
+
     $aba = $_POST['aba'] ?? '';
     if (!isset($abas_campos[$aba])) {
         redirect('admin/configuracoes');
@@ -256,6 +271,17 @@ ob_start();
     </div>
 
     <button class="btn" type="submit">Salvar</button>
+</form>
+
+<hr class="mt-1">
+<h2 class="mt-1">Testar envio de e-mail</h2>
+<p><small>Envia um e-mail de teste para o seu endereço de admin
+   (<?= e(usuario_atual()['email'] ?? '') ?>) para conferir se o servidor entrega.
+   Salve o "E-mail remetente" antes de testar.</small></p>
+<form method="post" action="<?= e(url('admin/configuracoes')) ?>">
+    <?= csrf_input() ?>
+    <input type="hidden" name="acao" value="email_teste">
+    <button class="btn sec" type="submit">Enviar e-mail de teste</button>
 </form>
 <?php
 view('admin_layout', ['titulo' => 'Configurações', 'conteudo' => ob_get_clean()]);
