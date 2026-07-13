@@ -10,9 +10,16 @@
  *   email_loja      -> recebe aviso de novo pedido (vazio = não notifica a loja)
  */
 
+/** Lê uma chave da configuração de e-mail (app/config.php -> 'email'). */
+function _email_conf(string $chave, $padrao = '')
+{
+    $c = $GLOBALS['config']['email'] ?? [];
+    return $c[$chave] ?? $padrao;
+}
+
 /**
  * Envia um e-mail HTML. Retorna true/false; nunca lança exceção.
- * Modo definido em settings.email_modo: 'smtp' (recomendado) ou 'mail'.
+ * Configuração 100% em app/config.php (bloco 'email') — nada no admin.
  */
 function enviar_email(string $para, string $assunto, string $html): bool
 {
@@ -23,17 +30,17 @@ function enviar_email(string $para, string $assunto, string $html): bool
 
     $nome_loja   = (string) cfg('site_nome', 'Loja');
     $assunto_enc = '=?UTF-8?B?' . base64_encode($assunto) . '?=';
-    $modo = cfg('email_modo', 'mail') === 'smtp' ? 'smtp' : 'mail';
+    $modo = _email_conf('modo', 'mail') === 'smtp' ? 'smtp' : 'mail';
 
     // --- SMTP autenticado (entrega no servidor de e-mail correto, ex.: Titan) --
     if ($modo === 'smtp') {
         // O "De:" precisa ser a própria conta autenticada, senão o servidor recusa.
-        $de = trim((string) cfg('smtp_usuario', ''));
+        $de = trim((string) _email_conf('smtp_usuario', ''));
         return _smtp_enviar($para, $assunto_enc, $html, $de, $nome_loja);
     }
 
     // --- mail() nativo (fallback) ---------------------------------------------
-    $de = trim((string) cfg('email_remetente', ''));
+    $de = trim((string) _email_conf('remetente', ''));
     if ($de === '') {
         $host = parse_url((string) ($GLOBALS['config']['base_url'] ?? ''), PHP_URL_HOST)
             ?: ($_SERVER['HTTP_HOST'] ?? 'localhost');
@@ -80,11 +87,11 @@ function _smtp_cmd($fp, string $cmd): string
 /** Envio via SMTP autenticado (AUTH LOGIN). Best-effort, loga falhas. */
 function _smtp_enviar(string $para, string $assunto_enc, string $html, string $de, string $nome_loja): bool
 {
-    $host = trim((string) cfg('smtp_host', ''));
-    $port = (int) cfg('smtp_porta', 465);
-    $user = trim((string) cfg('smtp_usuario', ''));
-    $pass = (string) cfg('smtp_senha', '');
-    $seg  = cfg('smtp_seguranca', 'ssl') === 'tls' ? 'tls' : 'ssl';
+    $host = trim((string) _email_conf('smtp_host', ''));
+    $port = (int) _email_conf('smtp_porta', 465);
+    $user = trim((string) _email_conf('smtp_usuario', ''));
+    $pass = (string) _email_conf('smtp_senha', '');
+    $seg  = _email_conf('smtp_seguranca', 'ssl') === 'tls' ? 'tls' : 'ssl';
 
     if ($host === '' || $user === '' || $pass === '' || $de === '') {
         error_log('[email] SMTP não configurado (host/usuário/senha).');
@@ -270,7 +277,7 @@ function email_novo_pedido(int $order_id): void
         );
     }
 
-    $loja = trim((string) cfg('email_loja', ''));
+    $loja = trim((string) _email_conf('loja', ''));
     if ($loja !== '') {
         $corpo = '<p>Um novo pedido <strong>#' . (int) $o['id'] . '</strong> foi realizado por '
             . e($o['cliente'] ?: ($o['contato_nome'] ?? 'cliente')) . '.</p>'

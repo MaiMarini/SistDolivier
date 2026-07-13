@@ -22,6 +22,20 @@ return [
     'mp_access_token' => '',
     'mp_public_key'   => '',
 
+    // --- E-mail (avisos de pedido) — técnico, fica fora do admin ---
+    // modo: 'smtp' (recomendado; entrega pelo servidor do domínio, ex.: Titan)
+    //       ou 'mail' (função mail() do servidor).
+    'email' => [
+        'modo'           => 'smtp',
+        'smtp_host'      => 'smtp.titan.email',
+        'smtp_porta'     => 465,               // 465 = SSL · 587 = TLS
+        'smtp_seguranca' => 'ssl',             // 'ssl' | 'tls'
+        'smtp_usuario'   => 'suporte@dolivier.com.br',
+        'smtp_senha'     => '',                // senha da caixa (preencher no servidor)
+        'remetente'      => 'suporte@dolivier.com.br', // usado no modo 'mail'
+        'loja'           => 'suporte@dolivier.com.br', // recebe aviso de novo pedido ('' = não avisa)
+    ],
+
     // Ambiente: 'dev' mostra erros na tela; 'prod' esconde.
     'env' => 'dev',
 ];
