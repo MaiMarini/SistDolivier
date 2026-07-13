@@ -70,7 +70,7 @@ ob_start();
         ?>
         <section class="pedido">
             <div class="pedido-cab">
-                <h3>Pedido #<?= (int) $pedido['id'] ?></h3>
+                <h3><a href="<?= e(url('pedido/' . (int) $pedido['id'])) ?>">Pedido #<?= (int) $pedido['id'] ?></a></h3>
                 <span class="total"><?= e(money((int) $pedido['total_centavos'])) ?></span>
                 <span class="data">
                     <?= e(date('d/m/Y H:i', strtotime($pedido['criado_em']))) ?>
@@ -117,6 +117,10 @@ ob_start();
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
+
+            <p class="mt-1">
+                <a class="btn sec" href="<?= e(url('pedido/' . (int) $pedido['id'])) ?>">Ver detalhes</a>
+            </p>
         </section>
     <?php endforeach; ?>
 <?php endif; ?>

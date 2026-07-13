@@ -14,6 +14,7 @@ $ehAdmin  = ($u !== null && !empty($u['is_admin']));
 // Itens do menu: rótulo => [seção, rota]
 $menu = [
     'Painel'        => ['', 'admin'],
+    'Pedidos'       => ['pedidos', 'admin/pedidos'],
     'Produtos'      => ['produtos', 'admin/produtos'],
     'Tabelas nutricionais' => ['tabelas-nutricionais', 'admin/tabelas-nutricionais'],
     'Categorias'    => ['categorias', 'admin/categorias'],
@@ -67,7 +68,6 @@ $menu = [
                     <a class="<?= admin_menu_ativo($info[0]) ?>"
                        href="<?= e(url($info[1])) ?>"><?= e($rotulo) ?></a>
                 <?php endforeach; ?>
-                <span class="menu-breve">Pedidos <small>em breve</small></span>
                 <span class="menu-breve">E-mails <small>em breve</small></span>
             </nav>
         </aside>

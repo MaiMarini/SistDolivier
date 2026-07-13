@@ -7,6 +7,9 @@
 // Biblioteca de upload/otimização de imagens (GD).
 require_once __DIR__ . '/lib/imagem.php';
 
+// Cálculo de frete por distância (valor final + distância plugável).
+require_once __DIR__ . '/lib/frete.php';
+
 // =============================================================================
 // Acesso ao banco
 // =============================================================================
@@ -117,6 +120,41 @@ function centavos_para_input(int $centavos): string
     return number_format($centavos / 100, 2, ',', '');
 }
 
+/**
+ * Texto de parcelamento a partir do total (centavos), conforme as settings:
+ *   parcelamento_limite_centavos -> valor mínimo do pedido para poder parcelar
+ *   parcela_minima_centavos      -> cada parcela não pode ficar abaixo disso
+ *   parcelamento_max             -> teto de parcelas (0/1 = sem teto)
+ * O nº de parcelas é o maior possível mantendo a parcela >= mínimo (e <= teto).
+ * Abaixo do limite -> "à vista".
+ */
+function parcelamento_texto(int $total_centavos): string
+{
+    $limite = (int) cfg('parcelamento_limite_centavos', 0);
+    $minima = (int) cfg('parcela_minima_centavos', 0);
+    $max    = (int) cfg('parcelamento_max', 0);
+
+    if ($total_centavos <= 0 || $total_centavos < $limite) {
+        return 'à vista';
+    }
+
+    // Parcelas: cada uma >= parcela mínima (se definida); senão, usa o teto.
+    if ($minima > 0) {
+        $parcelas = (int) floor($total_centavos / $minima);
+    } else {
+        $parcelas = $max >= 2 ? $max : 1;
+    }
+    if ($max >= 2) {
+        $parcelas = min($parcelas, $max); // aplica teto só quando >= 2
+    }
+    if ($parcelas < 2) {
+        return 'à vista';
+    }
+
+    $valor_parcela = (int) ceil($total_centavos / $parcelas);
+    return 'em até ' . $parcelas . 'x de ' . money($valor_parcela) . ' sem juros';
+}
+
 // =============================================================================
 // CSRF
 // =============================================================================
@@ -183,7 +221,7 @@ function exigir_login(): void
 {
     if (usuario_atual() === null) {
         flash('erro', 'Faça login para continuar.');
-        redirect('login');
+        redirect('entrar');
     }
 }
 
@@ -267,7 +305,7 @@ function carrinho_adicionar(int $produto_id, int $qtd = 1): void
         $qtd = 1;
     }
     $atual = carrinho();
-    $atual[$produto_id] = ($atual[$produto_id] ?? 0) + $qtd;
+    $atual[$produto_id] = min(99, ($atual[$produto_id] ?? 0) + $qtd); // teto por item
     $_SESSION['carrinho'] = $atual;
 }
 
@@ -278,7 +316,7 @@ function carrinho_atualizar(int $produto_id, int $qtd): void
     if ($qtd <= 0) {
         unset($atual[$produto_id]);
     } else {
-        $atual[$produto_id] = $qtd;
+        $atual[$produto_id] = min(99, $qtd); // teto por item
     }
     $_SESSION['carrinho'] = $atual;
 }

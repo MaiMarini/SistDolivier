@@ -15,8 +15,10 @@ $abas_campos = [
                     'instagram_usuario', 'tiktok_usuario', 'facebook_url', 'pinterest_url'],
     ],
     'pagamento' => [
-        'dinheiro' => ['parcelamento_limite_centavos'],
-        'inteiro'  => ['parcelamento_max'],
+        'texto'    => ['loja_endereco', 'loja_lat', 'loja_lng', 'retirada_endereco'],
+        'dinheiro' => ['parcelamento_limite_centavos', 'parcela_minima_centavos',
+                       'frete_base_centavos', 'frete_por_km_centavos'],
+        'inteiro'  => ['parcelamento_max', 'frete_base_km', 'entrega_raio_max_km'],
     ],
     'config' => [
         'texto' => ['regras_texto', 'whatsapp_msg', 'personalizar_msg_template', 'sobre_texto'],
@@ -139,16 +141,74 @@ ob_start();
     <input type="hidden" name="aba" value="pagamento">
 
     <div class="campo">
-        <label for="parcelamento_limite_centavos">Valor mínimo para parcelar (R$)</label>
+        <label for="parcelamento_limite_centavos">Valor mínimo do pedido para parcelar (R$)</label>
         <input type="text" id="parcelamento_limite_centavos" name="parcelamento_limite_centavos"
                inputmode="decimal"
                value="<?= e(centavos_para_input((int) cfg('parcelamento_limite_centavos', '0'))) ?>"
                placeholder="Ex.: 120,00">
+        <small>Abaixo deste total, a compra é só à vista.</small>
     </div>
     <div class="campo">
-        <label for="parcelamento_max">Máximo de parcelas</label>
-        <input type="number" id="parcelamento_max" name="parcelamento_max" min="1"
-               value="<?= (int) cfg('parcelamento_max', '1') ?>">
+        <label for="parcela_minima_centavos">Valor mínimo de cada parcela (R$)</label>
+        <input type="text" id="parcela_minima_centavos" name="parcela_minima_centavos"
+               inputmode="decimal"
+               value="<?= e(centavos_para_input((int) cfg('parcela_minima_centavos', '4000'))) ?>"
+               placeholder="Ex.: 40,00">
+        <small>O nº de parcelas é ajustado para que nenhuma fique abaixo deste valor.</small>
+    </div>
+    <div class="campo">
+        <label for="parcelamento_max">Máximo de parcelas (0 = sem limite)</label>
+        <input type="number" id="parcelamento_max" name="parcelamento_max" min="0"
+               value="<?= (int) cfg('parcelamento_max', '3') ?>">
+        <small>Teto de parcelas (padrão 3). Use 0 para deixar só a regra da parcela mínima.</small>
+    </div>
+
+    <h2 class="mt-1">Entrega (frete por distância)</h2>
+    <p><small>O frete do motoboy é calculado pela distância da loja até o cliente:
+       um valor fixo nos primeiros km e uma taxa por km extra. A retirada é sempre grátis.</small></p>
+
+    <div class="campo">
+        <label for="frete_base_km">Primeiros km (com valor fixo)</label>
+        <input type="number" id="frete_base_km" name="frete_base_km" min="0"
+               value="<?= (int) cfg('frete_base_km', '5') ?>">
+        <small>Até esta distância, cobra o valor fixo abaixo.</small>
+    </div>
+    <div class="campo">
+        <label for="frete_base_centavos">Valor fixo dos primeiros km (R$)</label>
+        <input type="text" id="frete_base_centavos" name="frete_base_centavos" inputmode="decimal"
+               value="<?= e(centavos_para_input((int) cfg('frete_base_centavos', '900'))) ?>" placeholder="Ex.: 9,00">
+    </div>
+    <div class="campo">
+        <label for="frete_por_km_centavos">Valor por km extra (R$)</label>
+        <input type="text" id="frete_por_km_centavos" name="frete_por_km_centavos" inputmode="decimal"
+               value="<?= e(centavos_para_input((int) cfg('frete_por_km_centavos', '100'))) ?>" placeholder="Ex.: 1,00">
+        <small>Cada km acima do limite (arredondado para cima) soma este valor.</small>
+    </div>
+    <div class="campo">
+        <label for="entrega_raio_max_km">Raio máximo de entrega (km)</label>
+        <input type="number" id="entrega_raio_max_km" name="entrega_raio_max_km" min="0"
+               value="<?= (int) cfg('entrega_raio_max_km', '15') ?>">
+        <small>Acima desta distância, só retirada. Use 0 para não limitar.</small>
+    </div>
+    <div class="campo">
+        <label for="loja_endereco">Endereço da loja (origem do frete)</label>
+        <input type="text" id="loja_endereco" name="loja_endereco"
+               value="<?= e(cfg('loja_endereco', '')) ?>" placeholder="Rua, número, bairro, cidade">
+    </div>
+    <div class="campo">
+        <label for="loja_lat">Latitude da loja (opcional)</label>
+        <input type="text" id="loja_lat" name="loja_lat"
+               value="<?= e(cfg('loja_lat', '')) ?>" placeholder="Ex.: -23.5505">
+    </div>
+    <div class="campo">
+        <label for="loja_lng">Longitude da loja (opcional)</label>
+        <input type="text" id="loja_lng" name="loja_lng"
+               value="<?= e(cfg('loja_lng', '')) ?>" placeholder="Ex.: -46.6333">
+        <small>Latitude/longitude ajudam no cálculo preciso da distância (preencha quando definirmos o mapa).</small>
+    </div>
+    <div class="campo">
+        <label for="retirada_endereco">Endereço / instruções de retirada</label>
+        <textarea id="retirada_endereco" name="retirada_endereco" rows="2"><?= e(cfg('retirada_endereco', '')) ?></textarea>
     </div>
 
     <button class="btn" type="submit">Salvar</button>

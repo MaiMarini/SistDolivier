@@ -15,12 +15,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $acao = $_POST['acao'] ?? '';
 
     if ($acao === 'adicionar') {
-        // Vem da página de produto.
+        // Vem da página de produto. Só adiciona se o produto existir e estiver ativo.
         $pid = (int) ($_POST['produto_id'] ?? 0);
         $qtd = (int) ($_POST['quantidade'] ?? 1);
         if ($pid > 0) {
-            carrinho_adicionar($pid, $qtd);
-            flash('sucesso', 'Produto adicionado ao carrinho.');
+            $stmt = db()->prepare('SELECT nome FROM products WHERE id = ? AND ativo = 1 LIMIT 1');
+            $stmt->execute([$pid]);
+            if ($stmt->fetchColumn() === false) {
+                flash('erro', 'Este produto não está mais disponível.');
+            } else {
+                carrinho_adicionar($pid, $qtd);
+                flash('sucesso', 'Produto adicionado ao carrinho.');
+            }
         }
     } elseif ($acao === 'atualizar') {
         // Atualiza várias quantidades de uma vez; qtd 0 remove o item.
@@ -46,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $itens = carrinho(); // [product_id => quantidade]
 $linhas = [];
 $subtotal_geral = 0;
+$removidos = 0;      // itens que saíram do catálogo e foram tirados do carrinho
 
 if (!empty($itens)) {
     $ids = array_keys($itens);
@@ -65,8 +72,9 @@ if (!empty($itens)) {
     foreach ($itens as $pid => $qtd) {
         $pid = (int) $pid;
         if (!isset($por_id[$pid])) {
-            // Produto saiu do catálogo: limpa do carrinho silenciosamente.
+            // Produto saiu do catálogo (inativo/excluído): remove e avisa.
             carrinho_remover($pid);
+            $removidos++;
             continue;
         }
         $produto  = $por_id[$pid];
@@ -83,6 +91,14 @@ if (!empty($itens)) {
 ob_start();
 ?>
 <h1>Seu carrinho</h1>
+
+<?php if ($removidos > 0): ?>
+    <div class="flash erro">
+        <?= $removidos === 1
+            ? 'Um item saiu do catálogo e foi removido do seu carrinho.'
+            : (int) $removidos . ' itens saíram do catálogo e foram removidos do seu carrinho.' ?>
+    </div>
+<?php endif; ?>
 
 <?php if (empty($linhas)): ?>
     <p>Seu carrinho está vazio.</p>
@@ -133,7 +149,7 @@ ob_start();
 
         <div class="produto-acoes mt-1">
             <button class="btn sec" type="submit">Atualizar quantidades</button>
-            <button class="btn" type="button" data-abrir-modal="modal-regras">Finalizar compra</button>
+            <a class="btn" href="<?= e(url('checkout')) ?>">Ir para o pagamento</a>
         </div>
     </form>
 
