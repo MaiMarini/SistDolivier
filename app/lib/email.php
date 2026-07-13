@@ -10,7 +10,10 @@
  *   email_loja      -> recebe aviso de novo pedido (vazio = não notifica a loja)
  */
 
-/** Envia um e-mail HTML. Retorna true/false; nunca lança exceção. */
+/**
+ * Envia um e-mail HTML. Retorna true/false; nunca lança exceção.
+ * Modo definido em settings.email_modo: 'smtp' (recomendado) ou 'mail'.
+ */
 function enviar_email(string $para, string $assunto, string $html): bool
 {
     $para = trim($para);
@@ -18,34 +21,151 @@ function enviar_email(string $para, string $assunto, string $html): bool
         return false;
     }
 
+    $nome_loja   = (string) cfg('site_nome', 'Loja');
+    $assunto_enc = '=?UTF-8?B?' . base64_encode($assunto) . '?=';
+    $modo = cfg('email_modo', 'mail') === 'smtp' ? 'smtp' : 'mail';
+
+    // --- SMTP autenticado (entrega no servidor de e-mail correto, ex.: Titan) --
+    if ($modo === 'smtp') {
+        // O "De:" precisa ser a própria conta autenticada, senão o servidor recusa.
+        $de = trim((string) cfg('smtp_usuario', ''));
+        return _smtp_enviar($para, $assunto_enc, $html, $de, $nome_loja);
+    }
+
+    // --- mail() nativo (fallback) ---------------------------------------------
     $de = trim((string) cfg('email_remetente', ''));
     if ($de === '') {
         $host = parse_url((string) ($GLOBALS['config']['base_url'] ?? ''), PHP_URL_HOST)
             ?: ($_SERVER['HTTP_HOST'] ?? 'localhost');
         $de = 'no-reply@' . preg_replace('/^www\./', '', $host);
     }
-    $nome_loja = (string) cfg('site_nome', 'Loja');
-
     $headers = [
         'MIME-Version: 1.0',
         'Content-Type: text/html; charset=UTF-8',
         'From: =?UTF-8?B?' . base64_encode($nome_loja) . '?= <' . $de . '>',
         'Reply-To: ' . $de,
     ];
-    $assunto_enc = '=?UTF-8?B?' . base64_encode($assunto) . '?=';
-
     try {
-        // 5º parâmetro: envelope sender (-f). Muitas hospedagens compartilhadas
-        // (HostGator) só entregam quando o Return-Path é um e-mail real do domínio.
         $ok = @mail($para, $assunto_enc, $html, implode("\r\n", $headers), '-f' . $de);
         if (!$ok) {
-            error_log('[email] mail() retornou false ao enviar para ' . $para . ' (De: ' . $de . ')');
+            error_log('[email] mail() retornou false ao enviar para ' . $para);
         }
         return $ok;
     } catch (\Throwable $e) {
-        error_log('[email] exceção ao enviar para ' . $para . ': ' . $e->getMessage());
+        error_log('[email] exceção mail(): ' . $e->getMessage());
         return false;
     }
+}
+
+/** Lê uma resposta (multi-linha) do servidor SMTP. */
+function _smtp_ler($fp): string
+{
+    $resp = '';
+    while (($linha = fgets($fp, 1024)) !== false) {
+        $resp .= $linha;
+        if (strlen($linha) >= 4 && $linha[3] === ' ') {
+            break; // última linha da resposta
+        }
+    }
+    return $resp;
+}
+
+/** Envia um comando e devolve a resposta (código nos 3 primeiros dígitos). */
+function _smtp_cmd($fp, string $cmd): string
+{
+    fwrite($fp, $cmd . "\r\n");
+    return _smtp_ler($fp);
+}
+
+/** Envio via SMTP autenticado (AUTH LOGIN). Best-effort, loga falhas. */
+function _smtp_enviar(string $para, string $assunto_enc, string $html, string $de, string $nome_loja): bool
+{
+    $host = trim((string) cfg('smtp_host', ''));
+    $port = (int) cfg('smtp_porta', 465);
+    $user = trim((string) cfg('smtp_usuario', ''));
+    $pass = (string) cfg('smtp_senha', '');
+    $seg  = cfg('smtp_seguranca', 'ssl') === 'tls' ? 'tls' : 'ssl';
+
+    if ($host === '' || $user === '' || $pass === '' || $de === '') {
+        error_log('[email] SMTP não configurado (host/usuário/senha).');
+        return false;
+    }
+
+    $destino = ($seg === 'ssl' ? 'ssl://' : 'tcp://') . $host . ':' . $port;
+    $ctx = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+    $fp = @stream_socket_client($destino, $errno, $errstr, 20, STREAM_CLIENT_CONNECT, $ctx);
+    if (!$fp) {
+        error_log("[email] SMTP conexão falhou: $errstr ($errno)");
+        return false;
+    }
+    stream_set_timeout($fp, 20);
+
+    $ehlo = preg_replace('/^www\./', '', parse_url((string) ($GLOBALS['config']['base_url'] ?? ''), PHP_URL_HOST) ?: 'localhost');
+    $ok = true;
+    $cod = static function ($r) { return (int) substr($r, 0, 3); };
+
+    try {
+        if ($cod(_smtp_ler($fp)) !== 220) { $ok = false; }
+
+        if ($ok) {
+            _smtp_cmd($fp, 'EHLO ' . $ehlo);
+            if ($seg === 'tls') {
+                if ($cod(_smtp_cmd($fp, 'STARTTLS')) === 220) {
+                    @stream_socket_enable_crypto(
+                        $fp,
+                        true,
+                        STREAM_CRYPTO_METHOD_TLS_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT
+                    );
+                    _smtp_cmd($fp, 'EHLO ' . $ehlo);
+                } else {
+                    $ok = false;
+                }
+            }
+        }
+
+        if ($ok) {
+            _smtp_cmd($fp, 'AUTH LOGIN');
+            _smtp_cmd($fp, base64_encode($user));
+            if ($cod(_smtp_cmd($fp, base64_encode($pass))) !== 235) {
+                error_log('[email] SMTP autenticação recusada.');
+                $ok = false;
+            }
+        }
+
+        if ($ok) {
+            _smtp_cmd($fp, 'MAIL FROM:<' . $de . '>');
+            $rc = $cod(_smtp_cmd($fp, 'RCPT TO:<' . $para . '>'));
+            if ($rc !== 250 && $rc !== 251) {
+                error_log('[email] SMTP RCPT recusado para ' . $para);
+                $ok = false;
+            }
+        }
+
+        if ($ok && $cod(_smtp_cmd($fp, 'DATA')) === 354) {
+            $cabec = 'From: =?UTF-8?B?' . base64_encode($nome_loja) . "?= <$de>\r\n"
+                . "Reply-To: $de\r\n"
+                . "To: $para\r\n"
+                . "Subject: $assunto_enc\r\n"
+                . "MIME-Version: 1.0\r\n"
+                . "Content-Type: text/html; charset=UTF-8\r\n";
+            // Normaliza quebras para CRLF e faz "dot-stuffing".
+            $corpo = str_replace(["\r\n", "\r", "\n"], "\r\n", $html);
+            $corpo = preg_replace('/^\./m', '..', $corpo);
+            $data = $cabec . "\r\n" . $corpo . "\r\n.";
+            if ($cod(_smtp_cmd($fp, $data)) !== 250) {
+                $ok = false;
+            }
+        } elseif ($ok) {
+            $ok = false;
+        }
+
+        _smtp_cmd($fp, 'QUIT');
+    } catch (\Throwable $e) {
+        error_log('[email] SMTP exceção: ' . $e->getMessage());
+        $ok = false;
+    }
+    fclose($fp);
+    return $ok;
 }
 
 /** Envelopa o conteúdo num HTML simples nas cores da marca (estilos inline). */

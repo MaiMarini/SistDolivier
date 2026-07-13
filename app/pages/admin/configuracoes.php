@@ -47,6 +47,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/configuracoes');
     }
 
+    // Configurações de SMTP (senha só é regravada se preenchida).
+    if (($_POST['acao'] ?? '') === 'smtp_salvar') {
+        $up = db()->prepare(
+            'INSERT INTO settings (chave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = ?'
+        );
+        $vals = [
+            'email_modo'      => (($_POST['email_modo'] ?? 'mail') === 'smtp' ? 'smtp' : 'mail'),
+            'smtp_host'       => trim($_POST['smtp_host'] ?? ''),
+            'smtp_porta'      => (string) (int) ($_POST['smtp_porta'] ?? 465),
+            'smtp_seguranca'  => (($_POST['smtp_seguranca'] ?? 'ssl') === 'tls' ? 'tls' : 'ssl'),
+            'smtp_usuario'    => trim($_POST['smtp_usuario'] ?? ''),
+        ];
+        foreach ($vals as $k => $v) {
+            $up->execute([$k, $v, $v]);
+        }
+        $senha = (string) ($_POST['smtp_senha'] ?? '');
+        if ($senha !== '') {
+            $up->execute(['smtp_senha', $senha, $senha]);
+        }
+        flash('sucesso', 'Configurações de e-mail (SMTP) salvas.');
+        redirect('admin/configuracoes');
+    }
+
     $aba = $_POST['aba'] ?? '';
     if (!isset($abas_campos[$aba])) {
         redirect('admin/configuracoes');
@@ -271,6 +294,57 @@ ob_start();
     </div>
 
     <button class="btn" type="submit">Salvar</button>
+</form>
+
+<hr class="mt-1">
+<h2 class="mt-1">Envio de e-mail (SMTP)</h2>
+<p><small>Recomendado: enviar pelo servidor de e-mail do domínio (ex.: Titan) por SMTP
+   autenticado — mais confiável que o <code>mail()</code> e necessário quando o e-mail
+   está fora da hospedagem.</small></p>
+<form class="formulario" method="post" action="<?= e(url('admin/configuracoes')) ?>" style="max-width:640px;">
+    <?= csrf_input() ?>
+    <input type="hidden" name="acao" value="smtp_salvar">
+
+    <div class="campo">
+        <label for="email_modo">Modo de envio</label>
+        <?php $modo = cfg('email_modo', 'mail'); ?>
+        <select id="email_modo" name="email_modo">
+            <option value="mail" <?= $modo !== 'smtp' ? 'selected' : '' ?>>mail() do servidor</option>
+            <option value="smtp" <?= $modo === 'smtp' ? 'selected' : '' ?>>SMTP autenticado (recomendado)</option>
+        </select>
+    </div>
+    <div class="campo">
+        <label for="smtp_host">Servidor SMTP</label>
+        <input type="text" id="smtp_host" name="smtp_host"
+               value="<?= e(cfg('smtp_host', 'smtp.titan.email')) ?>" placeholder="smtp.titan.email">
+    </div>
+    <div class="campo">
+        <label for="smtp_porta">Porta</label>
+        <input type="number" id="smtp_porta" name="smtp_porta"
+               value="<?= (int) cfg('smtp_porta', '465') ?>" placeholder="465">
+        <small>465 = SSL · 587 = TLS.</small>
+    </div>
+    <div class="campo">
+        <label for="smtp_seguranca">Segurança</label>
+        <?php $seg = cfg('smtp_seguranca', 'ssl'); ?>
+        <select id="smtp_seguranca" name="smtp_seguranca">
+            <option value="ssl" <?= $seg !== 'tls' ? 'selected' : '' ?>>SSL (porta 465)</option>
+            <option value="tls" <?= $seg === 'tls' ? 'selected' : '' ?>>TLS (porta 587)</option>
+        </select>
+    </div>
+    <div class="campo">
+        <label for="smtp_usuario">Usuário (e-mail completo)</label>
+        <input type="email" id="smtp_usuario" name="smtp_usuario"
+               value="<?= e(cfg('smtp_usuario', '')) ?>" placeholder="suporte@dolivier.com.br">
+    </div>
+    <div class="campo">
+        <label for="smtp_senha">Senha da caixa</label>
+        <input type="password" id="smtp_senha" name="smtp_senha" autocomplete="new-password"
+               placeholder="<?= cfg('smtp_senha', '') !== '' ? '•••••• (deixe vazio para manter)' : 'senha do e-mail' ?>">
+        <small>Por segurança, a senha não é exibida. Preencha só para alterá-la.</small>
+    </div>
+
+    <button class="btn" type="submit">Salvar SMTP</button>
 </form>
 
 <hr class="mt-1">
