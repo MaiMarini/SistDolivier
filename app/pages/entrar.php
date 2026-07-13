@@ -27,8 +27,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nome     = trim($_POST['nome'] ?? '');
         $cpf      = preg_replace('/\D+/', '', $_POST['cpf'] ?? ''); // só dígitos
         $email    = trim($_POST['email'] ?? '');
-        $endereco = trim($_POST['endereco'] ?? '');
         $senha    = $_POST['senha'] ?? '';
+
+        // Endereço estruturado -> uma linha formatada guardada em users.endereco.
+        $rua    = trim($_POST['rua'] ?? '');
+        $numero = trim($_POST['numero'] ?? '');
+        $comp   = trim($_POST['complemento'] ?? '');
+        $bairro = trim($_POST['bairro'] ?? '');
+        $cidade = trim($_POST['cidade'] ?? '');
+        $estado = trim($_POST['estado'] ?? '');
+        $cep    = trim($_POST['cep'] ?? '');
+        $endereco = $rua;
+        if ($numero !== '') { $endereco .= ', ' . $numero; }
+        if ($comp !== '')   { $endereco .= ' - ' . $comp; }
+        if ($bairro !== '') { $endereco .= ' - ' . $bairro; }
+        if ($cidade !== '' || $estado !== '') {
+            $endereco .= ' - ' . trim($cidade . ($estado !== '' ? '/' . $estado : ''));
+        }
+        if ($cep !== '') { $endereco .= ' - CEP ' . $cep; }
+        $endereco = trim($endereco, ' -,');
 
         $erros = [];
         if (mb_strlen($nome) < 3) {
@@ -158,10 +175,39 @@ ob_start();
             <label for="cad-email">E-mail</label>
             <input type="email" id="cad-email" name="email" required>
         </div>
+
         <div class="campo">
-            <label for="cad-endereco">Endereço</label>
-            <textarea id="cad-endereco" name="endereco" rows="2"></textarea>
+            <label for="cad-cep">CEP</label>
+            <input type="text" id="cad-cep" name="cep" inputmode="numeric"
+                   placeholder="Somente números" data-cep>
+            <small>Preencha o CEP para completar o endereço automaticamente.</small>
         </div>
+        <div class="campo">
+            <label for="cad-rua">Rua</label>
+            <input type="text" id="cad-rua" name="rua" data-cep-rua>
+        </div>
+        <div class="campo">
+            <label for="cad-numero">Número</label>
+            <input type="text" id="cad-numero" name="numero">
+        </div>
+        <div class="campo">
+            <label for="cad-complemento">Complemento (opcional)</label>
+            <input type="text" id="cad-complemento" name="complemento">
+        </div>
+        <div class="campo">
+            <label for="cad-bairro">Bairro</label>
+            <input type="text" id="cad-bairro" name="bairro" data-cep-bairro>
+        </div>
+        <div class="campo">
+            <label for="cad-cidade">Cidade</label>
+            <input type="text" id="cad-cidade" name="cidade" data-cep-cidade>
+        </div>
+        <div class="campo">
+            <label for="cad-estado">Estado (UF)</label>
+            <input type="text" id="cad-estado" name="estado" maxlength="2"
+                   placeholder="Ex.: SP" data-cep-uf>
+        </div>
+
         <div class="campo">
             <label for="cad-senha">Senha</label>
             <input type="password" id="cad-senha" name="senha" minlength="6" required>

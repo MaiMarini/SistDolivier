@@ -140,12 +140,39 @@ $ico_usuario  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
                            placeholder="Somente números" required>
                 </div>
                 <div class="campo">
-                    <label for="dw-cad-endereco">Endereço</label>
-                    <textarea id="dw-cad-endereco" name="endereco" rows="2"></textarea>
-                </div>
-                <div class="campo">
                     <label for="dw-cad-email">E-mail</label>
                     <input type="email" id="dw-cad-email" name="email" required>
+                </div>
+                <div class="campo">
+                    <label for="dw-cad-cep">CEP</label>
+                    <input type="text" id="dw-cad-cep" name="cep" inputmode="numeric"
+                           placeholder="Somente números" data-cep>
+                    <small>Preencha o CEP para completar o endereço.</small>
+                </div>
+                <div class="campo">
+                    <label for="dw-cad-rua">Rua</label>
+                    <input type="text" id="dw-cad-rua" name="rua" data-cep-rua>
+                </div>
+                <div class="campo">
+                    <label for="dw-cad-numero">Número</label>
+                    <input type="text" id="dw-cad-numero" name="numero">
+                </div>
+                <div class="campo">
+                    <label for="dw-cad-complemento">Complemento (opcional)</label>
+                    <input type="text" id="dw-cad-complemento" name="complemento">
+                </div>
+                <div class="campo">
+                    <label for="dw-cad-bairro">Bairro</label>
+                    <input type="text" id="dw-cad-bairro" name="bairro" data-cep-bairro>
+                </div>
+                <div class="campo">
+                    <label for="dw-cad-cidade">Cidade</label>
+                    <input type="text" id="dw-cad-cidade" name="cidade" data-cep-cidade>
+                </div>
+                <div class="campo">
+                    <label for="dw-cad-estado">Estado (UF)</label>
+                    <input type="text" id="dw-cad-estado" name="estado" maxlength="2"
+                           placeholder="Ex.: SP" data-cep-uf>
                 </div>
                 <div class="campo">
                     <label for="dw-cad-senha">Senha</label>

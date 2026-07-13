@@ -308,28 +308,7 @@ ob_start();
         aceite.addEventListener('change', sincronizar);
         sincronizar();
     }
-
-    // Autopreenche o endereço pelo CEP (ViaCEP; grátis, sem chave).
-    var cep = form.querySelector('[data-cep]');
-    if (cep) {
-        cep.addEventListener('blur', function () {
-            var digitos = (cep.value || '').replace(/\D+/g, '');
-            if (digitos.length !== 8) { return; }
-            fetch('https://viacep.com.br/ws/' + digitos + '/json/')
-                .then(function (r) { return r.json(); })
-                .then(function (d) {
-                    if (d.erro) { return; }
-                    var set = function (sel, val) {
-                        var el = form.querySelector(sel);
-                        if (el && val) { el.value = val; }
-                    };
-                    set('[data-cep-rua]', d.logradouro);
-                    set('[data-cep-bairro]', d.bairro);
-                    set('[data-cep-cidade]', d.localidade);
-                })
-                .catch(function () { /* silencioso: cliente preenche manualmente */ });
-        });
-    }
+    // O autopreenchimento por CEP (ViaCEP) é feito de forma genérica no app.js.
 })();
 </script>
 <?php

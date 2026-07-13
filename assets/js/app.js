@@ -205,6 +205,31 @@
             });
         }
 
+        // --- ViaCEP: autopreenche endereço a partir do CEP -----------------
+        // Reaproveitável: em qualquer formulário, um [data-cep] preenche os
+        // campos [data-cep-rua], [data-cep-bairro], [data-cep-cidade], [data-cep-uf].
+        document.querySelectorAll('[data-cep]').forEach(function (cep) {
+            cep.addEventListener('blur', function () {
+                var d8 = (cep.value || '').replace(/\D+/g, '');
+                if (d8.length !== 8) { return; }
+                var escopo = cep.closest('form') || document;
+                fetch('https://viacep.com.br/ws/' + d8 + '/json/')
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) {
+                        if (!d || d.erro) { return; }
+                        var setF = function (sel, val) {
+                            var el = escopo.querySelector(sel);
+                            if (el && val) { el.value = val; }
+                        };
+                        setF('[data-cep-rua]', d.logradouro);
+                        setF('[data-cep-bairro]', d.bairro);
+                        setF('[data-cep-cidade]', d.localidade);
+                        setF('[data-cep-uf]', d.uf);
+                    })
+                    .catch(function () { /* silencioso: preenche manualmente */ });
+            });
+        });
+
         // --- Slug automático (nome -> slug) ---------------------------------
         var slugSource = document.querySelector('[data-slug-source]');
         var slugTarget = document.querySelector('[data-slug-target]');
