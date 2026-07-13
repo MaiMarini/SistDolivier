@@ -147,6 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     carrinho_limpar();
+    email_novo_pedido($order_id); // avisa cliente (e loja); best-effort
     flash('sucesso', 'Pedido realizado! Veja os detalhes abaixo.');
     redirect('pedido/' . $order_id);
 }

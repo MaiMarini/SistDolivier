@@ -34,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare('INSERT INTO order_status_history (order_id, status) VALUES (?, ?)')
                     ->execute([$id, $novo]);
                 $pdo->commit();
+                email_status_pedido($id); // avisa o cliente; best-effort
                 flash('sucesso', 'Status atualizado para "' . $STATUS[$novo] . '".');
             } catch (Throwable $e) {
                 $pdo->rollBack();

@@ -12,6 +12,7 @@ exigir_admin();
 $abas_campos = [
     'comercial' => [
         'texto' => ['site_descricao', 'whatsapp_numero', 'endereco', 'cnpj',
+                    'email_remetente', 'email_loja',
                     'instagram_usuario', 'tiktok_usuario', 'facebook_url', 'pinterest_url'],
     ],
     'pagamento' => [
@@ -108,6 +109,18 @@ ob_start();
     <div class="campo">
         <label for="cnpj">CNPJ</label>
         <input type="text" id="cnpj" name="cnpj" value="<?= e(cfg('cnpj', '')) ?>">
+    </div>
+    <div class="campo">
+        <label for="email_remetente">E-mail remetente (avisos automáticos)</label>
+        <input type="email" id="email_remetente" name="email_remetente"
+               value="<?= e(cfg('email_remetente', '')) ?>" placeholder="no-reply@seudominio.com.br">
+        <small>Aparece como "De:" nos e-mails de pedido. Use um e-mail do domínio da loja.</small>
+    </div>
+    <div class="campo">
+        <label for="email_loja">E-mail da loja (recebe aviso de novo pedido)</label>
+        <input type="email" id="email_loja" name="email_loja"
+               value="<?= e(cfg('email_loja', '')) ?>" placeholder="pedidos@seudominio.com.br">
+        <small>Deixe vazio para não notificar a loja a cada novo pedido.</small>
     </div>
     <div class="campo">
         <label for="instagram_usuario">Instagram (usuário, sem @)</label>
