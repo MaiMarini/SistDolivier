@@ -230,6 +230,22 @@
             });
         });
 
+        // --- Máscara de telefone BR: (11) 91234-5678 / (11) 1234-5678 -------
+        function mascaraTelefone(valor) {
+            var v = (valor || '').replace(/\D/g, '').slice(0, 11);
+            if (v.length <= 2) { return v.length ? '(' + v : v; }
+            var ddd = v.slice(0, 2);
+            var resto = v.slice(2);
+            if (resto.length <= 4) { return '(' + ddd + ') ' + resto; }
+            if (resto.length <= 8) { return '(' + ddd + ') ' + resto.slice(0, 4) + '-' + resto.slice(4); }
+            return '(' + ddd + ') ' + resto.slice(0, 5) + '-' + resto.slice(5);
+        }
+        document.querySelectorAll('[data-mask-tel]').forEach(function (el) {
+            var aplicar = function () { el.value = mascaraTelefone(el.value); };
+            el.addEventListener('input', aplicar);
+            aplicar(); // formata um valor já preenchido
+        });
+
         // --- Slug automático (nome -> slug) ---------------------------------
         var slugSource = document.querySelector('[data-slug-source]');
         var slugTarget = document.querySelector('[data-slug-target]');

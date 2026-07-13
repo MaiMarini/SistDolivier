@@ -249,7 +249,8 @@ ob_start();
     </div>
     <div class="campo">
         <label for="contato_telefone">Telefone / WhatsApp</label>
-        <input type="text" id="contato_telefone" name="contato_telefone" value="<?= e($dados['telefone'] ?? '') ?>">
+        <input type="tel" id="contato_telefone" name="contato_telefone" inputmode="numeric"
+               value="<?= e($dados['telefone'] ?? '') ?>" placeholder="(11) 91234-5678" data-mask-tel>
     </div>
 
     <!-- Observações -->
