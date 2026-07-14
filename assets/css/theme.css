@@ -2203,6 +2203,32 @@ body.menu-aberto {
     display: block;
 }
 
+/* --- Barra de filtros (listagens do admin) ------------------------------- */
+.filtros {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .6rem;
+    margin-bottom: 1.2rem;
+}
+
+.filtros input,
+.filtros select {
+    font-family: var(--fonte-texto);
+    font-size: 1rem;
+    padding: .5rem .7rem;
+    border: 1px solid #ccc;
+    border-radius: var(--raio);
+    background: #fff;
+    color: var(--cor-texto);
+}
+
+.filtros input:focus,
+.filtros select:focus {
+    outline: 2px solid var(--cor-destaque);
+    border-color: var(--cor-destaque);
+}
+
 /* --- Tabela simples ------------------------------------------------------ */
 .tabela {
     width: 100%;

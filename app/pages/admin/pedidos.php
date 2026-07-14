@@ -87,7 +87,6 @@ if ($acao !== '' && ctype_digit((string) $acao)) {
     ob_start();
     ?>
     <p><a href="<?= e(url('admin/pedidos')) ?>">&larr; Voltar para pedidos</a></p>
-    <h1>Pedido #<?= (int) $pedido['id'] ?></h1>
     <p class="data"><?= e(date('d/m/Y H:i', strtotime($pedido['criado_em']))) ?></p>
 
     <!-- Mudar status -->
@@ -214,9 +213,7 @@ $pedidos = $stmt->fetchAll();
 
 ob_start();
 ?>
-<h1>Pedidos</h1>
-
-<form method="get" action="<?= e(url('admin/pedidos')) ?>" class="campo-inline" style="flex-wrap:wrap; gap:.6rem; margin-bottom:1rem;">
+<form method="get" action="<?= e(url('admin/pedidos')) ?>" class="filtros">
     <select name="status">
         <option value="">Todos os status</option>
         <?php foreach ($STATUS as $chave => $rotulo): ?>
