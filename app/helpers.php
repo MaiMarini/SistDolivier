@@ -10,9 +10,6 @@ require_once __DIR__ . '/lib/imagem.php';
 // Cálculo de frete por distância (valor final + distância plugável).
 require_once __DIR__ . '/lib/frete.php';
 
-// E-mails transacionais (confirmação de pedido, mudança de status).
-require_once __DIR__ . '/lib/email.php';
-
 // =============================================================================
 // Acesso ao banco
 // =============================================================================

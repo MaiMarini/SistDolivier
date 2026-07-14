@@ -25,18 +25,6 @@ return [
     'mp_access_token' => env('MP_ACCESS_TOKEN', ''),
     'mp_public_key'   => env('MP_PUBLIC_KEY', ''),
 
-    // --- E-mail (avisos de pedido) — segredos no .env ---
-    'email' => [
-        'modo'           => env('EMAIL_MODO', 'smtp'),        // 'smtp' | 'mail'
-        'smtp_host'      => env('SMTP_HOST', 'smtp.titan.email'),
-        'smtp_porta'     => (int) env('SMTP_PORTA', 465),     // 465=SSL · 587=TLS
-        'smtp_seguranca' => env('SMTP_SEGURANCA', 'ssl'),     // 'ssl' | 'tls'
-        'smtp_usuario'   => env('SMTP_USUARIO', ''),
-        'smtp_senha'     => env('SMTP_SENHA', ''),
-        'remetente'      => env('EMAIL_REMETENTE', env('SMTP_USUARIO', '')),
-        'loja'           => env('EMAIL_LOJA', ''),            // aviso de novo pedido ('' = não avisa)
-    ],
-
     // Ambiente: 'dev' mostra erros na tela; 'prod' esconde.
     'env' => env('APP_ENV', 'dev'),
 ];
