@@ -1,6 +1,9 @@
 # Configuração local (cada loja tem a sua; nunca versionar)
 app/config.php
 
+# Variáveis de ambiente (segredos: banco, SMTP, tokens)
+.env
+
 # Uploads enviados pela loja (mantém só a pasta, não o conteúdo)
 assets/uploads/*
 !assets/uploads/.gitkeep

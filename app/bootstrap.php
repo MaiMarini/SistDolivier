@@ -15,6 +15,14 @@
 define('APP_PATH', __DIR__);
 define('ROOT_PATH', dirname(__DIR__));
 
+// --- 0. Variáveis de ambiente (.env, não versionado) ------------------------
+// Carregado ANTES do config.php para que ele leia segredos via env().
+// Procura na raiz (public_html) e também UM NÍVEL ACIMA (fora da web, mais
+// seguro). O de cima tem prioridade — coloque o .env lá se a hospedagem deixar.
+require APP_PATH . '/lib/env.php';
+env_carregar(ROOT_PATH . '/.env');            // raiz do site (public_html)
+env_carregar(dirname(ROOT_PATH) . '/.env');   // um nível acima (sobrepõe a raiz)
+
 // --- 1. Configuração ---------------------------------------------------------
 $config_file = APP_PATH . '/config.php';
 if (!is_file($config_file)) {
