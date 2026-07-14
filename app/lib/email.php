@@ -168,7 +168,8 @@ function _smtp_enviar(string $para, string $assunto_enc, string $html, string $d
             $r = _smtp_cmd($fp, base64_encode($pass));
             if ($cod($r) !== 235) {
                 $ok = false;
-                $erro = 'autenticação recusada (usuário/senha): ' . trim($r);
+                $erro = 'autenticação recusada — usuário="' . $user . '", senha com '
+                    . strlen($pass) . ' caractere(s). Resposta: ' . trim($r);
             }
         }
 
