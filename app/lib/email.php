@@ -163,13 +163,21 @@ function _smtp_enviar(string $para, string $assunto_enc, string $html, string $d
         }
 
         if ($ok) {
+            // 1) AUTH LOGIN (mais comum).
             _smtp_cmd($fp, 'AUTH LOGIN');
             _smtp_cmd($fp, base64_encode($user));
             $r = _smtp_cmd($fp, base64_encode($pass));
+            // 2) Fallback: AUTH PLAIN (alguns servidores preferem).
+            if ($cod($r) !== 235) {
+                $r = _smtp_cmd($fp, 'AUTH PLAIN ' . base64_encode("\0" . $user . "\0" . $pass));
+            }
             if ($cod($r) !== 235) {
                 $ok = false;
-                $erro = 'autenticação recusada — usuário="' . $user . '", senha com '
-                    . strlen($pass) . ' caractere(s). Resposta: ' . trim($r);
+                $dica = substr($pass, 0, 2)
+                    . str_repeat('*', max(0, strlen($pass) - 4))
+                    . substr($pass, -2);
+                $erro = 'autenticação recusada — usuário="' . $user . '", senha lida="'
+                    . $dica . '" (' . strlen($pass) . ' chars). Resposta: ' . trim($r);
             }
         }
 
