@@ -31,18 +31,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/configuracoes');
     }
 
-    // Envio de e-mail de teste (diagnóstico do mail() neste servidor).
+    // Envio de e-mail de teste (com diagnóstico do MODO usado).
     if (($_POST['acao'] ?? '') === 'email_teste') {
         $u = usuario_atual();
         $para = trim($u['email'] ?? '');
+        $modo = (_email_conf('modo', 'mail') === 'smtp') ? 'smtp' : 'mail';
+
         $ok = enviar_email(
             $para,
             'Teste de e-mail — ' . cfg('site_nome', 'Loja'),
             _email_layout('Teste de e-mail', '<p>Se você recebeu esta mensagem, o envio de e-mails está funcionando. 🎉</p>')
         );
-        flash($ok ? 'sucesso' : 'erro', $ok
-            ? 'mail() retornou sucesso — enviado para ' . $para . '. Confira a caixa de entrada e o SPAM.'
-            : 'Falha no envio (mail() retornou false). Provável: função mail() desabilitada ou remetente inválido. Veja as observações abaixo.');
+
+        if ($modo === 'mail') {
+            // mail() "aceita" mas NÃO entrega quando o e-mail está no Titan.
+            flash('erro', 'ATENÇÃO: enviando pelo modo mail() do servidor — este modo NÃO entrega '
+                . 'quando o e-mail está no Titan. Configure o .env do SERVIDOR com EMAIL_MODO=smtp '
+                . 'e os dados SMTP (e o config.php precisa ter o bloco "email"). Modo atual: mail().');
+        } elseif ($ok) {
+            flash('sucesso', 'Enviado por SMTP com sucesso para ' . $para
+                . '. Confira a caixa de entrada e o SPAM.');
+        } else {
+            flash('erro', 'SMTP falhou ao enviar (veja o log de erros do PHP, linhas "[email] SMTP..."). '
+                . 'Cheque host/porta/segurança/usuário/senha no .env do servidor.');
+        }
         redirect('admin/configuracoes');
     }
 

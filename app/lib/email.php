@@ -10,11 +10,34 @@
  *   email_loja      -> recebe aviso de novo pedido (vazio = não notifica a loja)
  */
 
-/** Lê uma chave da configuração de e-mail (app/config.php -> 'email'). */
+/**
+ * Lê uma chave da configuração de e-mail. Ordem: config.php ('email') e, se não
+ * definida ali, cai direto no .env. Assim basta o .env no servidor — não é
+ * preciso alterar o config.php.
+ */
 function _email_conf(string $chave, $padrao = '')
 {
     $c = $GLOBALS['config']['email'] ?? [];
-    return $c[$chave] ?? $padrao;
+    if (isset($c[$chave]) && $c[$chave] !== '' && $c[$chave] !== null) {
+        return $c[$chave];
+    }
+    $mapa = [
+        'modo'           => 'EMAIL_MODO',
+        'smtp_host'      => 'SMTP_HOST',
+        'smtp_porta'     => 'SMTP_PORTA',
+        'smtp_seguranca' => 'SMTP_SEGURANCA',
+        'smtp_usuario'   => 'SMTP_USUARIO',
+        'smtp_senha'     => 'SMTP_SENHA',
+        'remetente'      => 'EMAIL_REMETENTE',
+        'loja'           => 'EMAIL_LOJA',
+    ];
+    if (isset($mapa[$chave])) {
+        $v = env($mapa[$chave], null);
+        if ($v !== null && $v !== '') {
+            return $v;
+        }
+    }
+    return $padrao;
 }
 
 /**
