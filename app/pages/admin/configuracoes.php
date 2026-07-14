@@ -47,6 +47,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/configuracoes');
     }
 
+    // Limpa a fila de e-mails (para refazer um teste do zero).
+    if (($_POST['acao'] ?? '') === 'email_limpar') {
+        try {
+            db()->exec('TRUNCATE TABLE email_fila');
+            flash('sucesso', 'Fila de e-mails limpa.');
+        } catch (\Throwable $e) {
+            flash('erro', 'Não foi possível limpar a fila.');
+        }
+        redirect('admin/configuracoes');
+    }
+
     // Processa a fila agora (útil para testar sem esperar o cron).
     if (($_POST['acao'] ?? '') === 'email_processar') {
         $r = email_processar_fila(50);
@@ -290,6 +301,12 @@ ob_start();
         <?= csrf_input() ?>
         <input type="hidden" name="acao" value="email_processar">
         <button class="btn sec" type="submit">Processar fila agora</button>
+    </form>
+    <form method="post" action="<?= e(url('admin/configuracoes')) ?>"
+          data-confirmar="Limpar toda a fila de e-mails?" data-confirmar-ok="Limpar">
+        <?= csrf_input() ?>
+        <input type="hidden" name="acao" value="email_limpar">
+        <button class="btn sec" type="submit">Limpar fila</button>
     </form>
 </div>
 
