@@ -116,8 +116,10 @@ function _smtp_enviar(string $para, string $assunto_enc, string $html, string $d
     $pass = (string) _email_conf('smtp_senha', '');
     $seg  = _email_conf('smtp_seguranca', 'ssl') === 'tls' ? 'tls' : 'ssl';
 
+    $GLOBALS['_email_ultimo_erro'] = '';
     if ($host === '' || $user === '' || $pass === '' || $de === '') {
-        error_log('[email] SMTP não configurado (host/usuário/senha).');
+        $GLOBALS['_email_ultimo_erro'] = 'SMTP incompleto no .env (host/usuário/senha).';
+        error_log('[email] SMTP ' . $GLOBALS['_email_ultimo_erro']);
         return false;
     }
 
@@ -125,17 +127,23 @@ function _smtp_enviar(string $para, string $assunto_enc, string $html, string $d
     $ctx = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
     $fp = @stream_socket_client($destino, $errno, $errstr, 20, STREAM_CLIENT_CONNECT, $ctx);
     if (!$fp) {
-        error_log("[email] SMTP conexão falhou: $errstr ($errno)");
+        $GLOBALS['_email_ultimo_erro'] = "conexão falhou em {$host}:{$port} ({$seg}) — {$errstr} ({$errno})";
+        error_log('[email] SMTP ' . $GLOBALS['_email_ultimo_erro']);
         return false;
     }
     stream_set_timeout($fp, 20);
 
     $ehlo = preg_replace('/^www\./', '', parse_url((string) ($GLOBALS['config']['base_url'] ?? ''), PHP_URL_HOST) ?: 'localhost');
     $ok = true;
+    $erro = '';
     $cod = static function ($r) { return (int) substr($r, 0, 3); };
 
     try {
-        if ($cod(_smtp_ler($fp)) !== 220) { $ok = false; }
+        $r = _smtp_ler($fp);
+        if ($cod($r) !== 220) {
+            $ok = false;
+            $erro = 'sem saudação 220: ' . trim($r);
+        }
 
         if ($ok) {
             _smtp_cmd($fp, 'EHLO ' . $ehlo);
@@ -149,6 +157,7 @@ function _smtp_enviar(string $para, string $assunto_enc, string $html, string $d
                     _smtp_cmd($fp, 'EHLO ' . $ehlo);
                 } else {
                     $ok = false;
+                    $erro = 'STARTTLS recusado';
                 }
             }
         }
@@ -156,46 +165,61 @@ function _smtp_enviar(string $para, string $assunto_enc, string $html, string $d
         if ($ok) {
             _smtp_cmd($fp, 'AUTH LOGIN');
             _smtp_cmd($fp, base64_encode($user));
-            if ($cod(_smtp_cmd($fp, base64_encode($pass))) !== 235) {
-                error_log('[email] SMTP autenticação recusada.');
+            $r = _smtp_cmd($fp, base64_encode($pass));
+            if ($cod($r) !== 235) {
                 $ok = false;
+                $erro = 'autenticação recusada (usuário/senha): ' . trim($r);
             }
         }
 
         if ($ok) {
             _smtp_cmd($fp, 'MAIL FROM:<' . $de . '>');
-            $rc = $cod(_smtp_cmd($fp, 'RCPT TO:<' . $para . '>'));
-            if ($rc !== 250 && $rc !== 251) {
-                error_log('[email] SMTP RCPT recusado para ' . $para);
+            $r = $cod($rr = _smtp_cmd($fp, 'RCPT TO:<' . $para . '>'));
+            if ($r !== 250 && $r !== 251) {
                 $ok = false;
+                $erro = 'destinatário recusado: ' . trim($rr);
             }
         }
 
-        if ($ok && $cod(_smtp_cmd($fp, 'DATA')) === 354) {
-            $cabec = 'From: =?UTF-8?B?' . base64_encode($nome_loja) . "?= <$de>\r\n"
-                . "Reply-To: $de\r\n"
-                . "To: $para\r\n"
-                . "Subject: $assunto_enc\r\n"
-                . "MIME-Version: 1.0\r\n"
-                . "Content-Type: text/html; charset=UTF-8\r\n";
-            // Normaliza quebras para CRLF e faz "dot-stuffing".
-            $corpo = str_replace(["\r\n", "\r", "\n"], "\r\n", $html);
-            $corpo = preg_replace('/^\./m', '..', $corpo);
-            $data = $cabec . "\r\n" . $corpo . "\r\n.";
-            if ($cod(_smtp_cmd($fp, $data)) !== 250) {
+        if ($ok) {
+            if ($cod(_smtp_cmd($fp, 'DATA')) === 354) {
+                $cabec = 'From: =?UTF-8?B?' . base64_encode($nome_loja) . "?= <$de>\r\n"
+                    . "Reply-To: $de\r\n"
+                    . "To: $para\r\n"
+                    . "Subject: $assunto_enc\r\n"
+                    . "MIME-Version: 1.0\r\n"
+                    . "Content-Type: text/html; charset=UTF-8\r\n";
+                $corpo = str_replace(["\r\n", "\r", "\n"], "\r\n", $html);
+                $corpo = preg_replace('/^\./m', '..', $corpo);
+                $r = _smtp_cmd($fp, $cabec . "\r\n" . $corpo . "\r\n.");
+                if ($cod($r) !== 250) {
+                    $ok = false;
+                    $erro = 'mensagem recusada (DATA): ' . trim($r);
+                }
+            } else {
                 $ok = false;
+                $erro = 'comando DATA recusado';
             }
-        } elseif ($ok) {
-            $ok = false;
         }
 
         _smtp_cmd($fp, 'QUIT');
     } catch (\Throwable $e) {
-        error_log('[email] SMTP exceção: ' . $e->getMessage());
         $ok = false;
+        $erro = 'exceção: ' . $e->getMessage();
     }
     fclose($fp);
+
+    if (!$ok) {
+        $GLOBALS['_email_ultimo_erro'] = $erro;
+        error_log('[email] SMTP ' . $erro);
+    }
     return $ok;
+}
+
+/** Último erro de envio SMTP (para diagnóstico rápido no admin). */
+function email_ultimo_erro(): string
+{
+    return (string) ($GLOBALS['_email_ultimo_erro'] ?? '');
 }
 
 /** Envelopa o conteúdo num HTML simples nas cores da marca (estilos inline). */

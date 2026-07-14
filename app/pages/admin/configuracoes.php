@@ -52,8 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('sucesso', 'Enviado por SMTP com sucesso para ' . $para
                 . '. Confira a caixa de entrada e o SPAM.');
         } else {
-            flash('erro', 'SMTP falhou ao enviar (veja o log de erros do PHP, linhas "[email] SMTP..."). '
-                . 'Cheque host/porta/segurança/usuário/senha no .env do servidor.');
+            flash('erro', 'SMTP falhou. Detalhe: ' . (email_ultimo_erro() ?: 'sem detalhe')
+                . ' — cheque host/porta/segurança/usuário/senha no .env do servidor.');
         }
         redirect('admin/configuracoes');
     }
