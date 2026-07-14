@@ -31,29 +31,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/configuracoes');
     }
 
-    // Envio de e-mail de teste (com diagnóstico do MODO usado).
+    // Enfileira um e-mail de teste (o envio real é pelo worker/cron).
     if (($_POST['acao'] ?? '') === 'email_teste') {
         $u = usuario_atual();
         $para = trim($u['email'] ?? '');
-        $modo = (_email_conf('modo', 'mail') === 'smtp') ? 'smtp' : 'mail';
-
         $ok = enviar_email(
             $para,
             'Teste de e-mail — ' . cfg('site_nome', 'Loja'),
             _email_layout('Teste de e-mail', '<p>Se você recebeu esta mensagem, o envio de e-mails está funcionando. 🎉</p>')
         );
+        flash($ok ? 'sucesso' : 'erro', $ok
+            ? 'E-mail de teste ENFILEIRADO para ' . $para . '. Ele sai quando o worker/cron processar a fila '
+                . '(ou clique em "Processar fila agora").'
+            : 'Não foi possível enfileirar (e-mail inválido?).');
+        redirect('admin/configuracoes');
+    }
 
-        if ($modo === 'mail') {
-            // mail() "aceita" mas NÃO entrega quando o e-mail está no Titan.
-            flash('erro', 'ATENÇÃO: enviando pelo modo mail() do servidor — este modo NÃO entrega '
-                . 'quando o e-mail está no Titan. Configure o .env do SERVIDOR com EMAIL_MODO=smtp '
-                . 'e os dados SMTP (e o config.php precisa ter o bloco "email"). Modo atual: mail().');
-        } elseif ($ok) {
-            flash('sucesso', 'Enviado por SMTP com sucesso para ' . $para
-                . '. Confira a caixa de entrada e o SPAM.');
+    // Processa a fila agora (útil para testar sem esperar o cron).
+    if (($_POST['acao'] ?? '') === 'email_processar') {
+        $r = email_processar_fila(50);
+        if ($r['falhas'] === 0) {
+            flash('sucesso', "Fila processada: {$r['enviados']} enviado(s), 0 falha(s). "
+                . ($r['enviados'] > 0 ? 'Confira a caixa (e o spam).' : 'Nada pendente.'));
         } else {
-            flash('erro', 'SMTP falhou. Detalhe: ' . (email_ultimo_erro() ?: 'sem detalhe')
-                . ' — cheque host/porta/segurança/usuário/senha no .env do servidor.');
+            flash('erro', "Fila: {$r['enviados']} enviado(s), {$r['falhas']} falha(s). "
+                . 'Último erro: ' . (email_ultimo_erro() ?: 'sem detalhe')
+                . '. Obs.: pela WEB o SMTP pode ser bloqueado — o envio pelo CRON (CLI) costuma funcionar.');
         }
         redirect('admin/configuracoes');
     }
@@ -274,13 +277,51 @@ ob_start();
 
 <hr class="mt-1">
 <h2 class="mt-1">Testar envio de e-mail</h2>
-<p><small>Envia um e-mail de teste para o seu endereço de admin
-   (<?= e(usuario_atual()['email'] ?? '') ?>) para conferir se o servidor entrega.
-   Salve o "E-mail remetente" antes de testar.</small></p>
-<form method="post" action="<?= e(url('admin/configuracoes')) ?>">
-    <?= csrf_input() ?>
-    <input type="hidden" name="acao" value="email_teste">
-    <button class="btn sec" type="submit">Enviar e-mail de teste</button>
-</form>
+<p><small>Os e-mails são <strong>enfileirados</strong> e enviados por um worker via
+   <strong>cron</strong> (CLI) — que costuma ter a saída SMTP liberada, ao contrário do
+   servidor web. Use os botões abaixo para enfileirar um teste e processar a fila.</small></p>
+<div class="campo-inline" style="gap:.6rem; flex-wrap:wrap;">
+    <form method="post" action="<?= e(url('admin/configuracoes')) ?>">
+        <?= csrf_input() ?>
+        <input type="hidden" name="acao" value="email_teste">
+        <button class="btn sec" type="submit">Enfileirar e-mail de teste</button>
+    </form>
+    <form method="post" action="<?= e(url('admin/configuracoes')) ?>">
+        <?= csrf_input() ?>
+        <input type="hidden" name="acao" value="email_processar">
+        <button class="btn sec" type="submit">Processar fila agora</button>
+    </form>
+</div>
+
+<?php
+$fila = [];
+try {
+    $fila = db()->query(
+        'SELECT id, para, status, tentativas, erro, criado_em
+           FROM email_fila ORDER BY id DESC LIMIT 8'
+    )->fetchAll();
+} catch (PDOException $e) {
+    $fila = [];
+}
+?>
+<?php if (!empty($fila)): ?>
+    <h3 class="mt-1">Fila de e-mails (últimos)</h3>
+    <table class="tabela">
+        <thead>
+            <tr><th>#</th><th>Para</th><th class="t-centro">Status</th><th class="t-centro">Tent.</th><th>Erro</th></tr>
+        </thead>
+        <tbody>
+            <?php foreach ($fila as $f): ?>
+                <tr>
+                    <td><?= (int) $f['id'] ?></td>
+                    <td><?= e($f['para']) ?></td>
+                    <td class="t-centro"><?= e($f['status']) ?></td>
+                    <td class="t-centro"><?= (int) $f['tentativas'] ?></td>
+                    <td><?= e($f['erro'] ?: '—') ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
 <?php
 view('admin_layout', ['titulo' => 'Configurações', 'conteudo' => ob_get_clean()]);

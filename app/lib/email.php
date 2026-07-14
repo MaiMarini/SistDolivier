@@ -41,10 +41,65 @@ function _email_conf(string $chave, $padrao = '')
 }
 
 /**
- * Envia um e-mail HTML. Retorna true/false; nunca lança exceção.
- * Configuração 100% em app/config.php (bloco 'email') — nada no admin.
+ * ENFILEIRA um e-mail (assíncrono). O envio real ocorre no worker (CLI/cron),
+ * que costuma ter a saída SMTP liberada na hospedagem — diferente do processo
+ * web. Best-effort: nunca lança/quebra o fluxo. Retorna true se enfileirou.
  */
 function enviar_email(string $para, string $assunto, string $html): bool
+{
+    $para = trim($para);
+    if ($para === '' || !filter_var($para, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+    try {
+        db()->prepare(
+            'INSERT INTO email_fila (para, assunto, corpo_html, status) VALUES (?, ?, ?, "pendente")'
+        )->execute([$para, $assunto, $html]);
+        return true;
+    } catch (\Throwable $e) {
+        error_log('[email] falha ao enfileirar: ' . $e->getMessage());
+        // Sem fila (tabela ausente?): tenta enviar na hora para não perder.
+        return _email_transportar($para, $assunto, $html);
+    }
+}
+
+/**
+ * Processa a fila (usar via cron/CLI): envia os pendentes e marca o status.
+ * Retorna ['enviados' => N, 'falhas' => N].
+ */
+function email_processar_fila(int $limite = 25): array
+{
+    $enviados = 0;
+    $falhas = 0;
+
+    $sel = db()->prepare(
+        'SELECT id, para, assunto, corpo_html FROM email_fila
+          WHERE status = "pendente" AND tentativas < 5
+          ORDER BY id ASC LIMIT ' . max(1, (int) $limite)
+    );
+    $sel->execute();
+    $itens = $sel->fetchAll();
+
+    $ok  = db()->prepare('UPDATE email_fila SET status = "enviado", enviado_em = NOW() WHERE id = ?');
+    $err = db()->prepare(
+        'UPDATE email_fila SET tentativas = tentativas + 1,
+                status = IF(tentativas + 1 >= 5, "erro", "pendente"), erro = ? WHERE id = ?'
+    );
+
+    foreach ($itens as $it) {
+        if (_email_transportar($it['para'], $it['assunto'], $it['corpo_html'])) {
+            $ok->execute([(int) $it['id']]);
+            $enviados++;
+        } else {
+            $err->execute([mb_substr(email_ultimo_erro() ?: 'falha no envio', 0, 250), (int) $it['id']]);
+            $falhas++;
+        }
+    }
+    return ['enviados' => $enviados, 'falhas' => $falhas];
+}
+
+/** Transporta o e-mail AGORA (SMTP ou mail()). Chamado pelo worker da fila. */
+function _email_transportar(string $para, string $assunto, string $html): bool
 {
     $para = trim($para);
     if ($para === '' || !filter_var($para, FILTER_VALIDATE_EMAIL)) {
