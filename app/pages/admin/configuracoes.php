@@ -45,9 +45,7 @@ function _endereco_campos(string $prefixo): void
         <div class="campo campo-largo">
             <label for="<?= $prefixo ?>cep">CEP</label>
             <input type="text" id="<?= $prefixo ?>cep" name="<?= $prefixo ?>cep" value="<?= e($cep) ?>"
-                   inputmode="numeric" maxlength="9" placeholder="00000-000" style="max-width:12rem;" data-cep>
-            <small>Ao sair do campo, rua, bairro, cidade e UF são preenchidos automaticamente.</small>
-        </div>
+                   inputmode="numeric" maxlength="9" placeholder="00000-000" style="max-width:12rem;" data-cep>        </div>
         <div class="campo campo-largo">
             <label for="<?= $prefixo ?>rua">Rua / avenida</label>
             <input type="text" id="<?= $prefixo ?>rua" name="<?= $prefixo ?>rua" value="<?= $v('rua') ?>" data-cep-rua>
