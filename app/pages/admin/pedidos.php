@@ -134,6 +134,17 @@ if ($acao !== '' && ctype_digit((string) $acao)) {
         <p><small>Observações: <?= e($pedido['observacoes']) ?></small></p>
     <?php endif; ?>
 
+    <?php if (!empty($pedido['presente'])): ?>
+        <!-- Presente -->
+        <h2 class="mt-1">Presente</h2>
+        <p>Para: <strong><?= e((string) $pedido['presente_para']) ?></strong>
+           <?php if (!empty($pedido['presente_telefone'])): ?> · <?= e($pedido['presente_telefone']) ?><?php endif; ?></p>
+        <?php if (!empty($pedido['presente_mensagem'])): ?>
+            <p>Mensagem do cartão:</p>
+            <blockquote><?= nl2br(e($pedido['presente_mensagem'])) ?></blockquote>
+        <?php endif; ?>
+    <?php endif; ?>
+
     <!-- Itens + totais -->
     <h2 class="mt-1">Itens</h2>
     <table class="tabela">
@@ -200,7 +211,7 @@ if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $f_ate)) {
     $args[]  = $f_ate . ' 23:59:59';
 }
 
-$sql = 'SELECT o.id, o.status, o.entrega, o.total_centavos, o.pagamento_status, o.criado_em,
+$sql = 'SELECT o.id, o.status, o.entrega, o.presente, o.total_centavos, o.pagamento_status, o.criado_em,
                u.nome AS cliente
           FROM orders o LEFT JOIN users u ON u.id = o.user_id';
 if ($where) {
@@ -251,7 +262,7 @@ ob_start();
                     <td><?= (int) $p['id'] ?></td>
                     <td><?= e($p['cliente'] ?: '—') ?></td>
                     <td class="t-centro"><?= e(date('d/m/Y', strtotime($p['criado_em']))) ?></td>
-                    <td class="t-centro"><?= $p['entrega'] === 'motoboy' ? 'Motoboy' : 'Retirada' ?></td>
+                    <td class="t-centro"><?= $p['entrega'] === 'motoboy' ? 'Motoboy' : 'Retirada' ?><?= !empty($p['presente']) ? '<br><small>Presente</small>' : '' ?></td>
                     <td class="t-centro"><?= e($p['pagamento_status'] ?: 'pendente') ?></td>
                     <td class="t-centro"><?= e($STATUS[$p['status']] ?? $p['status']) ?></td>
                     <td class="col-acoes"><?= e(money((int) $p['total_centavos'])) ?></td>

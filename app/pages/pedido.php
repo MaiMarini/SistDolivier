@@ -136,6 +136,15 @@ ob_start();
 <?php if (!empty($pedido['observacoes'])): ?>
     <p><small>Observações: <?= e($pedido['observacoes']) ?></small></p>
 <?php endif; ?>
+<?php if (!empty($pedido['presente'])): ?>
+    <h2 class="mt-1">Presente</h2>
+    <p>Para: <strong><?= e((string) $pedido['presente_para']) ?></strong>
+       <?php if (!empty($pedido['presente_telefone'])): ?> · <?= e($pedido['presente_telefone']) ?><?php endif; ?></p>
+    <?php if (!empty($pedido['presente_mensagem'])): ?>
+        <p>Mensagem do cartão:</p>
+        <blockquote><?= nl2br(e($pedido['presente_mensagem'])) ?></blockquote>
+    <?php endif; ?>
+<?php endif; ?>
 
 <!-- Pagamento -->
 <h2 class="mt-1">Pagamento</h2>

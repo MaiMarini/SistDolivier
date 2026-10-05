@@ -29,23 +29,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email    = trim($_POST['email'] ?? '');
         $senha    = $_POST['senha'] ?? '';
 
-        // Endereço estruturado -> uma linha formatada guardada em users.endereco.
-        $rua    = trim($_POST['rua'] ?? '');
-        $numero = trim($_POST['numero'] ?? '');
-        $comp   = trim($_POST['complemento'] ?? '');
-        $bairro = trim($_POST['bairro'] ?? '');
-        $cidade = trim($_POST['cidade'] ?? '');
-        $estado = trim($_POST['estado'] ?? '');
-        $cep    = trim($_POST['cep'] ?? '');
-        $endereco = $rua;
-        if ($numero !== '') { $endereco .= ', ' . $numero; }
-        if ($comp !== '')   { $endereco .= ' - ' . $comp; }
-        if ($bairro !== '') { $endereco .= ' - ' . $bairro; }
-        if ($cidade !== '' || $estado !== '') {
-            $endereco .= ' - ' . trim($cidade . ($estado !== '' ? '/' . $estado : ''));
-        }
-        if ($cep !== '') { $endereco .= ' - CEP ' . $cep; }
-        $endereco = trim($endereco, ' -,');
+        // Endereço: campos separados + o texto completo em users.endereco.
+        $end = [
+            'cep'         => substr(preg_replace('/\D+/', '', $_POST['cep'] ?? ''), 0, 8),
+            'rua'         => mb_substr(trim($_POST['rua'] ?? ''), 0, 150),
+            'numero'      => mb_substr(trim($_POST['numero'] ?? ''), 0, 20),
+            'complemento' => mb_substr(trim($_POST['complemento'] ?? ''), 0, 100),
+            'bairro'      => mb_substr(trim($_POST['bairro'] ?? ''), 0, 100),
+            'cidade'      => mb_substr(trim($_POST['cidade'] ?? ''), 0, 100),
+            'uf'          => strtoupper(trim($_POST['estado'] ?? '')),
+        ];
+        $end['uf'] = preg_match('/^[A-Z]{2}$/', $end['uf']) ? $end['uf'] : '';
+        $endereco = endereco_formatar($end);
 
         $erros = [];
         if (mb_strlen($nome) < 3) {
@@ -76,10 +71,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $hash = password_hash($senha, PASSWORD_DEFAULT);
         $stmt = db()->prepare(
-            'INSERT INTO users (nome, cpf, email, senha_hash, endereco, papel, aceita_email)
-             VALUES (?, ?, ?, ?, ?, ?, 1)'
+            'INSERT INTO users (nome, cpf, email, senha_hash, cep, rua, numero, complemento,
+                                bairro, cidade, uf, endereco, papel, aceita_email)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)'
         );
-        $stmt->execute([$nome, $cpf, $email, $hash, $endereco, 'cliente']);
+        $nulo = fn ($v) => $v !== '' ? $v : null;
+        $stmt->execute([
+            $nome, $cpf, $email, $hash,
+            $nulo($end['cep']), $nulo($end['rua']), $nulo($end['numero']), $nulo($end['complemento']),
+            $nulo($end['bairro']), $nulo($end['cidade']), $nulo($end['uf']),
+            $endereco, 'cliente',
+        ]);
         $id = (int) db()->lastInsertId();
 
         session_regenerate_id(true);

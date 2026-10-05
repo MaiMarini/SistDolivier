@@ -64,6 +64,7 @@ if ($pin !== '') {
             <!-- Coluna 2: navegação (fixa) -->
             <nav class="rodape-col rodape-nav">
                 <a href="<?= e(url('sobre')) ?>">Sobre nós</a>
+                <a href="<?= e(url('meu-perfil')) ?>">Meu perfil</a>
                 <a href="<?= e(url('meus-pedidos')) ?>">Meus pedidos</a>
                 <a href="<?= e(url('regras')) ?>">Regras e prazos</a>
                 <a href="<?= e(url('politica-de-privacidade')) ?>">Política de privacidade</a>

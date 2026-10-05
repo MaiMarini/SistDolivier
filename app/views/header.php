@@ -59,6 +59,7 @@ $ico_usuario  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
                             <?php if ($eh_admin): ?>
                                 <a href="<?= e(url('admin')) ?>">Painel</a>
                             <?php else: ?>
+                                <a href="<?= e(url('meu-perfil')) ?>">Meu perfil</a>
                                 <a href="<?= e(url('meus-pedidos')) ?>">Meus pedidos</a>
                             <?php endif; ?>
                             <a href="<?= e(url('sair')) ?>">Sair</a>

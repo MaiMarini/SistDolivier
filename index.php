@@ -53,6 +53,7 @@ $rotas = [
     'cadastrar'    => 'cadastrar',
     'sair'         => 'sair',
     'meus-pedidos' => 'meus_pedidos',
+    'meu-perfil'   => 'meu_perfil',
 ];
 
 // rota admin (2º segmento) => arquivo em app/pages/admin/

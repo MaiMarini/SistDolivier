@@ -42,9 +42,16 @@ function _checkout_carrinho(): array
 }
 
 // Dados de contato/endereço do cadastro (para pré-preencher).
-$stmt = db()->prepare('SELECT nome, telefone, endereco FROM users WHERE id = ? LIMIT 1');
+$stmt = db()->prepare(
+    'SELECT nome, telefone, endereco, cep, rua, numero, complemento, bairro, cidade, uf
+       FROM users WHERE id = ? LIMIT 1'
+);
 $stmt->execute([(int) $usuario['id']]);
 $dados = $stmt->fetch() ?: ['nome' => $usuario['nome'] ?? '', 'telefone' => '', 'endereco' => ''];
+$cad = fn ($k) => (string) ($dados[$k] ?? '');
+// Endereço do perfil completo o bastante para entregar (pode ser escolhido no checkout).
+$tem_end_cad = strlen($cad('cep')) === 8 && $cad('rua') !== '' && $cad('numero') !== ''
+    && $cad('cidade') !== '' && preg_match('/^[A-Z]{2}$/', $cad('uf'));
 
 // -----------------------------------------------------------------------------
 // POST: criar o pedido
@@ -78,13 +85,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $frete = frete_calcular('retirada');
         $endereco_entrega = cfg('retirada_endereco', '') !== '' ? cfg('retirada_endereco', '') : 'Retirada no local';
     } else {
-        $cep    = preg_replace('/\D+/', '', $_POST['cep'] ?? '');
-        $rua    = trim($_POST['rua'] ?? '');
-        $numero = trim($_POST['numero'] ?? '');
-        $bairro = trim($_POST['bairro'] ?? '');
-        $cidade = trim($_POST['cidade'] ?? '');
-        $uf     = strtoupper(trim($_POST['uf'] ?? ''));
-        $comp   = trim($_POST['complemento'] ?? '');
+        // "cadastro" usa o endereço do perfil (lido do banco, não do formulário).
+        $usar_cad = $tem_end_cad && ($_POST['endereco_opcao'] ?? 'cadastro') === 'cadastro';
+        $origem = $usar_cad ? $dados : $_POST;
+        $cep    = preg_replace('/\D+/', '', (string) ($origem['cep'] ?? ''));
+        $rua    = trim((string) ($origem['rua'] ?? ''));
+        $numero = trim((string) ($origem['numero'] ?? ''));
+        $bairro = trim((string) ($origem['bairro'] ?? ''));
+        $cidade = trim((string) ($origem['cidade'] ?? ''));
+        $uf     = strtoupper(trim((string) ($origem['uf'] ?? '')));
+        $comp   = trim((string) ($origem['complemento'] ?? ''));
         if (strlen($cep) !== 8) {
             flash('erro', 'Informe um CEP válido (8 números).');
             redirect('checkout');
@@ -94,10 +104,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('checkout');
         }
         $cep_fmt = substr($cep, 0, 5) . '-' . substr($cep, 5);
-        $endereco_entrega = $rua . ', ' . $numero
-            . ($comp !== '' ? ' - ' . $comp : '')
-            . ($bairro !== '' ? ' - ' . $bairro : '')
-            . ' - ' . $cidade . '/' . $uf . ' - CEP ' . $cep_fmt;
+        $endereco_entrega = endereco_formatar([
+            'cep' => $cep, 'rua' => $rua, 'numero' => $numero, 'complemento' => $comp,
+            'bairro' => $bairro, 'cidade' => $cidade, 'uf' => $uf,
+        ]);
         $destino = trim("$rua, $numero, $bairro, $cidade - $uf, $cep_fmt", ' ,');
         $chave = $cep . '-' . preg_replace('/\s+/', '', mb_strtolower($numero));
         $frete = frete_calcular('motoboy', $destino, $chave);
@@ -107,6 +117,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('checkout');
         }
         $distancia_km = $frete['distancia_km'];
+    }
+
+    // Presente: quem recebe é obrigatório; telefone e mensagem do cartão, opcionais.
+    $presente      = isset($_POST['presente']) ? 1 : 0;
+    $presente_para = $presente ? mb_substr(trim($_POST['presente_para'] ?? ''), 0, 150) : '';
+    $presente_tel  = $presente ? mb_substr(trim($_POST['presente_telefone'] ?? ''), 0, 20) : '';
+    $presente_msg  = $presente ? mb_substr(trim($_POST['presente_mensagem'] ?? ''), 0, 300) : '';
+    if ($presente && mb_strlen($presente_para) < 2) {
+        flash('erro', 'Informe o nome de quem vai receber o presente.');
+        redirect('checkout');
     }
 
     $subtotal   = (int) $c['subtotal'];
@@ -120,8 +140,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'INSERT INTO orders
                 (user_id, status, entrega, subtotal_centavos, frete_centavos, total_centavos,
                  pagamento_status, aceitou_termos, observacoes, endereco_entrega,
-                 contato_nome, contato_telefone, entrega_distancia_km)
-             VALUES (?, "realizado", ?, ?, ?, ?, "pendente", 1, ?, ?, ?, ?, ?)'
+                 contato_nome, contato_telefone, entrega_distancia_km,
+                 presente, presente_para, presente_telefone, presente_mensagem)
+             VALUES (?, "realizado", ?, ?, ?, ?, "pendente", 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $ins->execute([
             (int) $usuario['id'], $entrega, $subtotal, $frete_cent, $total,
@@ -130,6 +151,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $contato_nome !== '' ? $contato_nome : null,
             $contato_tel !== '' ? $contato_tel : null,
             $distancia_km,
+            $presente,
+            $presente_para !== '' ? $presente_para : null,
+            $presente_tel !== '' ? $presente_tel : null,
+            $presente_msg !== '' ? $presente_msg : null,
         ]);
         $order_id = (int) $pdo->lastInsertId();
 
@@ -217,39 +242,78 @@ ob_start();
 
     <!-- Endereço (só motoboy) -->
     <div data-entrega-endereco hidden>
-        <?php if (!empty($dados['endereco'])): ?>
-            <p><small>Endereço do seu cadastro: <?= e($dados['endereco']) ?></small></p>
+        <?php if ($tem_end_cad): ?>
+            <div class="campo">
+                <label class="campo-inline" style="gap:.5rem; font-weight:400;">
+                    <input type="radio" name="endereco_opcao" value="cadastro" checked data-endereco-opcao>
+                    <span>Entregar no meu endereço<br><small><?= e($cad('endereco')) ?></small></span>
+                </label>
+                <label class="campo-inline" style="gap:.5rem; font-weight:400;">
+                    <input type="radio" name="endereco_opcao" value="outro" data-endereco-opcao>
+                    Entregar em outro endereço
+                </label>
+            </div>
+        <?php elseif ($cad('endereco') !== ''): ?>
+            <p><small>Endereço do seu cadastro: <?= e($cad('endereco')) ?>.
+               Atualize-o em <a href="<?= e(url('meu-perfil')) ?>">Meu perfil</a> para escolhê-lo aqui da próxima vez.</small></p>
         <?php endif; ?>
-        <div class="campo">
-            <label for="cep">CEP</label>
-            <input type="text" id="cep" name="cep" inputmode="numeric" maxlength="9" placeholder="Somente números" data-cep>
-        </div>
-        <div class="campo">
-            <label for="rua">Rua</label>
-            <input type="text" id="rua" name="rua" data-cep-rua>
-        </div>
-        <div class="campo">
-            <label for="numero">Número</label>
-            <input type="text" id="numero" name="numero">
-        </div>
-        <div class="campo">
-            <label for="complemento">Complemento (opcional)</label>
-            <input type="text" id="complemento" name="complemento">
-        </div>
-        <div class="campo">
-            <label for="bairro">Bairro</label>
-            <input type="text" id="bairro" name="bairro" data-cep-bairro>
-        </div>
-        <div class="campo">
-            <label for="cidade">Cidade</label>
-            <input type="text" id="cidade" name="cidade" data-cep-cidade>
-        </div>
-        <div class="campo">
-            <label for="uf">UF</label>
-            <input type="text" id="uf" name="uf" maxlength="2" placeholder="Ex.: SP"
-                   style="text-transform:uppercase; max-width:6rem;" data-cep-uf>
+
+        <div data-endereco-manual<?= $tem_end_cad ? ' hidden' : '' ?>>
+            <div class="campo">
+                <label for="cep">CEP</label>
+                <input type="text" id="cep" name="cep" inputmode="numeric" maxlength="9" placeholder="Somente números" data-cep>
+            </div>
+            <div class="campo">
+                <label for="rua">Rua</label>
+                <input type="text" id="rua" name="rua" data-cep-rua>
+            </div>
+            <div class="campo">
+                <label for="numero">Número</label>
+                <input type="text" id="numero" name="numero">
+            </div>
+            <div class="campo">
+                <label for="complemento">Complemento (opcional)</label>
+                <input type="text" id="complemento" name="complemento">
+            </div>
+            <div class="campo">
+                <label for="bairro">Bairro</label>
+                <input type="text" id="bairro" name="bairro" data-cep-bairro>
+            </div>
+            <div class="campo">
+                <label for="cidade">Cidade</label>
+                <input type="text" id="cidade" name="cidade" data-cep-cidade>
+            </div>
+            <div class="campo">
+                <label for="uf">UF</label>
+                <input type="text" id="uf" name="uf" maxlength="2" placeholder="Ex.: SP"
+                       style="text-transform:uppercase; max-width:6rem;" data-cep-uf>
+            </div>
         </div>
         <p><small>O valor do frete é calculado ao confirmar o pedido, pela distância até a loja.</small></p>
+    </div>
+
+    <!-- Presente -->
+    <div class="campo campo-inline mt-1">
+        <input type="checkbox" id="presente" name="presente" value="1" data-presente>
+        <label for="presente">É um presente</label>
+    </div>
+    <div data-presente-campos hidden>
+        <div class="campo">
+            <label for="presente_para">Nome de quem vai receber</label>
+            <input type="text" id="presente_para" name="presente_para" maxlength="150">
+        </div>
+        <div class="campo">
+            <label for="presente_telefone">Telefone de quem vai receber (opcional)</label>
+            <input type="tel" id="presente_telefone" name="presente_telefone" inputmode="numeric"
+                   placeholder="(11) 91234-5678" data-mask-tel>
+            <small>Usado só para combinar a entrega, se precisar.</small>
+        </div>
+        <div class="campo">
+            <label for="presente_mensagem">Mensagem para o cartão (opcional)</label>
+            <textarea id="presente_mensagem" name="presente_mensagem" rows="3" maxlength="300"
+                      placeholder="Ex.: Feliz aniversário! Com carinho, Ana."></textarea>
+            <small>Até 300 caracteres.</small>
+        </div>
     </div>
 
     <!-- Contato -->
@@ -311,6 +375,27 @@ ob_start();
         r.addEventListener('change', aplicarEntrega);
     });
     aplicarEntrega();
+
+    // Endereço do perfil x outro endereço (campos manuais).
+    var manual = form.querySelector('[data-endereco-manual]');
+    var opcoes = form.querySelectorAll('[data-endereco-opcao]');
+    if (manual && opcoes.length) {
+        var aplicarEndereco = function () {
+            var sel = form.querySelector('[data-endereco-opcao]:checked');
+            manual.hidden = !(sel && sel.value === 'outro');
+        };
+        opcoes.forEach(function (r) { r.addEventListener('change', aplicarEndereco); });
+        aplicarEndereco();
+    }
+
+    // Campos do presente só quando marcado.
+    var presente = form.querySelector('[data-presente]');
+    var presenteCampos = form.querySelector('[data-presente-campos]');
+    if (presente && presenteCampos) {
+        var aplicarPresente = function () { presenteCampos.hidden = !presente.checked; };
+        presente.addEventListener('change', aplicarPresente);
+        aplicarPresente();
+    }
 
     // Habilita "Confirmar pedido" só com o aceite marcado.
     var aceite = form.querySelector('[data-checkout-aceite]');

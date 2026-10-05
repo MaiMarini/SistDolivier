@@ -84,6 +84,27 @@ function redirect(string $destino): void
 }
 
 // =============================================================================
+// Endereço
+// =============================================================================
+
+/**
+ * Texto completo de um endereço separado (chaves: cep, rua, numero, complemento,
+ * bairro, cidade, uf): "Rua X, 12 - Apto 3 - Centro - Cidade/UF - CEP 00000-000".
+ */
+function endereco_formatar(array $e): string
+{
+    $g = fn ($k) => trim((string) ($e[$k] ?? ''));
+    $cep = preg_replace('/\D+/', '', $g('cep'));
+    $partes = [];
+    $partes[] = $g('rua') . ($g('numero') !== '' ? ', ' . $g('numero') : '');
+    $partes[] = $g('complemento');
+    $partes[] = $g('bairro');
+    $partes[] = trim($g('cidade') . ($g('uf') !== '' ? '/' . $g('uf') : ''), '/');
+    $partes[] = strlen($cep) === 8 ? 'CEP ' . substr($cep, 0, 5) . '-' . substr($cep, 5) : '';
+    return implode(' - ', array_filter($partes, fn ($p) => trim($p, ' ,') !== ''));
+}
+
+// =============================================================================
 // Dinheiro (sempre armazenado em CENTAVOS)
 // =============================================================================
 
