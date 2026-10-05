@@ -2210,6 +2210,44 @@ body.menu-aberto {
     border-color: var(--cor-destaque);
 }
 
+/* Campo de senha com botão de olho (criado pelo app.js). */
+.senha-caixa {
+    position: relative;
+    display: block;
+}
+
+.senha-caixa input {
+    padding-right: 2.6rem;
+}
+
+.senha-toggle {
+    position: absolute;
+    top: 50%;
+    right: .4rem;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--cor-texto);
+    opacity: .6;
+    cursor: pointer;
+}
+
+.senha-toggle:hover,
+.senha-toggle:focus-visible {
+    opacity: 1;
+}
+
+.senha-toggle svg {
+    width: 20px;
+    height: 20px;
+}
+
 .campo input[readonly] {
     background: #f3f3f3;
     color: #666;
