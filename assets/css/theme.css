@@ -2153,6 +2153,28 @@ body.menu-aberto {
     border-color: var(--cor-destaque);
 }
 
+.campo input[readonly] {
+    background: #f3f3f3;
+    color: #666;
+}
+
+/* Endereço separado (CEP, rua, número...): 2 colunas, número/UF estreitos. */
+.endereco-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 0 1rem;
+}
+
+.endereco-grid .campo-largo {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 480px) {
+    .endereco-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .campo-inline {
     display: flex;
     align-items: flex-start;

@@ -8,17 +8,89 @@
  */
 exigir_admin();
 
+// Partes de um endereço separado. Comercial grava "endereco_<parte>"; a loja
+// (origem do frete) grava "loja_<parte>". Os textos completos "endereco" e
+// "loja_endereco" são montados a partir delas ao salvar.
+const ENDERECO_PARTES = ['cep', 'rua', 'numero', 'complemento', 'bairro', 'cidade', 'uf'];
+
+function _endereco_chaves(string $prefixo): array
+{
+    return array_map(fn ($p) => $prefixo . $p, ENDERECO_PARTES);
+}
+
+/** "Rua X, 12 - Compl - Bairro - Cidade/UF - CEP 00000-000" (vazio se não houver rua). */
+function _endereco_texto(array $s, string $prefixo, bool $com_complemento): string
+{
+    $g = fn ($p) => trim((string) ($s[$prefixo . $p] ?? ''));
+    if ($g('rua') === '') {
+        return '';
+    }
+    $cep = $g('cep');
+    return $g('rua')
+        . ($g('numero') !== '' ? ', ' . $g('numero') : '')
+        . ($com_complemento && $g('complemento') !== '' ? ' - ' . $g('complemento') : '')
+        . ($g('bairro') !== '' ? ' - ' . $g('bairro') : '')
+        . ($g('cidade') !== '' ? ' - ' . $g('cidade') . ($g('uf') !== '' ? '/' . $g('uf') : '') : '')
+        . (strlen($cep) === 8 ? ' - CEP ' . substr($cep, 0, 5) . '-' . substr($cep, 5) : '');
+}
+
+/** Campos do endereço separado (CEP preenche o resto via ViaCEP, no app.js). */
+function _endereco_campos(string $prefixo): void
+{
+    $v = fn ($p) => e((string) cfg($prefixo . $p, ''));
+    $cep = (string) cfg($prefixo . 'cep', '');
+    $cep = strlen($cep) === 8 ? substr($cep, 0, 5) . '-' . substr($cep, 5) : $cep;
+    ?>
+    <div class="endereco-grid" data-endereco="<?= e($prefixo) ?>">
+        <div class="campo campo-largo">
+            <label for="<?= $prefixo ?>cep">CEP</label>
+            <input type="text" id="<?= $prefixo ?>cep" name="<?= $prefixo ?>cep" value="<?= e($cep) ?>"
+                   inputmode="numeric" maxlength="9" placeholder="00000-000" style="max-width:12rem;" data-cep>
+            <small>Ao sair do campo, rua, bairro, cidade e UF são preenchidos automaticamente.</small>
+        </div>
+        <div class="campo campo-largo">
+            <label for="<?= $prefixo ?>rua">Rua / avenida</label>
+            <input type="text" id="<?= $prefixo ?>rua" name="<?= $prefixo ?>rua" value="<?= $v('rua') ?>" data-cep-rua>
+        </div>
+        <div class="campo campo-largo">
+            <label for="<?= $prefixo ?>bairro">Bairro</label>
+            <input type="text" id="<?= $prefixo ?>bairro" name="<?= $prefixo ?>bairro" value="<?= $v('bairro') ?>" data-cep-bairro>
+        </div>
+        <div class="campo">
+            <label for="<?= $prefixo ?>numero">Número</label>
+            <input type="text" id="<?= $prefixo ?>numero" name="<?= $prefixo ?>numero" value="<?= $v('numero') ?>">
+        </div>
+        <div class="campo">
+            <label for="<?= $prefixo ?>complemento">Complemento</label>
+            <input type="text" id="<?= $prefixo ?>complemento" name="<?= $prefixo ?>complemento" value="<?= $v('complemento') ?>">
+        </div>
+        <div class="campo">
+            <label for="<?= $prefixo ?>uf">UF</label>
+            <input type="text" id="<?= $prefixo ?>uf" name="<?= $prefixo ?>uf" value="<?= $v('uf') ?>"
+                   maxlength="2" placeholder="SP" style="text-transform:uppercase;" data-cep-uf>
+        </div>
+        <div class="campo">
+            <label for="<?= $prefixo ?>cidade">Cidade</label>
+            <input type="text" id="<?= $prefixo ?>cidade" name="<?= $prefixo ?>cidade" value="<?= $v('cidade') ?>" data-cep-cidade>
+        </div>
+    </div>
+    <?php
+}
+
 // Chaves por aba e por tipo de tratamento.
 $abas_campos = [
     'comercial' => [
-        'texto' => ['site_descricao', 'whatsapp_numero', 'endereco', 'cnpj',
+        'texto' => array_merge(['site_descricao', 'whatsapp_numero', 'cnpj',
                     'instagram_usuario', 'tiktok_usuario', 'facebook_url', 'pinterest_url'],
+                    _endereco_chaves('endereco_')),
     ],
     'pagamento' => [
-        'texto'    => ['frete_provedor', 'loja_endereco', 'loja_lat', 'loja_lng', 'retirada_endereco'],
+        'texto'    => array_merge(['frete_provedor', 'loja_lat', 'loja_lng', 'retirada_endereco'],
+                    _endereco_chaves('loja_')),
         'dinheiro' => ['parcelamento_limite_centavos', 'parcela_minima_centavos',
                        'frete_base_centavos', 'frete_por_km_centavos'],
         'inteiro'  => ['parcelamento_max', 'frete_base_km', 'entrega_raio_max_km'],
+        'checkbox' => ['loja_endereco_igual'],
     ],
     'config' => [
         'texto' => ['regras_texto', 'whatsapp_msg', 'personalizar_msg_template', 'sobre_texto'],
@@ -59,6 +131,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (in_array($k, ['loja_lat', 'loja_lng'], true)) {
             $v = str_replace(',', '.', $v); // aceita vírgula digitada
         }
+        if (substr($k, -4) === '_cep') {
+            $v = substr(preg_replace('/\D+/', '', $v), 0, 8);
+        }
+        if (substr($k, -3) === '_uf') {
+            $v = strtoupper($v);
+            $v = preg_match('/^[A-Z]{2}$/', $v) ? $v : '';
+        }
         $stmt->execute([$k, $v, $v]);
     }
     foreach (($grupo['dinheiro'] ?? []) as $k) {
@@ -68,6 +147,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach (($grupo['inteiro'] ?? []) as $k) {
         $v = (string) (int) ($_POST[$k] ?? 0);
         $stmt->execute([$k, $v, $v]);
+    }
+    foreach (($grupo['checkbox'] ?? []) as $k) {
+        $v = isset($_POST[$k]) ? '1' : '0';
+        $stmt->execute([$k, $v, $v]);
+    }
+
+    // Endereço da loja "igual ao comercial": copia as partes (vale ao salvar
+    // qualquer uma das abas, para manter as duas em sincronia). Depois remonta
+    // os textos completos — só quando há rua, para não apagar um texto antigo.
+    $s = db()->query('SELECT chave, valor FROM settings')->fetchAll(PDO::FETCH_KEY_PAIR);
+    if (($s['loja_endereco_igual'] ?? '1') === '1') {
+        foreach (ENDERECO_PARTES as $p) {
+            $v = (string) ($s['endereco_' . $p] ?? '');
+            $stmt->execute(['loja_' . $p, $v, $v]);
+            $s['loja_' . $p] = $v;
+        }
+    }
+    foreach (['endereco' => ['endereco_', true], 'loja_endereco' => ['loja_', false]] as $k => [$prefixo, $compl]) {
+        $v = _endereco_texto($s, $prefixo, $compl);
+        if ($v !== '') {
+            $stmt->execute([$k, $v, $v]);
+        }
     }
 
     flash('sucesso', 'Configurações salvas com sucesso.');
@@ -108,10 +209,6 @@ ob_start();
                value="<?= e(cfg('whatsapp_numero', '')) ?>" placeholder="Ex.: 5511999999999">
     </div>
     <div class="campo">
-        <label for="endereco">Endereço</label>
-        <input type="text" id="endereco" name="endereco" value="<?= e(cfg('endereco', '')) ?>">
-    </div>
-    <div class="campo">
         <label for="cnpj">CNPJ</label>
         <input type="text" id="cnpj" name="cnpj" value="<?= e(cfg('cnpj', '')) ?>">
     </div>
@@ -136,6 +233,13 @@ ob_start();
                value="<?= e(cfg('pinterest_url', '')) ?>" placeholder="https://br.pinterest.com/seu-perfil">
     </div>
 
+    <h2 class="mt-1">Endereço</h2>
+    <?php if (cfg('endereco_rua', '') === '' && cfg('endereco', '') !== ''): ?>
+        <p><small>Endereço salvo anteriormente: <strong><?= e(cfg('endereco', '')) ?></strong>.
+           Preencha os campos abaixo e salve.</small></p>
+    <?php endif; ?>
+    <?php _endereco_campos('endereco_'); ?>
+
     <button class="btn" type="submit">Salvar</button>
 </form>
 
@@ -146,6 +250,8 @@ ob_start();
     <?= csrf_input() ?>
     <input type="hidden" name="aba" value="pagamento">
 
+    <div class="card-bloco">
+    <h2>Pagamento</h2>
     <div class="campo">
         <label for="parcelamento_limite_centavos">Valor mínimo do pedido para parcelar (R$)</label>
         <input type="text" id="parcelamento_limite_centavos" name="parcelamento_limite_centavos"
@@ -168,8 +274,10 @@ ob_start();
                value="<?= (int) cfg('parcelamento_max', '3') ?>">
         <small>Teto de parcelas (padrão 3). Use 0 para deixar só a regra da parcela mínima.</small>
     </div>
+    </div>
 
-    <h2 class="mt-1">Entrega (frete por distância)</h2>
+    <div class="card-bloco">
+    <h2>Entrega</h2>
     <p><small>O frete do motoboy é calculado pela distância da loja até o cliente:
        um valor fixo nos primeiros km e uma taxa por km extra. A retirada é sempre grátis.</small></p>
 
@@ -206,11 +314,30 @@ ob_start();
                value="<?= (int) cfg('entrega_raio_max_km', '15') ?>">
         <small>Acima desta distância, só retirada. Use 0 para não limitar.</small>
     </div>
-    <div class="campo">
-        <label for="loja_endereco">Endereço da loja (origem do frete)</label>
-        <input type="text" id="loja_endereco" name="loja_endereco"
-               value="<?= e(cfg('loja_endereco', '')) ?>" placeholder="Rua, número, bairro, cidade">
+    <?php
+    $igual = cfg('loja_endereco_igual', '1') === '1';
+    $comercial = [];
+    foreach (ENDERECO_PARTES as $p) {
+        $comercial[$p] = (string) cfg('endereco_' . $p, '');
+    }
+    if (strlen($comercial['cep']) === 8) {
+        $comercial['cep'] = substr($comercial['cep'], 0, 5) . '-' . substr($comercial['cep'], 5);
+    }
+    ?>
+    <h3 class="mt-1">Endereço da loja (origem do frete)</h3>
+    <div class="campo campo-inline">
+        <input type="checkbox" id="loja_endereco_igual" name="loja_endereco_igual" value="1"
+               <?= $igual ? 'checked' : '' ?> data-endereco-igual='<?= e(json_encode($comercial)) ?>'>
+        <label for="loja_endereco_igual">Usar o mesmo endereço das Informações comerciais</label>
     </div>
+    <?php if ($comercial['rua'] === ''): ?>
+        <p data-endereco-igual-aviso <?= $igual ? '' : 'hidden' ?>><small>O endereço das Informações comerciais
+           ainda não foi preenchido. Preencha lá ou desmarque a opção para digitar aqui.</small></p>
+    <?php endif; ?>
+    <?php if (cfg('loja_rua', '') === '' && cfg('loja_endereco', '') !== ''): ?>
+        <p><small>Endereço salvo anteriormente: <strong><?= e(cfg('loja_endereco', '')) ?></strong>.</small></p>
+    <?php endif; ?>
+    <?php _endereco_campos('loja_'); ?>
     <div class="campo">
         <label for="loja_lat">Latitude da loja (opcional)</label>
         <input type="text" id="loja_lat" name="loja_lat"
@@ -224,12 +351,36 @@ ob_start();
             Sem latitude/longitude, a distância parte do endereço acima (menos preciso).</small>
     </div>
     <div class="campo">
-        <label for="retirada_endereco">Endereço / instruções de retirada</label>
+        <label for="retirada_endereco">Instruções de retirada</label>
         <textarea id="retirada_endereco" name="retirada_endereco" rows="2"><?= e(cfg('retirada_endereco', '')) ?></textarea>
+    </div>
     </div>
 
     <button class="btn" type="submit">Salvar</button>
 </form>
+
+<script>
+(function () {
+    // "Usar o mesmo endereço": copia o endereço comercial (salvo) para os campos
+    // da loja e os trava; desmarcado, libera para digitar.
+    var chk = document.querySelector('[data-endereco-igual]');
+    var grid = document.querySelector('[data-endereco="loja_"]');
+    if (!chk || !grid) { return; }
+    var comercial = JSON.parse(chk.getAttribute('data-endereco-igual') || '{}');
+    var aviso = document.querySelector('[data-endereco-igual-aviso]');
+    function aplicar() {
+        Object.keys(comercial).forEach(function (p) {
+            var el = grid.querySelector('[name="loja_' + p + '"]');
+            if (!el) { return; }
+            if (chk.checked) { el.value = comercial[p]; }
+            el.readOnly = chk.checked;
+        });
+        if (aviso) { aviso.hidden = !chk.checked; }
+    }
+    chk.addEventListener('change', aplicar);
+    aplicar();
+})();
+</script>
 
 <!-- Aba 3: Configurações (textos + bloco editorial) -->
 <form method="post" action="<?= e(url('admin/configuracoes')) ?>"
