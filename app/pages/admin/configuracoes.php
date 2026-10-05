@@ -15,7 +15,7 @@ $abas_campos = [
                     'instagram_usuario', 'tiktok_usuario', 'facebook_url', 'pinterest_url'],
     ],
     'pagamento' => [
-        'texto'    => ['loja_endereco', 'loja_lat', 'loja_lng', 'retirada_endereco'],
+        'texto'    => ['frete_provedor', 'loja_endereco', 'loja_lat', 'loja_lng', 'retirada_endereco'],
         'dinheiro' => ['parcelamento_limite_centavos', 'parcela_minima_centavos',
                        'frete_base_centavos', 'frete_por_km_centavos'],
         'inteiro'  => ['parcelamento_max', 'frete_base_km', 'entrega_raio_max_km'],
@@ -52,6 +52,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (strpos($v, '{link}') === false) {
                 $v = trim($v . ' {link}');
             }
+        }
+        if ($k === 'frete_provedor' && !in_array($v, ['off', 'google'], true)) {
+            $v = 'off';
+        }
+        if (in_array($k, ['loja_lat', 'loja_lng'], true)) {
+            $v = str_replace(',', '.', $v); // aceita vírgula digitada
         }
         $stmt->execute([$k, $v, $v]);
     }
@@ -167,6 +173,16 @@ ob_start();
     <p><small>O frete do motoboy é calculado pela distância da loja até o cliente:
        um valor fixo nos primeiros km e uma taxa por km extra. A retirada é sempre grátis.</small></p>
 
+    <?php $provedor = cfg('frete_provedor', 'off'); ?>
+    <div class="campo">
+        <label for="frete_provedor">Cálculo da distância</label>
+        <select id="frete_provedor" name="frete_provedor">
+            <option value="off" <?= $provedor !== 'google' ? 'selected' : '' ?>>Desligado (só retirada)</option>
+            <option value="google" <?= $provedor === 'google' ? 'selected' : '' ?>>Google Maps</option>
+        </select>
+        <small>Chave do Google no .env (GOOGLE_MAPS_API_KEY):
+            <?= env('GOOGLE_MAPS_API_KEY', '') !== '' ? 'configurada.' : '<strong>não encontrada</strong> — o frete por motoboy não vai calcular.' ?></small>
+    </div>
     <div class="campo">
         <label for="frete_base_km">Primeiros km (com valor fixo)</label>
         <input type="number" id="frete_base_km" name="frete_base_km" min="0"
@@ -204,7 +220,8 @@ ob_start();
         <label for="loja_lng">Longitude da loja (opcional)</label>
         <input type="text" id="loja_lng" name="loja_lng"
                value="<?= e(cfg('loja_lng', '')) ?>" placeholder="Ex.: -46.6333">
-        <small>Latitude/longitude ajudam no cálculo preciso da distância (preencha quando definirmos o mapa).</small>
+        <small>No Google Maps, clique com o botão direito na porta da loja e copie os números.
+            Sem latitude/longitude, a distância parte do endereço acima (menos preciso).</small>
     </div>
     <div class="campo">
         <label for="retirada_endereco">Endereço / instruções de retirada</label>

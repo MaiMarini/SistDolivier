@@ -78,22 +78,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $frete = frete_calcular('retirada');
         $endereco_entrega = cfg('retirada_endereco', '') !== '' ? cfg('retirada_endereco', '') : 'Retirada no local';
     } else {
-        $cep    = trim($_POST['cep'] ?? '');
+        $cep    = preg_replace('/\D+/', '', $_POST['cep'] ?? '');
         $rua    = trim($_POST['rua'] ?? '');
         $numero = trim($_POST['numero'] ?? '');
         $bairro = trim($_POST['bairro'] ?? '');
         $cidade = trim($_POST['cidade'] ?? '');
+        $uf     = strtoupper(trim($_POST['uf'] ?? ''));
         $comp   = trim($_POST['complemento'] ?? '');
-        if ($rua === '' || $numero === '' || $cidade === '') {
-            flash('erro', 'Preencha o endereço de entrega (rua, número e cidade).');
+        if (strlen($cep) !== 8) {
+            flash('erro', 'Informe um CEP válido (8 números).');
             redirect('checkout');
         }
+        if ($rua === '' || $numero === '' || $cidade === '' || !preg_match('/^[A-Z]{2}$/', $uf)) {
+            flash('erro', 'Preencha o endereço de entrega (rua, número, cidade e UF).');
+            redirect('checkout');
+        }
+        $cep_fmt = substr($cep, 0, 5) . '-' . substr($cep, 5);
         $endereco_entrega = $rua . ', ' . $numero
             . ($comp !== '' ? ' - ' . $comp : '')
             . ($bairro !== '' ? ' - ' . $bairro : '')
-            . ' - ' . $cidade . ($cep !== '' ? ' - CEP ' . $cep : '');
-        $destino = trim("$rua, $numero, $bairro, $cidade, $cep", ' ,');
-        $chave = preg_replace('/\D+/', '', $cep) . '-' . preg_replace('/\s+/', '', $numero);
+            . ' - ' . $cidade . '/' . $uf . ' - CEP ' . $cep_fmt;
+        $destino = trim("$rua, $numero, $bairro, $cidade - $uf, $cep_fmt", ' ,');
+        $chave = $cep . '-' . preg_replace('/\s+/', '', mb_strtolower($numero));
         $frete = frete_calcular('motoboy', $destino, $chave);
         if (empty($frete['ok'])) {
             // Provedor de distância ainda não ativo, ou fora do raio.
@@ -216,7 +222,7 @@ ob_start();
         <?php endif; ?>
         <div class="campo">
             <label for="cep">CEP</label>
-            <input type="text" id="cep" name="cep" inputmode="numeric" placeholder="Somente números" data-cep>
+            <input type="text" id="cep" name="cep" inputmode="numeric" maxlength="9" placeholder="Somente números" data-cep>
         </div>
         <div class="campo">
             <label for="rua">Rua</label>
@@ -237,6 +243,11 @@ ob_start();
         <div class="campo">
             <label for="cidade">Cidade</label>
             <input type="text" id="cidade" name="cidade" data-cep-cidade>
+        </div>
+        <div class="campo">
+            <label for="uf">UF</label>
+            <input type="text" id="uf" name="uf" maxlength="2" placeholder="Ex.: SP"
+                   style="text-transform:uppercase; max-width:6rem;" data-cep-uf>
         </div>
         <p><small>O valor do frete é calculado ao confirmar o pedido, pela distância até a loja.</small></p>
     </div>

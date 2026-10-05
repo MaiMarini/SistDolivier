@@ -9,7 +9,7 @@
  *
  * O CÁLCULO DA DISTÂNCIA é plugável (settings.frete_provedor):
  *   - 'off'       -> ainda não calcula (retorna null; o checkout usa fallback)
- *   - 'google'    -> Distance Matrix (implementar quando houver a chave)
+ *   - 'google'    -> Google Routes API (chave em GOOGLE_MAPS_API_KEY no .env)
  *   - 'haversine' -> geocode + linha reta * fator (implementar)
  * Assim tudo já funciona (retirada 100%, motoboy com fallback) e, ao decidir o
  * provedor, basta preencher o driver correspondente — nada mais muda.
@@ -43,6 +43,9 @@ function frete_distancia_km(string $destino, ?string $chave_cache = null): ?floa
     }
 
     $chave = $chave_cache !== null ? trim($chave_cache) : mb_strtolower($destino);
+    // Prefixo da origem: mudar provedor/coordenadas/endereço da loja invalida o cache antigo.
+    $origem = $provedor . '|' . cfg('loja_lat', '') . '|' . cfg('loja_lng', '') . '|' . cfg('loja_endereco', '');
+    $chave = substr(md5($origem), 0, 8) . ':' . mb_substr($chave, 0, 180);
 
     // 1) Cache
     $st = db()->prepare('SELECT distancia_km FROM frete_cache WHERE chave = ? LIMIT 1');
@@ -117,13 +120,70 @@ function frete_calcular(string $tipo, string $destino = '', ?string $chave_cache
 // Drivers de distância — implementar quando o provedor for escolhido.
 // -----------------------------------------------------------------------------
 
-/** Google Distance Matrix (driving). Origem = loja_lat,loja_lng. */
+/**
+ * Google Routes API (computeRoutes). Origem = loja_lat,loja_lng; sem
+ * coordenadas, usa o texto de loja_endereco. Tenta rota de moto e, se a região
+ * não tiver, de carro. Null em qualquer falha (sem chave, sem origem, erro HTTP).
+ */
 function _frete_km_google(string $destino): ?float
 {
-    // TODO (quando houver maps_api_key): chamar a Distance Matrix API via cURL
-    // com origins=loja_lat,loja_lng, destinations=$destino, mode=driving, e
-    // devolver rows[0].elements[0].distance.value / 1000. Null em qualquer falha.
+    $key = (string) env('GOOGLE_MAPS_API_KEY', '');
+    if ($key === '') {
+        return null;
+    }
+
+    $lat = str_replace(',', '.', trim((string) cfg('loja_lat', '')));
+    $lng = str_replace(',', '.', trim((string) cfg('loja_lng', '')));
+    if (is_numeric($lat) && is_numeric($lng)) {
+        $origem = ['location' => ['latLng' => ['latitude' => (float) $lat, 'longitude' => (float) $lng]]];
+    } elseif (trim((string) cfg('loja_endereco', '')) !== '') {
+        $origem = ['address' => trim((string) cfg('loja_endereco', '')) . ', Brasil'];
+    } else {
+        return null;
+    }
+
+    foreach (['TWO_WHEELER', 'DRIVE'] as $modo) {
+        $metros = _frete_google_rota($key, $origem, $destino . ', Brasil', $modo);
+        if ($metros !== null) {
+            return round($metros / 1000, 2);
+        }
+    }
     return null;
+}
+
+/** Uma chamada ao computeRoutes. Devolve a distância em metros ou null. */
+function _frete_google_rota(string $key, array $origem, string $destino, string $modo): ?int
+{
+    $ch = curl_init('https://routes.googleapis.com/directions/v2:computeRoutes');
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode([
+            'origin'            => $origem,
+            'destination'       => ['address' => $destino],
+            'travelMode'        => $modo,
+            'languageCode'      => 'pt-BR',
+            'regionCode'        => 'BR',
+        ]),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_TIMEOUT        => 8,
+        CURLOPT_HTTPHEADER     => [
+            'Content-Type: application/json',
+            'X-Goog-Api-Key: ' . $key,
+            'X-Goog-FieldMask: routes.distanceMeters',
+        ],
+    ]);
+    $resp = curl_exec($ch);
+    $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($resp === false || $http !== 200) {
+        error_log('frete google: HTTP ' . $http . ' (' . $modo . ')');
+        return null;
+    }
+    // Sem rota para o modo pedido a API responde 200 com {} — o chamador tenta o próximo.
+    $m = json_decode($resp, true)['routes'][0]['distanceMeters'] ?? null;
+    return is_numeric($m) ? (int) $m : null;
 }
 
 /** Linha reta (haversine) a partir de coordenadas geocodificadas, * fator. */
