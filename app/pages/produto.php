@@ -262,6 +262,34 @@ ob_start();
             </form>
         <?php endif; ?>
 
+        <?php if (cfg('frete_provedor', 'off') !== 'off'): ?>
+            <?php
+            // Logado com endereço no cadastro -> estima direto para ele.
+            $frete_end = '';
+            if (usuario_atual() !== null) {
+                $st = db()->prepare('SELECT endereco FROM users WHERE id = ? LIMIT 1');
+                $st->execute([(int) usuario_atual()['id']]);
+                $frete_end = trim((string) $st->fetchColumn());
+            }
+            ?>
+            <div class="frete-calc" data-frete-calc data-url="<?= e(url('frete')) ?>"
+                 data-csrf="<?= e(csrf_token()) ?>"<?= $frete_end !== '' ? ' data-frete-cadastro' : '' ?>>
+                <span class="frete-calc-titulo">Calcular frete</span>
+                <?php if ($frete_end !== ''): ?>
+                    <p class="frete-calc-endereco" data-frete-endereco>
+                        <small>Para o seu endereço: <?= e($frete_end) ?></small>
+                        <button type="button" class="frete-calc-link" data-frete-outro>Usar outro CEP</button>
+                    </p>
+                <?php endif; ?>
+                <div class="frete-calc-linha" data-frete-form<?= $frete_end !== '' ? ' hidden' : '' ?>>
+                    <input type="text" inputmode="numeric" maxlength="9" placeholder="Seu CEP"
+                           aria-label="CEP" data-frete-cep>
+                    <button class="btn sec" type="button" data-frete-calcular>Calcular</button>
+                </div>
+                <div class="frete-calc-resultado" data-frete-resultado aria-live="polite" hidden></div>
+            </div>
+        <?php endif; ?>
+
         <div class="produto-botoes">
             <?php if ($mostrar_personalizar): ?>
                 <a class="btn btn-wpp-out" href="<?= e($link_personalizar) ?>"

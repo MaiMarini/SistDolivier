@@ -913,6 +913,63 @@ body.menu-aberto {
     margin: .6rem 0 1rem;
 }
 
+/* --- Estimativa de frete (página do produto) ------------------------------ */
+.frete-calc {
+    margin-top: 1rem;
+    padding: .8rem 1rem;
+    border: 1px solid rgba(0, 0, 0, .1);
+    border-radius: var(--raio);
+    background: var(--cor-superficie);
+}
+
+.frete-calc-titulo {
+    display: block;
+    font-weight: 700;
+    margin-bottom: .4rem;
+}
+
+.frete-calc-linha {
+    display: flex;
+    gap: .5rem;
+}
+
+.frete-calc [hidden] {
+    display: none;
+}
+
+.frete-calc-linha input {
+    flex: 1;
+    min-width: 0;
+    max-width: 12rem;
+    font: inherit;
+    padding: .5rem .7rem;
+    border: 1px solid #ccc;
+    border-radius: var(--raio);
+}
+
+.frete-calc-endereco {
+    margin: 0 0 .3rem;
+}
+
+.frete-calc-link {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-size: .9rem;
+    color: var(--cor-primaria);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.frete-calc-resultado {
+    margin-top: .6rem;
+}
+
+.frete-calc-resultado p {
+    margin: 0 0 .2rem;
+}
+
 .qtd-linha {
     display: flex;
     align-items: center;

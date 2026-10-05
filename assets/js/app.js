@@ -230,6 +230,114 @@
             });
         });
 
+        // --- Estimativa de frete (página do produto) ------------------------
+        // Logado com endereço -> calcula para ele ao abrir. Sem login, usa o CEP
+        // digitado (lembrado no navegador para os próximos produtos).
+        var freteCalc = document.querySelector('[data-frete-calc]');
+        if (freteCalc) {
+            var freteCep = freteCalc.querySelector('[data-frete-cep]');
+            var freteForm = freteCalc.querySelector('[data-frete-form]');
+            var freteRes = freteCalc.querySelector('[data-frete-resultado]');
+            var freteBtn = freteCalc.querySelector('[data-frete-calcular]');
+            var freteEnd = freteCalc.querySelector('[data-frete-endereco]');
+
+            var freteLinha = function (rotulo, valor, extra) {
+                var p = document.createElement('p');
+                var s = document.createElement('strong');
+                s.textContent = rotulo + ': ' + valor;
+                p.appendChild(s);
+                if (extra) { p.appendChild(document.createTextNode(' ' + extra)); }
+                return p;
+            };
+
+            var freteMostrar = function (d) {
+                freteRes.innerHTML = '';
+                if (d.ok) {
+                    var km = d.distancia_km !== null ? String(d.distancia_km).replace('.', ',') + ' km' : '';
+                    freteRes.appendChild(freteLinha('Entrega por motoboy', d.frete + ' (estimado)', km ? '· ' + km : ''));
+                } else {
+                    var erro = document.createElement('p');
+                    erro.textContent = d.mensagem || 'Não foi possível calcular o frete agora.';
+                    freteRes.appendChild(erro);
+                }
+                freteRes.appendChild(freteLinha('Retirada no local', 'grátis'));
+                var nota = document.createElement('small');
+                nota.textContent = (d.destino ? 'Para ' + d.destino + '. ' : '')
+                    + 'Valor estimado: o frete final é calculado no checkout, com o endereço completo.';
+                freteRes.appendChild(nota);
+                freteRes.hidden = false;
+            };
+
+            var freteEnviar = function (dados) {
+                var fd = new FormData();
+                fd.append('_csrf', freteCalc.getAttribute('data-csrf'));
+                Object.keys(dados).forEach(function (k) { fd.append(k, dados[k]); });
+                if (freteBtn) { freteBtn.disabled = true; }
+                freteRes.hidden = false;
+                freteRes.textContent = 'Calculando…';
+                return fetch(freteCalc.getAttribute('data-url'), { method: 'POST', body: fd, credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(freteMostrar)
+                    .catch(function () { freteMostrar({ ok: false }); })
+                    .then(function () { if (freteBtn) { freteBtn.disabled = false; } });
+            };
+
+            var freteCalcularCep = function () {
+                var d8 = (freteCep.value || '').replace(/\D+/g, '');
+                if (d8.length !== 8) {
+                    freteMostrar({ ok: false, mensagem: 'Informe um CEP válido (8 números).' });
+                    return;
+                }
+                try { localStorage.setItem('frete_cep', d8); } catch (e) { /* sem storage */ }
+                // ViaCEP completa o destino (mais preciso); se falhar, vai só com o CEP.
+                fetch('https://viacep.com.br/ws/' + d8 + '/json/')
+                    .then(function (r) { return r.json(); })
+                    .catch(function () { return {}; })
+                    .then(function (v) {
+                        if (v && v.erro) {
+                            freteMostrar({ ok: false, mensagem: 'CEP não encontrado. Confira os números.' });
+                            return;
+                        }
+                        v = v || {};
+                        freteEnviar({ cep: d8, rua: v.logradouro || '', bairro: v.bairro || '',
+                                      cidade: v.localidade || '', uf: v.uf || '' });
+                    });
+            };
+
+            if (freteCep) {
+                freteCep.addEventListener('input', function () {
+                    var v = freteCep.value.replace(/\D+/g, '').slice(0, 8);
+                    freteCep.value = v.length > 5 ? v.slice(0, 5) + '-' + v.slice(5) : v;
+                });
+                freteCep.addEventListener('keydown', function (ev) {
+                    if (ev.key === 'Enter') { ev.preventDefault(); freteCalcularCep(); }
+                });
+            }
+            if (freteBtn) { freteBtn.addEventListener('click', freteCalcularCep); }
+
+            var freteOutro = freteCalc.querySelector('[data-frete-outro]');
+            if (freteOutro) {
+                freteOutro.addEventListener('click', function () {
+                    if (freteEnd) { freteEnd.hidden = true; }
+                    freteForm.hidden = false;
+                    freteRes.hidden = true;
+                    freteCep.focus();
+                });
+            }
+
+            // Estado inicial.
+            if (freteCalc.hasAttribute('data-frete-cadastro')) {
+                freteEnviar({ cadastro: '1' });
+            } else {
+                var cepSalvo = null;
+                try { cepSalvo = localStorage.getItem('frete_cep'); } catch (e) { /* sem storage */ }
+                if (cepSalvo && /^\d{8}$/.test(cepSalvo)) {
+                    freteCep.value = cepSalvo.slice(0, 5) + '-' + cepSalvo.slice(5);
+                    freteCalcularCep();
+                }
+            }
+        }
+
         // --- Máscara de telefone BR: (11) 91234-5678 / (11) 1234-5678 -------
         function mascaraTelefone(valor) {
             var v = (valor || '').replace(/\D/g, '').slice(0, 11);

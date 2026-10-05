@@ -44,6 +44,7 @@ $rotas = [
     'produto'      => 'produto',
     'carrinho'     => 'carrinho',
     'checkout'     => 'checkout',
+    'frete'        => 'frete',         // POST JSON: estimativa de frete (página do produto)
     'pedido'       => 'pedido',
     'sobre'        => 'sobre',
     'regras'       => 'regras',
