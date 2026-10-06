@@ -2,18 +2,41 @@ name: Deploy
 on:
   push:
     branches: [ main ]
+
+# Um deploy por vez. Se chegar outro enquanto um roda, o novo espera; um que
+# ainda estava esperando é substituído pelo mais recente.
+concurrency:
+  group: deploy-producao
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Só publica se este commit ainda for o mais recente da main. Evita que um
+      # "Re-run" de um deploy antigo publique código velho por cima do atual.
+      - name: Conferir se é o commit mais recente
+        id: atual
+        run: |
+          HEAD_MAIN=$(git ls-remote origin refs/heads/main | cut -f1)
+          if [ "$HEAD_MAIN" = "${{ github.sha }}" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Deploy ignorado: ${{ github.sha }} não é o commit mais recente da main ($HEAD_MAIN)."
+          fi
+
       - name: Configurar SSH
+        if: steps.atual.outputs.ok == 'true'
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p 2222 ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
       - name: Deploy via rsync
+        if: steps.atual.outputs.ok == 'true'
         run: |
           rsync -avz \
             -e "ssh -p 2222 -i ~/.ssh/id_rsa" \
