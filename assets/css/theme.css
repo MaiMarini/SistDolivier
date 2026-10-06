@@ -2341,6 +2341,25 @@ body.menu-aberto {
     border-color: var(--cor-destaque);
 }
 
+/* Campos obrigatórios: asterisco no rótulo + legenda (marcados pelo app.js). */
+.rotulo-obrigatorio::after {
+    content: " *";
+    content: " *" / "";      /* leitor de tela ignora; o campo já diz "obrigatório" */
+    color: var(--cor-pop);
+    font-weight: 700;
+}
+
+.legenda-obrigatorio {
+    margin: 0 0 .8rem;
+    font-size: .82rem;
+    color: rgba(74, 51, 32, .65);
+}
+
+.legenda-obrigatorio span {
+    color: var(--cor-pop);
+    font-weight: 700;
+}
+
 /* Campo de senha com botão de olho (criado pelo app.js). */
 .senha-caixa {
     position: relative;

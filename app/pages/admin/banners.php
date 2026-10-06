@@ -377,7 +377,7 @@ if ($acao === 'novo' || $acao === 'editar') {
         <div class="campo">
             <label for="imagem">Imagem <?= $banner['id'] > 0 ? '(deixe vazio para manter)' : '' ?></label>
             <input class="input-arquivo" type="file" id="imagem" name="imagem"
-                   accept="image/jpeg,image/png,image/webp" data-arquivo-nome>
+                   accept="image/jpeg,image/png,image/webp" data-arquivo-nome<?= $banner['id'] > 0 ? '' : ' required' ?>>
             <div class="arquivo-linha">
                 <label for="imagem" class="btn btn-arquivo">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -737,9 +737,10 @@ $bloco_video = cfg('bloco_editorial_video', '');
         </div>
     <?php endif; ?>
     <div class="campo">
-        <label for="colecoes_imagem_lateral">Imagem lateral (deixe vazio para manter a atual)</label>
+        <!-- Este formulário só serve para trocar a imagem: o servidor exige o arquivo. -->
+        <label for="colecoes_imagem_lateral">Nova imagem lateral</label>
         <input class="input-arquivo" type="file" id="colecoes_imagem_lateral" name="colecoes_imagem_lateral"
-               accept="image/jpeg,image/png,image/webp" data-arquivo-nome>
+               accept="image/jpeg,image/png,image/webp" data-arquivo-nome required>
         <div class="arquivo-linha">
             <label for="colecoes_imagem_lateral" class="btn btn-arquivo">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"

@@ -466,7 +466,7 @@ if ($acao === 'novo' || $acao === 'editar') {
                 <div class="produto-col">
                     <div class="campo">
                         <label for="nome">Nome</label>
-                        <input type="text" id="nome" name="nome" value="<?= e($produto['nome']) ?>" required
+                        <input type="text" id="nome" name="nome" value="<?= e($produto['nome']) ?>" required minlength="2"
                             data-slug-source>
                     </div>
                     <div class="campo">
@@ -715,6 +715,15 @@ if ($acao === 'novo' || $acao === 'editar') {
         var endpoint = <?= json_encode(url('admin/produtos')) ?>;
         var csrf = <?= json_encode(csrf_token()) ?>;
         var liberado = false;
+
+        // Preço é obrigatório quando o produto NÃO é personalizável (igual ao servidor).
+        var preco = document.getElementById('preco');
+        var personalizavel = document.getElementById('permite_personalizacao');
+        if (preco && personalizavel) {
+            var aplicarPreco = function () { preco.required = !personalizavel.checked; };
+            personalizavel.addEventListener('change', aplicarPreco);
+            aplicarPreco();
+        }
 
         function enviar() {
             liberado = true;

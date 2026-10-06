@@ -283,11 +283,11 @@ ob_start();
                             <div class="campo">
                                 <label for="cep">CEP</label>
                                 <input type="text" id="cep" name="cep" inputmode="numeric" maxlength="9"
-                                       placeholder="00000-000" data-cep data-ck-end-campo>
+                                       placeholder="00000-000" data-cep data-ck-end-campo data-obrigatorio>
                             </div>
                             <div class="campo">
                                 <label for="numero">Número</label>
-                                <input type="text" id="numero" name="numero" data-ck-end-campo>
+                                <input type="text" id="numero" name="numero" data-ck-end-campo data-obrigatorio>
                             </div>
                             <div class="campo">
                                 <label for="complemento">Complemento <span class="ck-opcional">(opcional)</span></label>
@@ -296,7 +296,7 @@ ob_start();
                         </div>
                         <div class="campo">
                             <label for="rua">Rua</label>
-                            <input type="text" id="rua" name="rua" data-cep-rua data-ck-end-campo>
+                            <input type="text" id="rua" name="rua" data-cep-rua data-ck-end-campo data-obrigatorio>
                         </div>
                         <div class="ck-linha3 ck-linha3--local">
                             <div class="campo">
@@ -305,12 +305,12 @@ ob_start();
                             </div>
                             <div class="campo">
                                 <label for="cidade">Cidade</label>
-                                <input type="text" id="cidade" name="cidade" data-cep-cidade data-ck-end-campo>
+                                <input type="text" id="cidade" name="cidade" data-cep-cidade data-ck-end-campo data-obrigatorio>
                             </div>
                             <div class="campo">
                                 <label for="uf">UF</label>
                                 <input type="text" id="uf" name="uf" maxlength="2" placeholder="SP"
-                                       style="text-transform:uppercase;" data-cep-uf data-ck-end-campo>
+                                       style="text-transform:uppercase;" data-cep-uf data-ck-end-campo data-obrigatorio>
                             </div>
                         </div>
                         <p class="ck-pequeno">Rua, bairro, cidade e UF são preenchidos pelo CEP.</p>
@@ -338,7 +338,7 @@ ob_start();
                     <div class="ck-linha2">
                         <div class="campo">
                             <label for="presente_para">Nome de quem vai receber</label>
-                            <input type="text" id="presente_para" name="presente_para" maxlength="150">
+                            <input type="text" id="presente_para" name="presente_para" maxlength="150" data-obrigatorio>
                         </div>
                         <div class="campo">
                             <label for="presente_telefone">Telefone de quem vai receber <span class="ck-opcional">(opcional)</span></label>

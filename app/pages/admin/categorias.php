@@ -139,7 +139,7 @@ if ($acao === 'novo' || $acao === 'editar') {
         <div class="campo">
             <label for="nome">Nome</label>
             <input type="text" id="nome" name="nome"
-                   value="<?= e($categoria['nome']) ?>" required data-slug-source>
+                   value="<?= e($categoria['nome']) ?>" required minlength="2" data-slug-source>
         </div>
         <div class="campo">
             <label for="slug">Slug (endereço)</label>

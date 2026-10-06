@@ -132,7 +132,7 @@ if ($acao === 'novo' || $acao === 'editar') {
 
         <div class="campo">
             <label for="nome">Nome da tabela nutricional</label>
-            <input type="text" id="nome" name="nome" value="<?= e($rec['nome']) ?>" required>
+            <input type="text" id="nome" name="nome" value="<?= e($rec['nome']) ?>" required minlength="2">
         </div>
         <div class="campo">
             <label for="alergenicos">Aviso de alérgenos</label>

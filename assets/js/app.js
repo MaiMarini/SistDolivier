@@ -105,6 +105,47 @@
             });
         }
 
+        // --- Campos obrigatórios: asterisco no rótulo + legenda no formulário ---
+        // Vale para [required] e para [data-obrigatorio] (obrigatório só em certa
+        // situação, ex.: endereço do checkout; o servidor é quem valida).
+        var SEL_OBRIGATORIO = 'input[required], select[required], textarea[required], [data-obrigatorio]';
+        var marcarRotulo = function (campo) {
+            if (!campo.id || campo.type === 'hidden' || campo.type === 'checkbox' || campo.type === 'radio') { return; }
+            var obrigatorio = campo.required || campo.hasAttribute('data-obrigatorio');
+            // O primeiro <label for> é o rótulo; os outros (ex.: botão "Escolher arquivo") ficam como estão.
+            var rotulo = document.querySelector('label[for="' + campo.id + '"]:not(.btn)');
+            if (rotulo) { rotulo.classList.toggle('rotulo-obrigatorio', obrigatorio); }
+            if (campo.hasAttribute('data-obrigatorio')) { campo.setAttribute('aria-required', 'true'); }
+        };
+        document.querySelectorAll('form').forEach(function (form) {
+            var campos = form.querySelectorAll(SEL_OBRIGATORIO);
+            var marcados = 0;
+            campos.forEach(function (c) {
+                if (c.type === 'checkbox' || c.type === 'radio' || c.type === 'hidden') { return; }
+                marcarRotulo(c);
+                marcados++;
+            });
+            // Campos que podem virar obrigatórios depois (ex.: preço do produto).
+            form.querySelectorAll('input, select, textarea').forEach(function (c) {
+                if (c.id && !c.matches(SEL_OBRIGATORIO)) { marcarRotulo(c); }
+            });
+            if (marcados && !form.querySelector('.legenda-obrigatorio')) {
+                var legenda = document.createElement('p');
+                legenda.className = 'legenda-obrigatorio';
+                legenda.innerHTML = '<span aria-hidden="true">*</span> Campos obrigatórios';
+                var primeiro = Array.prototype.find.call(form.children, function (el) {
+                    return !(el.tagName === 'INPUT' && el.type === 'hidden');
+                });
+                form.insertBefore(legenda, primeiro || null);
+            }
+        });
+        // Acompanha campos que viram obrigatórios via JS (preço do produto, senha no perfil...).
+        if (window.MutationObserver) {
+            new MutationObserver(function (mudancas) {
+                mudancas.forEach(function (m) { marcarRotulo(m.target); });
+            }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['required'] });
+        }
+
         document.querySelectorAll('.modal').forEach(function (modal) {
             fecharAoClicarNoFundo(modal, function () { fecharModal(modal); });
             modal.querySelectorAll('[data-fechar-modal]').forEach(function (botao) {

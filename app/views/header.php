@@ -133,7 +133,7 @@ $ico_usuario  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
                 <input type="hidden" name="acao" value="cadastro">
                 <div class="campo">
                     <label for="dw-cad-nome">Nome completo</label>
-                    <input type="text" id="dw-cad-nome" name="nome" required>
+                    <input type="text" id="dw-cad-nome" name="nome" required minlength="3">
                 </div>
                 <div class="campo">
                     <label for="dw-cad-cpf">CPF</label>
