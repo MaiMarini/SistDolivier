@@ -278,31 +278,79 @@
             var freteRes = freteCalc.querySelector('[data-frete-resultado]');
             var freteBtn = freteCalc.querySelector('[data-frete-calcular]');
             var freteEnd = freteCalc.querySelector('[data-frete-endereco]');
+            var freteResumo = freteCalc.querySelector('[data-frete-resumo]');
 
-            var freteLinha = function (rotulo, valor, extra) {
+            var ICONE_MOTO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+                + 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+                + '<circle cx="5.5" cy="17" r="3"/><circle cx="18.5" cy="17" r="3"/>'
+                + '<path d="M8.5 17h6l2-6h-5l-2 3"/><path d="M15 6h2.5l1.5 5"/></svg>';
+            var ICONE_LOJA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+                + 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+                + '<path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v1.5a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/>'
+                + '<path d="M5 13v7h14v-7"/><path d="M10 20v-4h4v4"/></svg>';
+
+            // Um cartão de opção (Motoboy / Retirada). Textos via textContent.
+            var freteOpcao = function (classe, icone, rotulo, valor, detalhe) {
+                var card = document.createElement('div');
+                card.className = 'frete-opcao ' + classe;
+                var r = document.createElement('span');
+                r.className = 'frete-opcao-rotulo';
+                r.innerHTML = icone;
+                r.appendChild(document.createTextNode(rotulo));
+                var v = document.createElement('strong');
+                v.className = 'frete-opcao-valor';
+                v.textContent = valor;
+                var dt = document.createElement('span');
+                dt.className = 'frete-opcao-detalhe';
+                dt.textContent = detalhe;
+                card.appendChild(r);
+                card.appendChild(v);
+                card.appendChild(dt);
+                return card;
+            };
+
+            var freteTexto = function (classe, texto) {
                 var p = document.createElement('p');
-                var s = document.createElement('strong');
-                s.textContent = rotulo + ': ' + valor;
-                p.appendChild(s);
-                if (extra) { p.appendChild(document.createTextNode(' ' + extra)); }
+                p.className = classe;
+                p.textContent = texto;
                 return p;
             };
 
+            // d: resposta do /frete. d.soMensagem = erro de digitação (só o aviso).
             var freteMostrar = function (d) {
                 freteRes.innerHTML = '';
-                if (d.ok) {
-                    var km = d.distancia_km !== null ? String(d.distancia_km).replace('.', ',') + ' km' : '';
-                    freteRes.appendChild(freteLinha('Entrega por motoboy', d.frete + ' (estimado)', km ? '· ' + km : ''));
+                var definitivo = d.ok || d.motivo === 'fora_raio';
+
+                if (definitivo) {
+                    freteResumo.textContent = d.resumo || d.destino || '';
+                    freteEnd.hidden = false;
+                    freteForm.hidden = true;
                 } else {
-                    var erro = document.createElement('p');
-                    erro.textContent = d.mensagem || 'Não foi possível calcular o frete agora.';
-                    freteRes.appendChild(erro);
+                    freteRes.appendChild(freteTexto('frete-calc-msg',
+                        d.mensagem || 'Não foi possível calcular o frete agora.'));
+                    freteEnd.hidden = true;
+                    freteForm.hidden = false;
                 }
-                freteRes.appendChild(freteLinha('Retirada no local', 'grátis'));
-                var nota = document.createElement('small');
-                nota.textContent = (d.destino ? 'Para ' + d.destino + '. ' : '')
-                    + 'Valor estimado: o frete final é calculado no checkout, com o endereço completo.';
-                freteRes.appendChild(nota);
+
+                if (!d.soMensagem) {
+                    var grade = document.createElement('div');
+                    grade.className = 'frete-opcoes' + (definitivo ? '' : ' is-unica');
+                    if (d.ok) {
+                        var km = (d.distancia_km !== null && d.distancia_km !== undefined)
+                            ? Number(d.distancia_km).toFixed(1).replace('.', ',') + ' km da loja' : '';
+                        grade.appendChild(freteOpcao('frete-opcao--motoboy', ICONE_MOTO, 'Motoboy', d.frete, km));
+                    } else if (d.motivo === 'fora_raio') {
+                        grade.appendChild(freteOpcao('frete-opcao--indisponivel', ICONE_MOTO, 'Motoboy',
+                            'Indisponível', 'Fora do raio de entrega'));
+                    }
+                    grade.appendChild(freteOpcao('frete-opcao--retirada' + (d.ok ? '' : ' is-destaque'),
+                        ICONE_LOJA, 'Retirada', 'Grátis', 'Na loja'));
+                    freteRes.appendChild(grade);
+                }
+
+                if (d.ok) {
+                    freteRes.appendChild(freteTexto('frete-calc-nota', 'O valor final é confirmado no checkout.'));
+                }
                 freteRes.hidden = false;
             };
 
@@ -312,7 +360,8 @@
                 Object.keys(dados).forEach(function (k) { fd.append(k, dados[k]); });
                 if (freteBtn) { freteBtn.disabled = true; }
                 freteRes.hidden = false;
-                freteRes.textContent = 'Calculando…';
+                freteRes.innerHTML = '';
+                freteRes.appendChild(freteTexto('frete-calc-msg', 'Calculando…'));
                 return fetch(freteCalc.getAttribute('data-url'), { method: 'POST', body: fd, credentials: 'same-origin' })
                     .then(function (r) { return r.json(); })
                     .then(freteMostrar)
@@ -323,7 +372,7 @@
             var freteCalcularCep = function () {
                 var d8 = (freteCep.value || '').replace(/\D+/g, '');
                 if (d8.length !== 8) {
-                    freteMostrar({ ok: false, mensagem: 'Informe um CEP válido (8 números).' });
+                    freteMostrar({ ok: false, soMensagem: true, mensagem: 'Informe um CEP válido (8 números).' });
                     return;
                 }
                 try { localStorage.setItem('frete_cep', d8); } catch (e) { /* sem storage */ }
@@ -333,7 +382,7 @@
                     .catch(function () { return {}; })
                     .then(function (v) {
                         if (v && v.erro) {
-                            freteMostrar({ ok: false, mensagem: 'CEP não encontrado. Confira os números.' });
+                            freteMostrar({ ok: false, soMensagem: true, mensagem: 'CEP não encontrado. Confira os números.' });
                             return;
                         }
                         v = v || {};
@@ -356,7 +405,7 @@
             var freteOutro = freteCalc.querySelector('[data-frete-outro]');
             if (freteOutro) {
                 freteOutro.addEventListener('click', function () {
-                    if (freteEnd) { freteEnd.hidden = true; }
+                    freteEnd.hidden = true;
                     freteForm.hidden = false;
                     freteRes.hidden = true;
                     freteCep.focus();

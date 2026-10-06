@@ -274,13 +274,12 @@ ob_start();
             ?>
             <div class="frete-calc" data-frete-calc data-url="<?= e(url('frete')) ?>"
                  data-csrf="<?= e(csrf_token()) ?>"<?= $frete_end !== '' ? ' data-frete-cadastro' : '' ?>>
-                <span class="frete-calc-titulo">Calcular frete</span>
-                <?php if ($frete_end !== ''): ?>
-                    <p class="frete-calc-endereco" data-frete-endereco>
-                        <small>Para o seu endereço: <?= e($frete_end) ?></small>
-                        <button type="button" class="frete-calc-link" data-frete-outro>Usar outro CEP</button>
-                    </p>
-                <?php endif; ?>
+                <p class="frete-calc-titulo"><strong>Frete</strong> <span>– Estimado</span></p>
+                <!-- Endereço resumido + "Alterar": preenchidos pelo app.js após o cálculo -->
+                <div class="frete-calc-endereco" data-frete-endereco hidden>
+                    <span class="frete-calc-resumo" data-frete-resumo></span>
+                    <button type="button" class="frete-calc-link" data-frete-outro>Alterar</button>
+                </div>
                 <div class="frete-calc-linha" data-frete-form<?= $frete_end !== '' ? ' hidden' : '' ?>>
                     <input type="text" inputmode="numeric" maxlength="9" placeholder="Seu CEP"
                            aria-label="CEP" data-frete-cep>

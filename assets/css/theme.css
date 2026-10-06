@@ -913,28 +913,80 @@ body.menu-aberto {
     margin: .6rem 0 1rem;
 }
 
-/* --- Estimativa de frete (página do produto) ------------------------------ */
+/* --- Estimativa de frete (página do produto) — layout "C1" ----------------- */
+/* Card: título · endereço resumido + Alterar · 2 cartões (Motoboy | Retirada) · nota. */
 .frete-calc {
+    --frete-texto-sec: rgba(74, 51, 32, .65);                    /* fallback */
+    --frete-texto-sec: color-mix(in srgb, var(--cor-texto) 65%, transparent);
+    --frete-borda: rgba(0, 0, 0, .12);
+    --frete-alerta: #a5561c;
     margin-top: 1rem;
-    padding: .8rem 1rem;
+    padding: .9rem 1rem;
     border: 1px solid rgba(0, 0, 0, .1);
     border-radius: var(--raio);
     background: var(--cor-superficie);
-}
-
-.frete-calc-titulo {
-    display: block;
-    font-weight: 700;
-    margin-bottom: .4rem;
-}
-
-.frete-calc-linha {
-    display: flex;
-    gap: .5rem;
+    display: grid;
+    gap: .6rem;
+    min-width: 0;
 }
 
 .frete-calc [hidden] {
     display: none;
+}
+
+.frete-calc-titulo {
+    margin: 0;
+}
+
+.frete-calc-titulo strong {
+    font-weight: 700;
+}
+
+.frete-calc-titulo span {
+    font-weight: 400;
+    color: var(--frete-texto-sec);
+}
+
+/* Linha do endereço: resumo à esquerda, "Alterar" à direita. */
+.frete-calc-endereco {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .75rem;
+    min-width: 0;
+}
+
+.frete-calc-resumo {
+    min-width: 0;
+    font-size: .92rem;
+    color: var(--frete-texto-sec);
+    overflow-wrap: anywhere;
+}
+
+.frete-calc-link {
+    flex-shrink: 0;
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-size: .92rem;
+    font-weight: 600;
+    color: var(--cor-pop);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.frete-calc-link:focus-visible {
+    outline: 2px solid var(--cor-pop);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+/* Sem CEP ainda: campo + botão. */
+.frete-calc-linha {
+    display: flex;
+    gap: .5rem;
+    min-width: 0;
 }
 
 .frete-calc-linha input {
@@ -947,27 +999,106 @@ body.menu-aberto {
     border-radius: var(--raio);
 }
 
-.frete-calc-endereco {
-    margin: 0 0 .3rem;
-}
-
-.frete-calc-link {
-    background: none;
-    border: 0;
-    padding: 0;
-    font: inherit;
-    font-size: .9rem;
-    color: var(--cor-primaria);
-    text-decoration: underline;
-    cursor: pointer;
-}
-
 .frete-calc-resultado {
-    margin-top: .6rem;
+    display: grid;
+    gap: .6rem;
+    min-width: 0;
 }
 
-.frete-calc-resultado p {
-    margin: 0 0 .2rem;
+.frete-calc-msg {
+    margin: 0;
+}
+
+.frete-calc-nota {
+    margin: 0;
+    font-size: .82rem;
+    color: var(--frete-texto-sec);
+}
+
+/* Cartões Motoboy | Retirada */
+.frete-opcoes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.frete-opcoes.is-unica {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.frete-opcao {
+    display: grid;
+    gap: .15rem;
+    min-width: 0;
+    padding: .7rem .85rem;
+    border: 1.5px solid var(--frete-borda);
+    border-radius: var(--raio);
+}
+
+.frete-opcao-rotulo {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .92rem;
+    font-weight: 700;
+}
+
+.frete-opcao-rotulo svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.frete-opcao-valor {
+    font-size: 1.45rem;
+    font-weight: 800;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.frete-opcao-detalhe {
+    font-size: .82rem;
+    color: var(--frete-texto-sec);
+}
+
+.frete-opcao--motoboy {
+    border-color: var(--cor-pop);
+    background: #fffaf7;
+}
+
+.frete-opcao--motoboy .frete-opcao-rotulo {
+    color: var(--cor-pop);
+}
+
+.frete-opcao--retirada .frete-opcao-rotulo,
+.frete-opcao--retirada .frete-opcao-valor {
+    color: var(--cor-acento);
+}
+
+/* Fora do raio: Motoboy apagado; Retirada destacada como alternativa. */
+.frete-opcao--indisponivel {
+    opacity: .75;
+}
+
+.frete-opcao--indisponivel .frete-opcao-rotulo,
+.frete-opcao--indisponivel .frete-opcao-valor {
+    color: var(--frete-alerta);
+}
+
+.frete-opcao--indisponivel .frete-opcao-valor {
+    font-size: 1.1rem;
+    white-space: normal;
+}
+
+.frete-opcao--retirada.is-destaque {
+    border-color: var(--cor-acento);
+}
+
+@media (max-width: 420px) {
+    .frete-opcoes {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 .qtd-linha {

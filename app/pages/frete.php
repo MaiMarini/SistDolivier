@@ -25,19 +25,35 @@ if (cfg('frete_provedor', 'off') === 'off') {
     _frete_json(['ok' => false, 'mensagem' => 'Cálculo de frete indisponível no momento.']);
 }
 
+/** Linha curta para exibir: "Bairro, Cidade/UF · CEP 00000-000" (partes vazias somem). */
+function _frete_resumo(string $bairro, string $cidade, string $uf, string $cep): string
+{
+    $local = trim($cidade . ($uf !== '' ? '/' . $uf : ''), '/');
+    $lugar = implode(', ', array_filter([$bairro, $local], fn ($p) => $p !== ''));
+    $cep   = preg_replace('/\D+/', '', $cep);
+    // Espaço e hífen inquebráveis: "CEP 00000-000" nunca quebra no meio.
+    $cep   = strlen($cep) === 8 ? "CEP\u{00A0}" . substr($cep, 0, 5) . "\u{2011}" . substr($cep, 5) : '';
+    return implode(' · ', array_filter([$lugar, $cep], fn ($p) => $p !== ''));
+}
+
 // --- Destino ----------------------------------------------------------------
 $destino = '';
 $chave   = null;
 $rotulo  = '';
+$resumo  = '';
 
 $usuario = usuario_atual();
 if (!empty($_POST['cadastro']) && $usuario !== null) {
-    $st = db()->prepare('SELECT endereco FROM users WHERE id = ? LIMIT 1');
+    $st = db()->prepare('SELECT endereco, bairro, cidade, uf, cep FROM users WHERE id = ? LIMIT 1');
     $st->execute([(int) $usuario['id']]);
-    $end = trim((string) $st->fetchColumn());
+    $u   = $st->fetch() ?: [];
+    $end = trim((string) ($u['endereco'] ?? ''));
     if ($end !== '') {
         $destino = $end;
         $rotulo  = $end;
+        // Conta antiga sem campos separados: mostra o texto completo.
+        $resumo  = _frete_resumo((string) ($u['bairro'] ?? ''), (string) ($u['cidade'] ?? ''),
+                                 (string) ($u['uf'] ?? ''), (string) ($u['cep'] ?? '')) ?: $end;
         // Mesma chave de cache do checkout (cep-numero), quando dá para extrair.
         if (preg_match('/CEP\s*(\d{5})-?(\d{3})/i', $end, $mc)
             && preg_match('/^[^,]+,\s*(.+?)\s*(?: - |$)/', $end, $mn)) {
@@ -64,12 +80,13 @@ if ($destino === '') {
     $chave   = 'cep:' . $cep;
     $rotulo  = 'CEP ' . $cep_fmt . ($bairro !== '' || $local !== ''
              ? ' (' . implode(', ', array_filter([$bairro, $local], fn ($p) => $p !== '')) . ')' : '');
+    $resumo  = _frete_resumo($bairro, $cidade, $uf, $cep);
 }
 
 // --- Cache da sessão + limite de destinos novos -----------------------------
 $id_sessao = $chave ?? mb_strtolower($destino);
 if (isset($_SESSION['_frete_estimativas'][$id_sessao])) {
-    _frete_json($_SESSION['_frete_estimativas'][$id_sessao]);
+    _frete_json(['resumo' => $resumo] + $_SESSION['_frete_estimativas'][$id_sessao]);
 }
 
 $agora = time();
@@ -90,6 +107,7 @@ $resposta = [
     'frete'        => $r['ok'] ? money((int) $r['frete_centavos']) : null,
     'distancia_km' => $r['distancia_km'],
     'destino'      => $rotulo,
+    'resumo'       => $resumo,
     'motivo'       => $r['motivo'],
     'mensagem'     => $r['ok'] ? null : ($r['motivo'] === 'fora_raio'
         ? 'Fora da área de entrega por motoboy. Disponível para retirada.'
