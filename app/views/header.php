@@ -18,8 +18,6 @@ try {
 }
 
 $qtd_carrinho = carrinho_quantidade();
-// Carrinho em painel lateral (padrão) ou página — Admin › Configurações.
-$carrinho_lateral = cfg('carrinho_modo', 'lateral') !== 'pagina';
 $eh_admin = ($usuario !== null && ($usuario['papel'] ?? '') === 'admin');
 
 // Ícones (SVG inline, traço na cor do texto).
@@ -41,9 +39,9 @@ $ico_usuario  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
             </a>
 
             <div class="header-acoes">
-                <!-- Modo "lateral": o app.js abre o painel; sem JS (ou modo "página"), vai para /carrinho -->
+                <!-- O app.js abre o carrinho lateral; sem JS, o link vai para a página /carrinho -->
                 <a class="header-icone header-carrinho" href="<?= e(url('carrinho')) ?>" aria-label="Carrinho"
-                   <?= $carrinho_lateral ? 'data-abrir-carrinho aria-haspopup="dialog"' : '' ?>>
+                   data-abrir-carrinho aria-haspopup="dialog">
                     <?= $ico_carrinho ?>
                     <span class="header-badge" data-cart-badge<?= $qtd_carrinho > 0 ? '' : ' hidden' ?>><?= (int) $qtd_carrinho ?></span>
                 </a>
@@ -188,7 +186,6 @@ $ico_usuario  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 </div>
 <?php endif; ?>
 
-<?php if ($carrinho_lateral): ?>
 <!-- Carrinho lateral: conteúdo montado pelo app.js a partir de /carrinho?formato=json -->
 <div class="drawer-overlay" data-carrinho-overlay
      data-url="<?= e(url('carrinho')) ?>" data-csrf="<?= e(csrf_token()) ?>">
@@ -206,4 +203,3 @@ $ico_usuario  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
         </div>
     </aside>
 </div>
-<?php endif; ?>

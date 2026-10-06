@@ -91,7 +91,7 @@ $abas_campos = [
         'checkbox' => ['loja_endereco_igual'],
     ],
     'config' => [
-        'texto' => ['carrinho_modo', 'regras_texto', 'whatsapp_msg', 'personalizar_msg_template', 'sobre_texto'],
+        'texto' => ['regras_texto', 'whatsapp_msg', 'personalizar_msg_template', 'sobre_texto'],
     ],
 ];
 
@@ -125,9 +125,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if ($k === 'frete_provedor' && !in_array($v, ['off', 'google'], true)) {
             $v = 'off';
-        }
-        if ($k === 'carrinho_modo' && !in_array($v, ['lateral', 'pagina'], true)) {
-            $v = 'lateral';
         }
         if (in_array($k, ['loja_lat', 'loja_lng'], true)) {
             $v = str_replace(',', '.', $v); // aceita vírgula digitada
@@ -390,16 +387,6 @@ ob_start();
     <?= csrf_input() ?>
     <input type="hidden" name="aba" value="config">
 
-    <?php $carrinho_modo = cfg('carrinho_modo', 'lateral'); ?>
-    <div class="campo">
-        <label for="carrinho_modo">Carrinho</label>
-        <select id="carrinho_modo" name="carrinho_modo">
-            <option value="lateral" <?= $carrinho_modo !== 'pagina' ? 'selected' : '' ?>>Painel lateral (abre ao lado, sem sair da página)</option>
-            <option value="pagina" <?= $carrinho_modo === 'pagina' ? 'selected' : '' ?>>Página do carrinho</option>
-        </select>
-        <small>Como o carrinho abre ao clicar no ícone e ao adicionar um produto.
-            A página <code>/carrinho</code> continua disponível nos dois casos.</small>
-    </div>
     <div class="campo">
         <label for="regras_texto">Regras gerais</label>
         <textarea id="regras_texto" name="regras_texto" rows="5"><?= e(cfg('regras_texto', '')) ?></textarea>
