@@ -18,6 +18,8 @@ try {
 }
 
 $qtd_carrinho = carrinho_quantidade();
+// Carrinho em painel lateral (padrão) ou página — Admin › Configurações.
+$carrinho_lateral = cfg('carrinho_modo', 'lateral') !== 'pagina';
 $eh_admin = ($usuario !== null && ($usuario['papel'] ?? '') === 'admin');
 
 // Ícones (SVG inline, traço na cor do texto).
@@ -39,11 +41,11 @@ $ico_usuario  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
             </a>
 
             <div class="header-acoes">
-                <a class="header-icone header-carrinho" href="<?= e(url('carrinho')) ?>" aria-label="Carrinho">
+                <!-- Modo "lateral": o app.js abre o painel; sem JS (ou modo "página"), vai para /carrinho -->
+                <a class="header-icone header-carrinho" href="<?= e(url('carrinho')) ?>" aria-label="Carrinho"
+                   <?= $carrinho_lateral ? 'data-abrir-carrinho aria-haspopup="dialog"' : '' ?>>
                     <?= $ico_carrinho ?>
-                    <?php if ($qtd_carrinho > 0): ?>
-                        <span class="header-badge" data-cart-badge><?= (int) $qtd_carrinho ?></span>
-                    <?php endif; ?>
+                    <span class="header-badge" data-cart-badge<?= $qtd_carrinho > 0 ? '' : ' hidden' ?>><?= (int) $qtd_carrinho ?></span>
                 </a>
 
                 <?php if ($usuario === null): ?>
@@ -181,6 +183,26 @@ $ico_usuario  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
                 </div>
                 <button class="btn" type="submit">Criar conta</button>
             </form>
+        </div>
+    </aside>
+</div>
+<?php endif; ?>
+
+<?php if ($carrinho_lateral): ?>
+<!-- Carrinho lateral: conteúdo montado pelo app.js a partir de /carrinho?formato=json -->
+<div class="drawer-overlay" data-carrinho-overlay
+     data-url="<?= e(url('carrinho')) ?>" data-csrf="<?= e(csrf_token()) ?>">
+    <aside class="drawer drawer-carrinho" role="dialog" aria-modal="true" aria-labelledby="carrinho-titulo">
+        <button class="drawer-fechar" type="button" data-carrinho-fechar aria-label="Fechar carrinho">&times;</button>
+        <h2 id="carrinho-titulo">Seu carrinho</h2>
+        <div class="cl-corpo" data-carrinho-corpo aria-live="polite">
+            <p class="cl-msg">Carregando…</p>
+        </div>
+        <div class="cl-rodape" data-carrinho-rodape hidden>
+            <div class="cl-subtotal"><span>Subtotal</span><strong data-carrinho-subtotal></strong></div>
+            <p class="cl-nota">Frete e forma de entrega são escolhidos ao finalizar.</p>
+            <a class="btn cl-finalizar" href="<?= e(url('checkout')) ?>">Finalizar pedido</a>
+            <button type="button" class="cl-continuar" data-carrinho-fechar>Continuar comprando</button>
         </div>
     </aside>
 </div>

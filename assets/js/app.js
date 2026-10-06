@@ -827,6 +827,207 @@
             }
         }
 
+        // --- Carrinho lateral -------------------------------------------------
+        // Ícone do carrinho e "Adicionar ao carrinho" abrem um painel à direita.
+        // Sem JS (ou com o modo "página" no admin), tudo segue para /carrinho.
+        var cOverlay = document.querySelector('[data-carrinho-overlay]');
+        if (cOverlay) {
+            var cUrl = cOverlay.getAttribute('data-url');
+            var cCsrf = cOverlay.getAttribute('data-csrf');
+            var cCorpo = cOverlay.querySelector('[data-carrinho-corpo]');
+            var cRodape = cOverlay.querySelector('[data-carrinho-rodape]');
+            var cSubtotal = cOverlay.querySelector('[data-carrinho-subtotal]');
+            var cFecharBtn = cOverlay.querySelector('.drawer-fechar');
+            var cBadge = document.querySelector('[data-cart-badge]');
+            var cIcone = document.querySelector('[data-abrir-carrinho]');
+            var cHome = (document.querySelector('.header-marca') || {}).href || '/';
+            var cTimers = {};
+            var cFoco = null;
+
+            var cMsg = function (classe, texto) {
+                var p = document.createElement('p');
+                p.className = classe;
+                p.textContent = texto;
+                return p;
+            };
+
+            var cRender = function (c, mensagem, erro) {
+                if (cBadge) {
+                    cBadge.textContent = c.qtd_total;
+                    cBadge.hidden = !c.qtd_total;
+                }
+                cCorpo.innerHTML = '';
+                if (mensagem) { cCorpo.appendChild(cMsg('cl-aviso' + (erro ? ' is-erro' : ''), mensagem)); }
+                if (c.removidos) {
+                    cCorpo.appendChild(cMsg('cl-aviso is-erro', c.removidos === 1
+                        ? 'Um item saiu do catálogo e foi removido do seu carrinho.'
+                        : c.removidos + ' itens saíram do catálogo e foram removidos do seu carrinho.'));
+                }
+                if (!c.itens.length) {
+                    cCorpo.appendChild(cMsg('cl-msg', 'Seu carrinho está vazio.'));
+                    var ver = document.createElement('a');
+                    ver.className = 'btn';
+                    ver.href = cHome;
+                    ver.textContent = 'Ver produtos';
+                    cCorpo.appendChild(ver);
+                    cRodape.hidden = true;
+                    return;
+                }
+                var lista = document.createElement('ul');
+                lista.className = 'cl-itens';
+                c.itens.forEach(function (it) {
+                    var li = document.createElement('li');
+                    li.className = 'cl-item';
+                    var thumb = document.createElement(it.imagem ? 'img' : 'span');
+                    thumb.className = 'cl-thumb';
+                    if (it.imagem) { thumb.src = it.imagem; thumb.alt = ''; } else { thumb.setAttribute('aria-hidden', 'true'); }
+
+                    var info = document.createElement('div');
+                    info.className = 'cl-info';
+                    var nome = document.createElement('a');
+                    nome.className = 'cl-nome';
+                    nome.href = it.url;
+                    nome.textContent = it.nome;
+                    var preco = document.createElement('span');
+                    preco.className = 'cl-preco-un';
+                    preco.textContent = it.preco + ' cada';
+
+                    var linha = document.createElement('div');
+                    linha.className = 'cl-linha';
+                    var pill = document.createElement('div');
+                    pill.className = 'qtd-pilula qtd-sm';
+                    var menos = document.createElement('button');
+                    menos.type = 'button';
+                    menos.innerHTML = '&minus;';
+                    menos.setAttribute('aria-label', 'Diminuir quantidade de ' + it.nome);
+                    var num = document.createElement('span');
+                    num.className = 'qtd-num';
+                    num.textContent = it.qtd;
+                    num.setAttribute('aria-label', 'Quantidade');
+                    var mais = document.createElement('button');
+                    mais.type = 'button';
+                    mais.textContent = '+';
+                    mais.setAttribute('aria-label', 'Aumentar quantidade de ' + it.nome);
+                    pill.appendChild(menos); pill.appendChild(num); pill.appendChild(mais);
+                    var remover = document.createElement('button');
+                    remover.type = 'button';
+                    remover.className = 'cl-remover';
+                    remover.textContent = 'Remover';
+                    remover.setAttribute('aria-label', 'Remover ' + it.nome);
+                    linha.appendChild(pill);
+                    linha.appendChild(remover);
+
+                    info.appendChild(nome);
+                    info.appendChild(preco);
+                    info.appendChild(linha);
+
+                    var sub = document.createElement('strong');
+                    sub.className = 'cl-sub';
+                    sub.textContent = it.subtotal;
+
+                    li.appendChild(thumb);
+                    li.appendChild(info);
+                    li.appendChild(sub);
+                    lista.appendChild(li);
+
+                    var ajustar = function (delta) {
+                        var v = Math.max(1, Math.min(99, (parseInt(num.textContent, 10) || 1) + delta));
+                        num.textContent = v;
+                        cQtd(it.id, v, 300);
+                    };
+                    menos.addEventListener('click', function () { ajustar(-1); });
+                    mais.addEventListener('click', function () { ajustar(1); });
+                    remover.addEventListener('click', function () { cQtd(it.id, 0, 0); });
+                });
+                cCorpo.appendChild(lista);
+                cSubtotal.textContent = c.subtotal;
+                cRodape.hidden = false;
+            };
+
+            var cPost = function (dados) {
+                var body = new URLSearchParams();
+                body.append('_csrf', cCsrf);
+                Object.keys(dados).forEach(function (k) { body.append(k, dados[k]); });
+                return fetch(cUrl, {
+                    method: 'POST', body: body, credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'fetch' }
+                }).then(function (r) { return r.json(); });
+            };
+
+            // Quantidade (0 remove). Espera uma pausa nos cliques antes de enviar.
+            var cQtd = function (pid, qtd, espera) {
+                clearTimeout(cTimers[pid]);
+                cTimers[pid] = setTimeout(function () {
+                    cPost({ acao: 'set_qtd', produto_id: pid, quantidade: qtd })
+                        .then(function (d) {
+                            if (d && d.carrinho) { cRender(d.carrinho); }
+                            else { cRender({ itens: [], qtd_total: 0 }, (d && d.mensagem) || 'Não foi possível atualizar o carrinho.', true); }
+                        })
+                        .catch(function () { cCarregar('Não foi possível atualizar. Tente de novo.', true); });
+                }, espera);
+            };
+
+            var cCarregar = function (mensagem, erro) {
+                return fetch(cUrl + (cUrl.indexOf('?') === -1 ? '?' : '&') + 'formato=json', { credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) { cRender(d.carrinho, mensagem, erro); })
+                    .catch(function () {
+                        cCorpo.innerHTML = '';
+                        cCorpo.appendChild(cMsg('cl-aviso is-erro', 'Não foi possível carregar o carrinho.'));
+                        var link = document.createElement('a');
+                        link.href = cUrl;
+                        link.textContent = 'Abrir a página do carrinho';
+                        cCorpo.appendChild(link);
+                    });
+            };
+
+            var cAbrir = function () {
+                cFoco = document.activeElement;
+                cOverlay.classList.add('aberto');
+                document.body.classList.add('menu-aberto');
+                if (cFecharBtn) { cFecharBtn.focus(); }
+            };
+            var cFechar = function () {
+                cOverlay.classList.remove('aberto');
+                document.body.classList.remove('menu-aberto');
+                if (cFoco && cFoco.focus) { cFoco.focus(); }
+            };
+
+            // Na própria página /carrinho o ícone segue o link (evita duas listas diferentes).
+            if (cIcone && !document.querySelector('[data-cart-qtd]')) {
+                cIcone.addEventListener('click', function (ev) {
+                    ev.preventDefault();
+                    cAbrir();
+                    cCarregar();
+                });
+            }
+            cOverlay.querySelectorAll('[data-carrinho-fechar]').forEach(function (b) {
+                b.addEventListener('click', cFechar);
+            });
+            fecharAoClicarNoFundo(cOverlay, cFechar);
+            document.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Escape' && cOverlay.classList.contains('aberto')) { cFechar(); }
+            });
+
+            // "Adicionar ao carrinho" na página do produto.
+            document.querySelectorAll('form[data-carrinho-ajax]').forEach(function (form) {
+                form.addEventListener('submit', function (ev) {
+                    ev.preventDefault();
+                    var btn = form.querySelector('[type="submit"]');
+                    if (btn) { btn.disabled = true; }
+                    var dados = {};
+                    new FormData(form).forEach(function (v, k) { if (k !== '_csrf') { dados[k] = v; } });
+                    cPost(dados)
+                        .then(function (d) {
+                            cAbrir();
+                            cRender(d.carrinho || { itens: [], qtd_total: 0 }, d.mensagem, !d.ok);
+                        })
+                        .catch(function () { HTMLFormElement.prototype.submit.call(form); })  // sem AJAX: envio normal
+                        .then(function () { if (btn) { btn.disabled = false; } });
+                });
+            });
+        }
+
         // --- Acordeão de informações nutricionais ---------------------------
         document.querySelectorAll('[data-acordeon]').forEach(function (ac) {
             var btn = ac.querySelector('[data-acordeon-toggle]');

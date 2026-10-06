@@ -239,7 +239,9 @@ ob_start();
         <?php endif; ?>
 
         <?php if ((int) $produto['preco_centavos'] > 0): ?>
-            <form method="post" action="<?= e(url('carrinho')) ?>" class="compra-form">
+            <!-- Carrinho lateral: o app.js envia por AJAX e abre o painel; sem JS, segue para /carrinho -->
+            <form method="post" action="<?= e(url('carrinho')) ?>" class="compra-form"
+                  <?= cfg('carrinho_modo', 'lateral') !== 'pagina' ? 'data-carrinho-ajax' : '' ?>>
                 <?= csrf_input() ?>
                 <input type="hidden" name="acao" value="adicionar">
                 <input type="hidden" name="produto_id" value="<?= (int) $produto['id'] ?>">

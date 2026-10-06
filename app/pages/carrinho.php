@@ -4,9 +4,93 @@
  *
  * Trata as ações por POST (com CSRF) e usa o padrão "processa -> redireciona ->
  * exibe" para o contador do cabeçalho atualizar e evitar reenvio do formulário.
+ *
+ * O carrinho lateral (app.js) usa a mesma rota:
+ *   GET  /carrinho?formato=json            -> conteúdo do carrinho em JSON
+ *   POST acao=adicionar|set_qtd (AJAX)     -> JSON com o carrinho atualizado
  */
 
+/** Linhas do carrinho a partir do banco (só produtos ativos; os outros saem). */
+function _carrinho_montar(): array
+{
+    $itens = carrinho(); // [product_id => quantidade]
+    $linhas = [];
+    $subtotal_geral = 0;
+    $removidos = 0;
+    if (!empty($itens)) {
+        $ids = array_keys($itens);
+        $marcadores = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = db()->prepare(
+            "SELECT id, slug, nome, preco_centavos, imagem
+               FROM products
+              WHERE id IN ($marcadores) AND ativo = 1"
+        );
+        $stmt->execute($ids);
+        $por_id = [];
+        foreach ($stmt->fetchAll() as $p) {
+            $por_id[(int) $p['id']] = $p;
+        }
+        foreach ($itens as $pid => $qtd) {
+            $pid = (int) $pid;
+            if (!isset($por_id[$pid])) {
+                // Produto saiu do catálogo (inativo/excluído): remove e avisa.
+                carrinho_remover($pid);
+                $removidos++;
+                continue;
+            }
+            $subtotal = (int) $por_id[$pid]['preco_centavos'] * (int) $qtd;
+            $subtotal_geral += $subtotal;
+            $linhas[] = ['produto' => $por_id[$pid], 'qtd' => (int) $qtd, 'subtotal' => $subtotal];
+        }
+    }
+    return ['linhas' => $linhas, 'subtotal' => $subtotal_geral, 'removidos' => $removidos];
+}
+
+/** O carrinho no formato usado pelo painel lateral. */
+function _carrinho_json(): array
+{
+    $c = _carrinho_montar();
+    $itens = [];
+    foreach ($c['linhas'] as $l) {
+        $p = $l['produto'];
+        $itens[] = [
+            'id'       => (int) $p['id'],
+            'nome'     => $p['nome'],
+            'url'      => url('produto/' . $p['slug']),
+            'imagem'   => !empty($p['imagem']) ? url('assets/uploads/' . $p['imagem']) : '',
+            'preco'    => money((int) $p['preco_centavos']),
+            'qtd'      => $l['qtd'],
+            'subtotal' => money($l['subtotal']),
+        ];
+    }
+    return [
+        'itens'     => $itens,
+        'subtotal'  => money($c['subtotal']),
+        'qtd_total' => carrinho_quantidade(),
+        'removidos' => $c['removidos'],
+    ];
+}
+
+function _carrinho_responder(array $dados): void
+{
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($dados, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['formato'] ?? '') === 'json') {
+    _carrinho_responder(['ok' => true, 'carrinho' => _carrinho_json()]);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $ajax = ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== '';
+    if (!csrf_validar()) {
+        if ($ajax) {
+            _carrinho_responder(['ok' => false, 'mensagem' => 'Sua sessão expirou. Recarregue a página.']);
+        }
+        flash('erro', 'Sua sessão expirou. Tente novamente.');
+        redirect('carrinho');
+    }
     if (!csrf_validar()) {
         flash('erro', 'Sua sessão expirou. Tente novamente.');
         redirect('carrinho');
@@ -16,7 +100,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // AJAX: define a quantidade de um item (pílula −/+). Responde JSON.
     if ($acao === 'set_qtd') {
-        $ajax = ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== '';
         $pid = (int) ($_POST['produto_id'] ?? 0);
         $qtd = (int) ($_POST['quantidade'] ?? 1);
         if ($pid > 0) {
@@ -63,7 +146,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'item_subtotal' => money($item_sub),
                 'subtotal_geral' => money($subtotal_geral),
                 'qtd_total' => $qtd_total,
-            ]);
+                'carrinho' => _carrinho_json(),   // painel lateral redesenha com isto
+            ], JSON_UNESCAPED_UNICODE);
             return;
         }
         redirect('carrinho');
@@ -73,15 +157,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Vem da página de produto. Só adiciona se o produto existir e estiver ativo.
         $pid = (int) ($_POST['produto_id'] ?? 0);
         $qtd = (int) ($_POST['quantidade'] ?? 1);
+        $ok = false;
         if ($pid > 0) {
             $stmt = db()->prepare('SELECT nome FROM products WHERE id = ? AND ativo = 1 LIMIT 1');
             $stmt->execute([$pid]);
             if ($stmt->fetchColumn() === false) {
-                flash('erro', 'Este produto não está mais disponível.');
+                $msg = 'Este produto não está mais disponível.';
             } else {
                 carrinho_adicionar($pid, $qtd);
-                flash('sucesso', 'Produto adicionado ao carrinho.');
+                $ok = true;
+                $msg = 'Produto adicionado ao carrinho.';
             }
+            if ($ajax) {
+                _carrinho_responder(['ok' => $ok, 'mensagem' => $msg, 'carrinho' => _carrinho_json()]);
+            }
+            flash($ok ? 'sucesso' : 'erro', $msg);
         }
     } elseif ($acao === 'atualizar') {
         // Atualiza várias quantidades de uma vez; qtd 0 remove o item.
@@ -104,44 +194,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // --- Montagem da exibição (GET) ---------------------------------------------
-$itens = carrinho(); // [product_id => quantidade]
-$linhas = [];
-$subtotal_geral = 0;
-$removidos = 0;      // itens que saíram do catálogo e foram tirados do carrinho
-
-if (!empty($itens)) {
-    $ids = array_keys($itens);
-    $marcadores = implode(',', array_fill(0, count($ids), '?'));
-    $stmt = db()->prepare(
-        "SELECT id, slug, nome, preco_centavos
-           FROM products
-          WHERE id IN ($marcadores) AND ativo = 1"
-    );
-    $stmt->execute($ids);
-
-    $por_id = [];
-    foreach ($stmt->fetchAll() as $p) {
-        $por_id[(int) $p['id']] = $p;
-    }
-
-    foreach ($itens as $pid => $qtd) {
-        $pid = (int) $pid;
-        if (!isset($por_id[$pid])) {
-            // Produto saiu do catálogo (inativo/excluído): remove e avisa.
-            carrinho_remover($pid);
-            $removidos++;
-            continue;
-        }
-        $produto  = $por_id[$pid];
-        $subtotal = (int) $produto['preco_centavos'] * (int) $qtd;
-        $subtotal_geral += $subtotal;
-        $linhas[] = [
-            'produto'  => $produto,
-            'qtd'      => (int) $qtd,
-            'subtotal' => $subtotal,
-        ];
-    }
-}
+$montado        = _carrinho_montar();
+$linhas         = $montado['linhas'];
+$subtotal_geral = $montado['subtotal'];
+$removidos      = $montado['removidos']; // itens que saíram do catálogo
 
 ob_start();
 ?>
