@@ -46,8 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (mb_strlen($nome) < 3) {
             $erros[] = 'Informe seu nome (mínimo 3 caracteres).';
         }
-        if (strlen($cpf) !== 11) {
-            $erros[] = 'O CPF deve ter 11 dígitos.';
+        if (!cpf_valido($cpf)) {
+            $erros[] = 'Informe um CPF válido.';
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $erros[] = 'Informe um e-mail válido.';
@@ -60,6 +60,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$email]);
             if ($stmt->fetch()) {
                 $erros[] = 'Já existe uma conta com este e-mail.';
+            }
+            $stmt = db()->prepare('SELECT id FROM users WHERE cpf = ? LIMIT 1');
+            $stmt->execute([$cpf]);
+            if ($stmt->fetch()) {
+                $erros[] = 'Já existe uma conta com este CPF. Se for sua, entre com o e-mail cadastrado.';
             }
         }
 
@@ -76,12 +81,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)'
         );
         $nulo = fn ($v) => $v !== '' ? $v : null;
-        $stmt->execute([
-            $nome, $cpf, $email, $hash,
-            $nulo($end['cep']), $nulo($end['rua']), $nulo($end['numero']), $nulo($end['complemento']),
-            $nulo($end['bairro']), $nulo($end['cidade']), $nulo($end['uf']),
-            $endereco, 'cliente',
-        ]);
+        try {
+            $stmt->execute([
+                $nome, $cpf, $email, $hash,
+                $nulo($end['cep']), $nulo($end['rua']), $nulo($end['numero']), $nulo($end['complemento']),
+                $nulo($end['bairro']), $nulo($end['cidade']), $nulo($end['uf']),
+                $endereco, 'cliente',
+            ]);
+        } catch (PDOException $ex) {
+            // Índice único (e-mail ou CPF): dois cadastros iguais enviados ao mesmo tempo.
+            if ($ex->getCode() !== '23000') {
+                throw $ex;
+            }
+            flash('erro', 'Já existe uma conta com este e-mail ou CPF.');
+            flash('aba', 'cadastro');
+            redirect('entrar');
+        }
         $id = (int) db()->lastInsertId();
 
         session_regenerate_id(true);

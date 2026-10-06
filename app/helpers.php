@@ -84,6 +84,29 @@ function redirect(string $destino): void
 }
 
 // =============================================================================
+// CPF
+// =============================================================================
+
+/** CPF (só dígitos) com 11 números e dígitos verificadores corretos. */
+function cpf_valido(string $cpf): bool
+{
+    if (!preg_match('/^\d{11}$/', $cpf) || preg_match('/^(\d)\1{10}$/', $cpf)) {
+        return false; // tamanho errado ou todos iguais (111.111.111-11)
+    }
+    for ($t = 9; $t < 11; $t++) {
+        $soma = 0;
+        for ($i = 0; $i < $t; $i++) {
+            $soma += (int) $cpf[$i] * (($t + 1) - $i);
+        }
+        $dv = ((10 * $soma) % 11) % 10;
+        if ((int) $cpf[$t] !== $dv) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// =============================================================================
 // Endereço
 // =============================================================================
 
