@@ -808,6 +808,41 @@
                 }
             });
 
+            // Login e cadastro enviados sem sair da página: em erro, o aviso aparece
+            // no próprio painel e o que foi digitado continua nos campos.
+            loginOverlay.querySelectorAll('form').forEach(function (form) {
+                form.addEventListener('submit', function (ev) {
+                    ev.preventDefault();
+                    var btn = form.querySelector('[type="submit"]');
+                    var aviso = form.querySelector('.drawer-erro');
+                    if (!aviso) {
+                        aviso = document.createElement('p');
+                        aviso.className = 'drawer-erro';
+                        aviso.setAttribute('role', 'alert');
+                        form.insertBefore(aviso, form.querySelector('.campo'));
+                    }
+                    aviso.hidden = true;
+                    if (btn) { btn.disabled = true; }
+                    fetch(form.action, {
+                        method: 'POST', body: new FormData(form), credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'fetch' }
+                    })
+                        .then(function (r) { return r.json(); })
+                        .then(function (d) {
+                            if (d.ok) {
+                                // Recarrega a página atual já logado (o admin vai ao painel).
+                                if (d.redirect) { window.location.href = d.redirect; } else { window.location.reload(); }
+                                return;
+                            }
+                            aviso.textContent = d.mensagem || 'Não foi possível concluir. Tente novamente.';
+                            aviso.hidden = false;
+                            aviso.scrollIntoView({ block: 'nearest' });
+                            if (btn) { btn.disabled = false; }
+                        })
+                        .catch(function () { HTMLFormElement.prototype.submit.call(form); });  // envio normal
+                });
+            });
+
             // Alterna login <-> cadastro dentro do mesmo drawer.
             if (irCadastro && painelLogin && painelCadastro) {
                 irCadastro.addEventListener('click', function () {

@@ -7,17 +7,52 @@
  * A troca de abas é só visual (app.js). O campo escondido "acao" diz ao PHP qual
  * formulário foi enviado. Em erro, usa-se um flash "aba" para reabrir na aba que
  * falhou. Sem nenhum código de verificação.
+ *
+ * O painel lateral (header.php) envia para cá por AJAX: aí a resposta é JSON
+ * ({ok, mensagem} no erro; {ok, redirect} no sucesso) e o cliente não sai da
+ * página em que estava.
  */
+
+$ajax = ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== '';
+
+/** Erro: no painel, devolve a mensagem; na página, volta para a aba que falhou. */
+function _entrar_falha(string $mensagem, string $aba): void
+{
+    global $ajax;
+    if ($ajax) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => false, 'mensagem' => $mensagem], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    flash('erro', $mensagem);
+    flash('aba', $aba);
+    redirect('entrar');
+}
+
+/** Sucesso: no painel, recarrega a página atual (ou vai para $destino); na página, redireciona. */
+function _entrar_ok(string $mensagem, ?string $destino): void
+{
+    global $ajax;
+    flash('sucesso', $mensagem);
+    if ($ajax) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => true, 'redirect' => $destino !== null ? url($destino) : null]);
+        exit;
+    }
+    redirect($destino ?? '');
+}
 
 // Já logado vai para a home.
 if (usuario_atual() !== null) {
+    if ($ajax) {
+        _entrar_ok('Você já está conectado.', null);
+    }
     redirect('');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_validar()) {
-        flash('erro', 'Sua sessão expirou. Tente novamente.');
-        redirect('entrar');
+        _entrar_falha('Sua sessão expirou. Recarregue a página e tente novamente.', ($_POST['acao'] ?? '') === 'cadastro' ? 'cadastro' : 'login');
     }
 
     $acao = $_POST['acao'] ?? '';
@@ -69,9 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (!empty($erros)) {
-            flash('erro', implode(' ', $erros));
-            flash('aba', 'cadastro');
-            redirect('entrar');
+            _entrar_falha(implode(' ', $erros), 'cadastro');
         }
 
         $hash = password_hash($senha, PASSWORD_DEFAULT);
@@ -93,9 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($ex->getCode() !== '23000') {
                 throw $ex;
             }
-            flash('erro', 'Já existe uma conta com este e-mail ou CPF.');
-            flash('aba', 'cadastro');
-            redirect('entrar');
+            _entrar_falha('Já existe uma conta com este e-mail ou CPF.', 'cadastro');
         }
         $id = (int) db()->lastInsertId();
 
@@ -108,8 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'is_admin' => false,
         ];
 
-        flash('sucesso', 'Cadastro realizado. Boas-vindas!');
-        redirect('');
+        _entrar_ok('Cadastro realizado. Boas-vindas!', $ajax ? null : '');
     }
 
     // -------------------------------------------------------------------- LOGIN
@@ -123,9 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $usuario = $stmt->fetch();
 
     if (!$usuario || !password_verify($senha, $usuario['senha_hash'])) {
-        flash('erro', 'E-mail ou senha incorretos.');
-        flash('aba', 'login');
-        redirect('entrar');
+        _entrar_falha('E-mail ou senha incorretos.', 'login');
     }
 
     $is_admin = ($usuario['papel'] === 'admin');
@@ -139,8 +167,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'is_admin' => $is_admin,
     ];
 
-    flash('sucesso', 'Login efetuado. Olá, ' . $usuario['nome'] . '!');
-    redirect($is_admin ? 'admin' : '');
+    // Pelo painel, o cliente continua na página em que estava; o admin vai ao painel.
+    _entrar_ok('Login efetuado. Olá, ' . $usuario['nome'] . '!', $is_admin ? 'admin' : ($ajax ? null : ''));
 }
 
 // --- Exibição (GET) ----------------------------------------------------------

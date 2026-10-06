@@ -335,6 +335,21 @@ main {
     display: none;
 }
 
+/* Aviso de erro do login/cadastro dentro do painel lateral. */
+.drawer-erro {
+    margin: 0 0 1rem;
+    padding: .7rem .9rem;
+    border-radius: var(--raio);
+    background: #fbead9;
+    color: #a5561c;
+    font-size: .9rem;
+    font-weight: 600;
+}
+
+.drawer-erro[hidden] {
+    display: none;
+}
+
 /* --- Carrinho lateral (montado pelo app.js) -------------------------------- */
 .drawer-carrinho {
     max-width: 420px;
