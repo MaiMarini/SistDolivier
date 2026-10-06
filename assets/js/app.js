@@ -425,6 +425,234 @@
             }
         }
 
+        // --- Checkout (Finalizar pedido) -----------------------------------
+        // Visual + prévia do frete. O POST do checkout recalcula o frete no
+        // servidor: o valor da tela é só uma prévia.
+        var ck = document.querySelector('[data-checkout]');
+        if (ck) {
+            var ckSubtotal = parseInt(ck.getAttribute('data-subtotal'), 10) || 0;
+            var ckFreteAtivo = ck.getAttribute('data-frete-ativo') === '1';
+            var ckQ = function (sel) { return ck.querySelector(sel); };
+            var ckRadioMoto = ckQ('[data-entrega][value="motoboy"]');
+            var ckRadioRet = ckQ('[data-entrega][value="retirada"]');
+            var ckSub = ckQ('[data-entrega-endereco]');
+            var ckManual = ckQ('[data-endereco-manual]');
+            var ckAviso = ckQ('[data-ck-aviso]');
+            var ckEst = ckQ('[data-ck-est]');
+            var ckMotoValor = ckQ('[data-ck-moto-valor]');
+            var ckMotoDet = ckQ('[data-ck-moto-detalhe]');
+            var ckFreteRot = ckQ('[data-ck-frete-rotulo]');
+            var ckFreteVal = ckQ('[data-ck-frete-valor]');
+            var ckNota = ckQ('[data-ck-nota]');
+            var ckTotal = ckQ('[data-ck-total]');
+            var ckCtaTotal = ckQ('[data-ck-cta-total]');
+
+            // status: 'off' | 'pendente' | 'calculando' | 'ok' | 'fora' | 'erro'
+            var ckEstado = { status: ckFreteAtivo ? 'pendente' : 'off', centavos: null, km: null, autoRetirada: false };
+            var ckSeq = 0;
+            var ckTimer = null;
+
+            var ckBRL = function (c) {
+                return 'R$ ' + (c / 100).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            };
+            var ckModo = function () {
+                var r = ckQ('[data-entrega]:checked');
+                return r ? r.value : 'retirada';
+            };
+            var ckUsaCadastro = function () {
+                var r = ckQ('[data-endereco-opcao]:checked');
+                return !!r && r.value === 'cadastro';
+            };
+            var ckCampo = function (nome) {
+                var el = ckQ('[name="' + nome + '"]');
+                return el ? el.value.trim() : '';
+            };
+
+            var ckAtualizar = function () {
+                var st = ckEstado.status;
+                var moto = ckModo() === 'motoboy';
+
+                // Cartões selecionáveis: classe de marcado/desabilitado.
+                ck.querySelectorAll('.ck-modo, .ck-end').forEach(function (lb) {
+                    var inp = lb.querySelector('input');
+                    lb.classList.toggle('is-marcado', !!inp && inp.checked);
+                    lb.classList.toggle('is-desabilitado', !!inp && inp.disabled);
+                });
+
+                if (ckEst) { ckEst.hidden = !moto; }
+                // "Entregar em" aparece com Motoboy — e também fora do raio, para trocar o endereço.
+                ckSub.hidden = !(moto || st === 'fora');
+                if (ckManual) { ckManual.hidden = !!ckQ('[data-endereco-opcao]') && ckUsaCadastro(); }
+                ckAviso.hidden = st !== 'fora';
+
+                // Cartão Motoboy.
+                var mv = { off: 'Indisponível', pendente: '—', calculando: 'Calculando…', erro: 'A confirmar', fora: 'Indisponível' };
+                var md = { off: 'Entrega por motoboy indisponível no momento', pendente: 'Informe o endereço',
+                           calculando: '', erro: 'Não foi possível calcular agora', fora: 'Fora do raio de entrega' };
+                if (st === 'ok') {
+                    ckMotoValor.textContent = ckBRL(ckEstado.centavos);
+                    ckMotoDet.textContent = ckEstado.km !== null
+                        ? Number(ckEstado.km).toFixed(1).replace('.', ',') + ' km da loja' : '';
+                } else {
+                    ckMotoValor.textContent = mv[st];
+                    ckMotoDet.textContent = md[st];
+                }
+                ckMotoValor.classList.toggle('is-alerta', st === 'fora' || st === 'off');
+                ckMotoDet.classList.toggle('is-alerta', st === 'fora');
+
+                // Resumo: linha do frete + total + botão.
+                var frete = 0;
+                ckFreteVal.innerHTML = '';
+                var val = document.createElement('span');
+                val.className = 'ck-preco';
+                if (!moto) {
+                    ckFreteRot.textContent = 'Retirada na loja';
+                    val.classList.add('ck-gratis');
+                    val.textContent = 'Grátis';
+                } else {
+                    ckFreteRot.textContent = 'Frete (motoboy)';
+                    if (st === 'ok') {
+                        var tag = document.createElement('span');
+                        tag.className = 'ck-est-tag';
+                        tag.textContent = 'estimado ';
+                        ckFreteVal.appendChild(tag);
+                        val.textContent = ckBRL(ckEstado.centavos);
+                        frete = ckEstado.centavos;
+                    } else {
+                        val.textContent = st === 'calculando' ? 'Calculando…' : 'A confirmar';
+                    }
+                }
+                ckFreteVal.appendChild(val);
+                ckNota.hidden = !(moto && (st === 'erro' || st === 'pendente'));
+                ckTotal.textContent = ckBRL(ckSubtotal + frete);
+                ckCtaTotal.textContent = ckBRL(ckSubtotal + frete);
+            };
+
+            var ckResposta = function (d) {
+                if (d && d.ok) {
+                    var c = (d.frete_centavos !== undefined && d.frete_centavos !== null)
+                        ? d.frete_centavos : parseInt(String(d.frete || '').replace(/\D+/g, ''), 10);
+                    ckEstado.status = isNaN(c) ? 'erro' : 'ok';
+                    ckEstado.centavos = c;
+                    ckEstado.km = d.distancia_km;
+                    ckRadioMoto.disabled = false;
+                    // Voltou a ter entrega: desfaz a troca automática para Retirada.
+                    if (ckEstado.autoRetirada) { ckRadioMoto.checked = true; ckEstado.autoRetirada = false; }
+                } else if (d && d.motivo === 'fora_raio') {
+                    ckEstado.status = 'fora';
+                    if (ckRadioMoto.checked) { ckRadioRet.checked = true; ckEstado.autoRetirada = true; }
+                    ckRadioMoto.disabled = true;
+                } else {
+                    ckEstado.status = 'erro';
+                    ckRadioMoto.disabled = false;
+                }
+                ckAtualizar();
+            };
+
+            var ckCalcular = function () {
+                if (!ckFreteAtivo) { return; }
+                var dados;
+                if (ckUsaCadastro()) {
+                    dados = { cadastro: '1' };
+                } else {
+                    var cep = ckCampo('cep').replace(/\D+/g, '');
+                    var num = ckCampo('numero');
+                    if (cep.length !== 8 || num === '') {
+                        ckEstado.status = 'pendente';
+                        ckRadioMoto.disabled = false;
+                        ckAtualizar();
+                        return;
+                    }
+                    dados = { cep: cep, numero: num, rua: ckCampo('rua'), bairro: ckCampo('bairro'),
+                              cidade: ckCampo('cidade'), uf: ckCampo('uf') };
+                }
+                var seq = ++ckSeq;
+                ckEstado.status = 'calculando';
+                ckAtualizar();
+                var fd = new FormData();
+                fd.append('_csrf', ck.getAttribute('data-csrf'));
+                Object.keys(dados).forEach(function (k) { fd.append(k, dados[k]); });
+                fetch(ck.getAttribute('data-frete-url'), { method: 'POST', body: fd, credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .catch(function () { return { ok: false }; })
+                    .then(function (d) { if (seq === ckSeq) { ckResposta(d); } });
+            };
+
+            // Eventos.
+            ck.querySelectorAll('[data-entrega]').forEach(function (r) {
+                r.addEventListener('change', function () { ckEstado.autoRetirada = false; ckAtualizar(); });
+            });
+            ck.querySelectorAll('[data-endereco-opcao]').forEach(function (r) {
+                r.addEventListener('change', function () { ckAtualizar(); ckCalcular(); });
+            });
+            // Outro endereço: recalcula quando CEP + número estão completos (com pausa,
+            // para o ViaCEP terminar de preencher rua/bairro/cidade).
+            ck.querySelectorAll('[data-ck-end-campo]').forEach(function (el) {
+                var agendar = function () {
+                    clearTimeout(ckTimer);
+                    ckTimer = setTimeout(ckCalcular, 900);
+                };
+                el.addEventListener('input', agendar);
+                el.addEventListener('blur', agendar);
+            });
+
+            // Presente: campos + contador da mensagem.
+            var ckPresente = ckQ('[data-presente]');
+            var ckPresenteCampos = ckQ('[data-presente-campos]');
+            var ckMsg = ckQ('[data-ck-mensagem]');
+            var ckContador = ckQ('[data-ck-contador]');
+            if (ckPresente && ckPresenteCampos) {
+                var ckAplicarPresente = function () {
+                    ckPresenteCampos.hidden = !ckPresente.checked;
+                    ckPresente.setAttribute('aria-checked', ckPresente.checked ? 'true' : 'false');
+                };
+                ckPresente.addEventListener('change', ckAplicarPresente);
+                ckAplicarPresente();
+            }
+            if (ckMsg && ckContador) {
+                var ckContar = function () { ckContador.textContent = ckMsg.value.length + ' de 300 caracteres'; };
+                ckMsg.addEventListener('input', ckContar);
+                ckContar();
+            }
+
+            // Seus dados: "Alterar" mostra os campos (que sempre vão no POST).
+            var ckAlterar = ckQ('[data-ck-contato-alterar]');
+            if (ckAlterar) {
+                ckAlterar.addEventListener('click', function () {
+                    ckQ('[data-ck-contato-resumo]').hidden = true;
+                    ckQ('[data-ck-contato-campos]').hidden = false;
+                    ckAlterar.setAttribute('aria-expanded', 'true');
+                    ckQ('[name="contato_nome"]').focus();
+                });
+            }
+
+            // "Confirmar pedido" só com o aceite marcado.
+            var ckAceite = ckQ('[data-checkout-aceite]');
+            var ckConfirmar = ckQ('[data-checkout-confirmar]');
+            if (ckAceite && ckConfirmar) {
+                var ckSincronizar = function () { ckConfirmar.disabled = !ckAceite.checked; };
+                ckAceite.addEventListener('change', ckSincronizar);
+                ckSincronizar();
+            }
+
+            // Resumo sticky: fica abaixo do cabeçalho fixo (no computador só a linha 2 gruda).
+            var ckResumo = ckQ('[data-ck-resumo]');
+            var ckCab = document.querySelector('.cabecalho');
+            if (ckResumo && ckCab) {
+                var ckTopo = function () {
+                    var l1 = ckCab.querySelector('.header-linha1');
+                    var visivel = ckCab.offsetHeight - (window.innerWidth >= 768 && l1 ? l1.offsetHeight : 0);
+                    ckResumo.style.top = (Math.max(visivel, 0) + 16) + 'px';
+                };
+                ckTopo();
+                window.addEventListener('resize', ckTopo);
+                window.addEventListener('load', ckTopo);
+            }
+
+            ckAtualizar();
+            ckCalcular();
+        }
+
         // --- Máscara de telefone BR: (11) 91234-5678 / (11) 1234-5678 -------
         function mascaraTelefone(valor) {
             var v = (valor || '').replace(/\D/g, '').slice(0, 11);

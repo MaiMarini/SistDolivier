@@ -1,9 +1,10 @@
 <?php
 /**
- * Estimativa de frete (JSON): POST /frete — usada na página do produto.
+ * Estimativa de frete (JSON): POST /frete (ou /frete/calcular) — usada na página
+ * do produto e na prévia do checkout.
  * Logado com endereço no cadastro ("cadastro=1") -> usa esse endereço;
- * senão, o CEP informado (+ rua/bairro/cidade/UF vindos do ViaCEP, opcionais).
- * É só uma ESTIMATIVA: o valor final é recalculado no checkout.
+ * senão, o CEP informado (+ número, rua/bairro/cidade/UF, opcionais).
+ * É só uma ESTIMATIVA: o POST do checkout recalcula o frete no servidor.
  *
  * Proteção de custo: cada sessão guarda as respostas por destino (repetir não
  * consulta de novo) e pode fazer no máximo FRETE_LIMITE_HORA destinos novos/hora.
@@ -68,6 +69,7 @@ if ($destino === '') {
         _frete_json(['ok' => false, 'mensagem' => 'Informe um CEP válido (8 números).']);
     }
     $campo = fn ($k) => mb_substr(trim((string) ($_POST[$k] ?? '')), 0, 120);
+    $numero = mb_substr($campo('numero'), 0, 20);   // checkout manda; página do produto não
     $rua    = $campo('rua');
     $bairro = $campo('bairro');
     $cidade = $campo('cidade');
@@ -76,8 +78,14 @@ if ($destino === '') {
 
     $cep_fmt = substr($cep, 0, 5) . '-' . substr($cep, 5);
     $local   = $cidade !== '' ? $cidade . ($uf !== '' ? ' - ' . $uf : '') : '';
-    $destino = implode(', ', array_filter([$rua, $bairro, $local, $cep_fmt], fn ($p) => $p !== ''));
-    $chave   = 'cep:' . $cep;
+    if ($numero !== '') {
+        // Mesmo destino e mesma chave de cache (cep-numero) que o POST do checkout.
+        $destino = trim("$rua, $numero, $bairro, $cidade - $uf, $cep_fmt", ' ,');
+        $chave   = $cep . '-' . preg_replace('/\s+/', '', mb_strtolower($numero));
+    } else {
+        $destino = implode(', ', array_filter([$rua, $bairro, $local, $cep_fmt], fn ($p) => $p !== ''));
+        $chave   = 'cep:' . $cep;
+    }
     $rotulo  = 'CEP ' . $cep_fmt . ($bairro !== '' || $local !== ''
              ? ' (' . implode(', ', array_filter([$bairro, $local], fn ($p) => $p !== '')) . ')' : '');
     $resumo  = _frete_resumo($bairro, $cidade, $uf, $cep);
@@ -105,6 +113,7 @@ $r = frete_calcular('motoboy', $destino, $chave);
 $resposta = [
     'ok'           => (bool) $r['ok'],
     'frete'        => $r['ok'] ? money((int) $r['frete_centavos']) : null,
+    'frete_centavos' => $r['ok'] ? (int) $r['frete_centavos'] : null,
     'distancia_km' => $r['distancia_km'],
     'destino'      => $rotulo,
     'resumo'       => $resumo,

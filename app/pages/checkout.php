@@ -19,7 +19,7 @@ function _checkout_carrinho(): array
         $ids = array_keys($itens);
         $ph = implode(',', array_fill(0, count($ids), '?'));
         $st = db()->prepare(
-            "SELECT id, slug, nome, preco_centavos FROM products WHERE id IN ($ph) AND ativo = 1"
+            "SELECT id, slug, nome, preco_centavos, imagem FROM products WHERE id IN ($ph) AND ativo = 1"
         );
         $st->execute($ids);
         $por_id = [];
@@ -199,214 +199,235 @@ if (empty($c['linhas'])) {
 }
 
 $subtotal = (int) $c['subtotal'];
-$total    = $subtotal; // inicial: retirada (frete 0)
+
+// Prévia do frete (app.js chama /frete/calcular). O POST acima recalcula sempre.
+$frete_ativo = cfg('frete_provedor', 'off') !== 'off';
+// Começa em Motoboy quando dá para estimar já ao abrir (endereço do perfil completo).
+$modo_inicial = ($frete_ativo && $tem_end_cad) ? 'motoboy' : 'retirada';
+// Fase 3 (Mercado Pago) ainda não existe: o botão só confirma o pedido.
+$pagamento_online = false;
+
+// "Seus dados": com nome e telefone já preenchidos, mostra uma linha só.
+$contato_completo = $cad('nome') !== '' && $cad('telefone') !== '';
+
+$ico_moto  = '<svg class="ck-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="17" r="3"/><circle cx="18.5" cy="17" r="3"/><path d="M8.5 17h6l-3-7H8M14 6h3l1.5 8M11.5 10h5"/></svg>';
+$ico_loja  = '<svg class="ck-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M5 12v8h14v-8M10 20v-5h4v5"/></svg>';
+$ico_gift  = '<svg class="ck-ico ck-ico-presente" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8S10.5 4 8 4.5 7.5 8 12 8zM12 8s1.5-4 4-3.5S16.5 8 12 8z"/></svg>';
+$ico_aviso = '<svg class="ck-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17v.5"/></svg>';
+$ico_cadeado = '<svg class="ck-ico ck-ico-p" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 
 ob_start();
 ?>
 <h1>Finalizar pedido</h1>
 
-<form class="formulario" method="post" action="<?= e(url('checkout')) ?>" style="max-width:720px;" data-checkout>
+<form class="checkout" method="post" action="<?= e(url('checkout')) ?>" data-checkout
+      data-subtotal="<?= $subtotal ?>" data-frete-url="<?= e(url('frete/calcular')) ?>"
+      data-csrf="<?= e(csrf_token()) ?>" data-frete-ativo="<?= $frete_ativo ? '1' : '0' ?>">
     <?= csrf_input() ?>
 
-    <!-- Revisão dos itens -->
-    <h2>Seu pedido</h2>
-    <table class="tabela">
-        <thead>
-            <tr>
-                <th>Produto</th>
-                <th class="t-centro">Qtd.</th>
-                <th class="col-acoes">Subtotal</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($c['linhas'] as $l): ?>
-                <tr>
-                    <td><?= e($l['produto']['nome']) ?></td>
-                    <td class="t-centro"><?= (int) $l['qtd'] ?></td>
-                    <td class="col-acoes"><?= e(money($l['subtotal'])) ?></td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+    <div class="checkout-grid">
+        <div class="checkout-col">
 
-    <!-- Entrega -->
-    <h2 class="mt-1">Entrega</h2>
-    <div class="campo">
-        <label class="campo-inline" style="gap:.5rem; font-weight:400;">
-            <input type="radio" name="entrega" value="retirada" checked data-entrega> Retirada no local (sem taxa)
-        </label>
-        <label class="campo-inline" style="gap:.5rem; font-weight:400;">
-            <input type="radio" name="entrega" value="motoboy" data-entrega> Entrega por motoboy (frete por distância)
-        </label>
-    </div>
+            <!-- 1. Entrega -->
+            <section class="ck-card" aria-labelledby="ck-titulo-entrega">
+                <h2 class="ck-titulo" id="ck-titulo-entrega">
+                    <span class="ck-num" aria-hidden="true">1</span>
+                    <span>Entrega <span class="ck-est" data-ck-est<?= $modo_inicial === 'motoboy' ? '' : ' hidden' ?>>– Estimado</span></span>
+                </h2>
 
-    <!-- Endereço (só motoboy) -->
-    <div data-entrega-endereco hidden>
-        <?php if ($tem_end_cad): ?>
-            <div class="campo">
-                <label class="campo-inline" style="gap:.5rem; font-weight:400;">
-                    <input type="radio" name="endereco_opcao" value="cadastro" checked data-endereco-opcao>
-                    <span>Entregar no meu endereço<br><small><?= e($cad('endereco')) ?></small></span>
+                <div class="ck-modos" role="radiogroup" aria-labelledby="ck-titulo-entrega">
+                    <label class="ck-modo ck-modo--moto" data-ck-modo="motoboy">
+                        <input class="ck-sr" type="radio" name="entrega" value="motoboy" data-entrega
+                               <?= $modo_inicial === 'motoboy' ? 'checked' : '' ?><?= $frete_ativo ? '' : ' disabled' ?>>
+                        <span class="ck-dot" aria-hidden="true"></span>
+                        <span class="ck-modo-rotulo"><?= $ico_moto ?> Motoboy</span>
+                        <span class="ck-modo-valor" data-ck-moto-valor><?= $frete_ativo ? '—' : 'Indisponível' ?></span>
+                        <span class="ck-pequeno" data-ck-moto-detalhe><?= $frete_ativo ? 'Informe o endereço' : 'Entrega por motoboy indisponível no momento' ?></span>
+                    </label>
+                    <label class="ck-modo ck-modo--retirada" data-ck-modo="retirada">
+                        <input class="ck-sr" type="radio" name="entrega" value="retirada" data-entrega
+                               <?= $modo_inicial === 'retirada' ? 'checked' : '' ?>>
+                        <span class="ck-dot" aria-hidden="true"></span>
+                        <span class="ck-modo-rotulo"><?= $ico_loja ?> Retirada</span>
+                        <span class="ck-modo-valor ck-gratis">Grátis</span>
+                        <span class="ck-pequeno">Na loja</span>
+                    </label>
+                </div>
+
+                <!-- Entregar em (só motoboy) -->
+                <div class="ck-sub" data-entrega-endereco<?= $modo_inicial === 'motoboy' ? '' : ' hidden' ?>>
+                    <span class="ck-sub-titulo" id="ck-entregar-em">Entregar em</span>
+
+                    <?php if ($tem_end_cad): ?>
+                        <div class="ck-enderecos" role="radiogroup" aria-labelledby="ck-entregar-em">
+                            <label class="ck-end">
+                                <input class="ck-sr" type="radio" name="endereco_opcao" value="cadastro" checked data-endereco-opcao>
+                                <span class="ck-r" aria-hidden="true"></span>
+                                <span class="ck-end-txt"><b>Meu endereço</b>
+                                    <span class="ck-pequeno"><?= e($cad('endereco')) ?></span></span>
+                            </label>
+                            <label class="ck-end">
+                                <input class="ck-sr" type="radio" name="endereco_opcao" value="outro" data-endereco-opcao>
+                                <span class="ck-r" aria-hidden="true"></span>
+                                <span class="ck-end-txt"><b>Outro endereço</b>
+                                    <span class="ck-pequeno">Para entregar em outro lugar, como no endereço de quem vai ganhar o presente</span></span>
+                            </label>
+                        </div>
+                    <?php elseif ($cad('endereco') !== ''): ?>
+                        <p class="ck-pequeno">Endereço do seu cadastro: <?= e($cad('endereco')) ?>.
+                           Atualize-o em <a href="<?= e(url('meu-perfil')) ?>">Meu perfil</a> para escolhê-lo aqui da próxima vez.</p>
+                    <?php endif; ?>
+
+                    <div class="ck-manual" data-endereco-manual<?= $tem_end_cad ? ' hidden' : '' ?>>
+                        <div class="ck-linha3">
+                            <div class="campo">
+                                <label for="cep">CEP</label>
+                                <input type="text" id="cep" name="cep" inputmode="numeric" maxlength="9"
+                                       placeholder="00000-000" data-cep data-ck-end-campo>
+                            </div>
+                            <div class="campo">
+                                <label for="numero">Número</label>
+                                <input type="text" id="numero" name="numero" data-ck-end-campo>
+                            </div>
+                            <div class="campo">
+                                <label for="complemento">Complemento <span class="ck-opcional">(opcional)</span></label>
+                                <input type="text" id="complemento" name="complemento">
+                            </div>
+                        </div>
+                        <div class="campo">
+                            <label for="rua">Rua</label>
+                            <input type="text" id="rua" name="rua" data-cep-rua data-ck-end-campo>
+                        </div>
+                        <div class="ck-linha3 ck-linha3--local">
+                            <div class="campo">
+                                <label for="bairro">Bairro</label>
+                                <input type="text" id="bairro" name="bairro" data-cep-bairro data-ck-end-campo>
+                            </div>
+                            <div class="campo">
+                                <label for="cidade">Cidade</label>
+                                <input type="text" id="cidade" name="cidade" data-cep-cidade data-ck-end-campo>
+                            </div>
+                            <div class="campo">
+                                <label for="uf">UF</label>
+                                <input type="text" id="uf" name="uf" maxlength="2" placeholder="SP"
+                                       style="text-transform:uppercase;" data-cep-uf data-ck-end-campo>
+                            </div>
+                        </div>
+                        <p class="ck-pequeno">Rua, bairro, cidade e UF são preenchidos pelo CEP.</p>
+                    </div>
+
+                    <div class="ck-aviso" data-ck-aviso role="status" hidden>
+                        <?= $ico_aviso ?>
+                        <span>Este endereço fica fora da nossa área de entrega por motoboy. Você pode retirar na
+                              loja sem custo ou informar outro endereço.</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Presente -->
+            <section class="ck-card">
+                <label class="ck-switch" for="presente">
+                    <input class="ck-sr" type="checkbox" id="presente" name="presente" value="1"
+                           role="switch" data-presente>
+                    <?= $ico_gift ?>
+                    <span class="ck-switch-txt"><b>É um presente?</b>
+                        <span class="ck-pequeno">Incluímos um cartão com a sua mensagem e falamos com quem vai receber.</span></span>
+                    <span class="ck-tog" aria-hidden="true"></span>
                 </label>
-                <label class="campo-inline" style="gap:.5rem; font-weight:400;">
-                    <input type="radio" name="endereco_opcao" value="outro" data-endereco-opcao>
-                    Entregar em outro endereço
+                <div class="ck-presente-campos" data-presente-campos hidden>
+                    <div class="ck-linha2">
+                        <div class="campo">
+                            <label for="presente_para">Nome de quem vai receber</label>
+                            <input type="text" id="presente_para" name="presente_para" maxlength="150">
+                        </div>
+                        <div class="campo">
+                            <label for="presente_telefone">Telefone de quem vai receber <span class="ck-opcional">(opcional)</span></label>
+                            <input type="tel" id="presente_telefone" name="presente_telefone" inputmode="numeric"
+                                   placeholder="(11) 91234-5678" data-mask-tel>
+                        </div>
+                    </div>
+                    <div class="campo">
+                        <label for="presente_mensagem">Mensagem para o cartão <span class="ck-opcional">(opcional)</span></label>
+                        <textarea id="presente_mensagem" name="presente_mensagem" rows="3" maxlength="300"
+                                  placeholder="Ex.: Feliz aniversário! Com carinho, Ana."
+                                  aria-describedby="presente_contador" data-ck-mensagem></textarea>
+                        <span class="ck-pequeno" id="presente_contador" data-ck-contador aria-live="polite">0 de 300 caracteres</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Seus dados -->
+            <section class="ck-card" aria-labelledby="ck-titulo-dados">
+                <h2 class="ck-titulo" id="ck-titulo-dados"><span class="ck-num" aria-hidden="true">2</span> Seus dados</h2>
+                <?php if ($contato_completo): ?>
+                    <div class="ck-contato" data-ck-contato-resumo>
+                        <span class="ck-contato-txt"><b><?= e($cad('nome')) ?></b> · <span data-ck-tel-resumo><?= e($cad('telefone')) ?></span></span>
+                        <button type="button" class="ck-link" data-ck-contato-alterar
+                                aria-expanded="false" aria-controls="ck-contato-campos">Alterar</button>
+                    </div>
+                <?php endif; ?>
+                <div class="ck-linha2" id="ck-contato-campos" data-ck-contato-campos<?= $contato_completo ? ' hidden' : '' ?>>
+                    <div class="campo">
+                        <label for="contato_nome">Nome</label>
+                        <input type="text" id="contato_nome" name="contato_nome" value="<?= e($cad('nome')) ?>">
+                    </div>
+                    <div class="campo">
+                        <label for="contato_telefone">Telefone / WhatsApp</label>
+                        <input type="tel" id="contato_telefone" name="contato_telefone" inputmode="numeric"
+                               value="<?= e($cad('telefone')) ?>" placeholder="(11) 91234-5678" data-mask-tel>
+                    </div>
+                </div>
+                <div class="campo">
+                    <label for="observacoes">Observações <span class="ck-opcional">(opcional)</span></label>
+                    <textarea id="observacoes" name="observacoes" rows="2" placeholder="Algo que a loja precisa saber?"></textarea>
+                </div>
+            </section>
+        </div>
+
+        <!-- Resumo (sticky no computador) -->
+        <aside class="checkout-resumo" data-ck-resumo>
+            <section class="ck-card" aria-labelledby="ck-titulo-resumo">
+                <h2 class="ck-titulo" id="ck-titulo-resumo">Resumo</h2>
+                <ul class="ck-itens">
+                    <?php foreach ($c['linhas'] as $l): ?>
+                        <li class="ck-item">
+                            <?php if (!empty($l['produto']['imagem'])): ?>
+                                <img class="ck-thumb" src="<?= e(url('assets/uploads/' . $l['produto']['imagem'])) ?>" alt="">
+                            <?php else: ?>
+                                <span class="ck-thumb" aria-hidden="true"></span>
+                            <?php endif; ?>
+                            <span class="ck-item-txt"><b><?= e($l['produto']['nome']) ?></b>
+                                <span class="ck-pequeno"><?= (int) $l['qtd'] ?> × <?= e(money((int) $l['produto']['preco_centavos'])) ?></span></span>
+                            <span class="ck-preco"><?= e(money($l['subtotal'])) ?></span>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+
+                <div class="ck-soma">
+                    <div class="ck-soma-linha"><span class="ck-rot">Subtotal</span><span class="ck-preco ck-preco-leve"><?= e(money($subtotal)) ?></span></div>
+                    <div class="ck-soma-linha">
+                        <span class="ck-rot" data-ck-frete-rotulo>Retirada na loja</span>
+                        <span data-ck-frete-valor><span class="ck-preco ck-gratis">Grátis</span></span>
+                    </div>
+                    <p class="ck-pequeno ck-nota" data-ck-nota hidden>Não conseguimos calcular o frete agora. Ele é confirmado ao finalizar o pedido.</p>
+                    <div class="ck-soma-linha ck-total"><span class="ck-rot">Total</span><span class="ck-preco" data-ck-total><?= e(money($subtotal)) ?></span></div>
+                </div>
+
+                <label class="ck-termos" for="checkout-aceite">
+                    <input type="checkbox" id="checkout-aceite" name="aceite" value="1" data-checkout-aceite>
+                    <span>Li e concordo com as
+                        <a href="<?= e(url('regras')) ?>" target="_blank" rel="noopener">regras e o prazo de produção</a>.</span>
                 </label>
-            </div>
-        <?php elseif ($cad('endereco') !== ''): ?>
-            <p><small>Endereço do seu cadastro: <?= e($cad('endereco')) ?>.
-               Atualize-o em <a href="<?= e(url('meu-perfil')) ?>">Meu perfil</a> para escolhê-lo aqui da próxima vez.</small></p>
-        <?php endif; ?>
 
-        <div data-endereco-manual<?= $tem_end_cad ? ' hidden' : '' ?>>
-            <div class="campo">
-                <label for="cep">CEP</label>
-                <input type="text" id="cep" name="cep" inputmode="numeric" maxlength="9" placeholder="Somente números" data-cep>
-            </div>
-            <div class="campo">
-                <label for="rua">Rua</label>
-                <input type="text" id="rua" name="rua" data-cep-rua>
-            </div>
-            <div class="campo">
-                <label for="numero">Número</label>
-                <input type="text" id="numero" name="numero">
-            </div>
-            <div class="campo">
-                <label for="complemento">Complemento (opcional)</label>
-                <input type="text" id="complemento" name="complemento">
-            </div>
-            <div class="campo">
-                <label for="bairro">Bairro</label>
-                <input type="text" id="bairro" name="bairro" data-cep-bairro>
-            </div>
-            <div class="campo">
-                <label for="cidade">Cidade</label>
-                <input type="text" id="cidade" name="cidade" data-cep-cidade>
-            </div>
-            <div class="campo">
-                <label for="uf">UF</label>
-                <input type="text" id="uf" name="uf" maxlength="2" placeholder="Ex.: SP"
-                       style="text-transform:uppercase; max-width:6rem;" data-cep-uf>
-            </div>
-        </div>
-        <p><small>O valor do frete é calculado ao confirmar o pedido, pela distância até a loja.</small></p>
+                <button class="ck-cta" type="submit" data-checkout-confirmar>
+                    <span><?= $pagamento_online ? 'Ir para o pagamento' : 'Confirmar pedido' ?></span>
+                    <span class="ck-cta-sep" aria-hidden="true">·</span>
+                    <span data-ck-cta-total><?= e(money($subtotal)) ?></span>
+                </button>
+                <p class="ck-pagamento"><?= $ico_cadeado ?> Pagamento <?= e(parcelamento_texto($subtotal)) ?> na próxima etapa</p>
+            </section>
+        </aside>
     </div>
-
-    <!-- Presente -->
-    <div class="campo campo-inline mt-1">
-        <input type="checkbox" id="presente" name="presente" value="1" data-presente>
-        <label for="presente">É um presente</label>
-    </div>
-    <div data-presente-campos hidden>
-        <div class="campo">
-            <label for="presente_para">Nome de quem vai receber</label>
-            <input type="text" id="presente_para" name="presente_para" maxlength="150">
-        </div>
-        <div class="campo">
-            <label for="presente_telefone">Telefone de quem vai receber (opcional)</label>
-            <input type="tel" id="presente_telefone" name="presente_telefone" inputmode="numeric"
-                   placeholder="(11) 91234-5678" data-mask-tel>
-            <small>Usado só para combinar a entrega, se precisar.</small>
-        </div>
-        <div class="campo">
-            <label for="presente_mensagem">Mensagem para o cartão (opcional)</label>
-            <textarea id="presente_mensagem" name="presente_mensagem" rows="3" maxlength="300"
-                      placeholder="Ex.: Feliz aniversário! Com carinho, Ana."></textarea>
-            <small>Até 300 caracteres.</small>
-        </div>
-    </div>
-
-    <!-- Contato -->
-    <h2 class="mt-1">Contato</h2>
-    <div class="campo">
-        <label for="contato_nome">Nome</label>
-        <input type="text" id="contato_nome" name="contato_nome" value="<?= e($dados['nome'] ?? '') ?>">
-    </div>
-    <div class="campo">
-        <label for="contato_telefone">Telefone / WhatsApp</label>
-        <input type="tel" id="contato_telefone" name="contato_telefone" inputmode="numeric"
-               value="<?= e($dados['telefone'] ?? '') ?>" placeholder="(11) 91234-5678" data-mask-tel>
-    </div>
-
-    <!-- Observações -->
-    <div class="campo">
-        <label for="observacoes">Observações (opcional)</label>
-        <textarea id="observacoes" name="observacoes" rows="2"></textarea>
-    </div>
-
-    <!-- Totais -->
-    <h2 class="mt-1">Resumo</h2>
-    <table class="tabela">
-        <tbody>
-            <tr><td>Subtotal</td><td class="col-acoes"><?= e(money($subtotal)) ?></td></tr>
-            <tr><td>Frete</td><td class="col-acoes" data-frete>Grátis (retirada)</td></tr>
-            <tr><td><strong>Total</strong></td><td class="col-acoes"><strong><?= e(money($total)) ?></strong></td></tr>
-        </tbody>
-    </table>
-    <p><small>Pagamento <?= e(parcelamento_texto($total)) ?> (na próxima etapa).</small></p>
-
-    <!-- Aceite das regras -->
-    <div class="campo campo-inline" style="margin-top:1rem;">
-        <input type="checkbox" id="checkout-aceite" name="aceite" value="1" data-checkout-aceite>
-        <label for="checkout-aceite">Li e concordo com as
-            <a href="<?= e(url('regras')) ?>" target="_blank" rel="noopener">regras e o prazo de produção</a>.</label>
-    </div>
-
-    <button class="btn" type="submit" data-checkout-confirmar>Confirmar pedido</button>
-    <p><small>O pagamento (Pix, cartão) será adicionado em breve. Por enquanto o pedido fica
-       registrado como "pendente de pagamento".</small></p>
 </form>
-
-<script>
-(function () {
-    var form = document.querySelector('[data-checkout]');
-    if (!form) { return; }
-
-    // Mostra o bloco de endereço só para motoboy.
-    var endereco = form.querySelector('[data-entrega-endereco]');
-    var freteCel = form.querySelector('[data-frete]');
-    function aplicarEntrega() {
-        var sel = form.querySelector('[data-entrega]:checked');
-        var motoboy = sel && sel.value === 'motoboy';
-        if (endereco) { endereco.hidden = !motoboy; }
-        if (freteCel) { freteCel.textContent = motoboy ? 'Calculado ao confirmar' : 'Grátis (retirada)'; }
-    }
-    form.querySelectorAll('[data-entrega]').forEach(function (r) {
-        r.addEventListener('change', aplicarEntrega);
-    });
-    aplicarEntrega();
-
-    // Endereço do perfil x outro endereço (campos manuais).
-    var manual = form.querySelector('[data-endereco-manual]');
-    var opcoes = form.querySelectorAll('[data-endereco-opcao]');
-    if (manual && opcoes.length) {
-        var aplicarEndereco = function () {
-            var sel = form.querySelector('[data-endereco-opcao]:checked');
-            manual.hidden = !(sel && sel.value === 'outro');
-        };
-        opcoes.forEach(function (r) { r.addEventListener('change', aplicarEndereco); });
-        aplicarEndereco();
-    }
-
-    // Campos do presente só quando marcado.
-    var presente = form.querySelector('[data-presente]');
-    var presenteCampos = form.querySelector('[data-presente-campos]');
-    if (presente && presenteCampos) {
-        var aplicarPresente = function () { presenteCampos.hidden = !presente.checked; };
-        presente.addEventListener('change', aplicarPresente);
-        aplicarPresente();
-    }
-
-    // Habilita "Confirmar pedido" só com o aceite marcado.
-    var aceite = form.querySelector('[data-checkout-aceite]');
-    var confirmar = form.querySelector('[data-checkout-confirmar]');
-    if (aceite && confirmar) {
-        var sincronizar = function () { confirmar.disabled = !aceite.checked; };
-        aceite.addEventListener('change', sincronizar);
-        sincronizar();
-    }
-    // O autopreenchimento por CEP (ViaCEP) é feito de forma genérica no app.js.
-})();
-</script>
 <?php
 view('layout', ['titulo' => 'Checkout', 'conteudo' => ob_get_clean()]);
