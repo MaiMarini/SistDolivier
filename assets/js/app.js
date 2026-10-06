@@ -93,11 +93,20 @@
             });
         });
 
-        document.querySelectorAll('.modal').forEach(function (modal) {
-            modal.addEventListener('click', function (ev) {
-                // Clique no fundo (fora do conteúdo) fecha.
-                if (ev.target === modal) { fecharModal(modal); }
+        // Fecha um painel/modal ao clicar no fundo — só se o botão foi APERTADO e
+        // SOLTO no fundo. Começar a seleção dentro do painel (ex.: escolher o
+        // e-mail salvo, selecionar texto) e soltar fora não fecha mais.
+        function fecharAoClicarNoFundo(fundo, fechar) {
+            var apertouNoFundo = false;
+            fundo.addEventListener('pointerdown', function (ev) { apertouNoFundo = ev.target === fundo; });
+            fundo.addEventListener('click', function (ev) {
+                if (ev.target === fundo && apertouNoFundo) { fechar(); }
+                apertouNoFundo = false;
             });
+        }
+
+        document.querySelectorAll('.modal').forEach(function (modal) {
+            fecharAoClicarNoFundo(modal, function () { fecharModal(modal); });
             modal.querySelectorAll('[data-fechar-modal]').forEach(function (botao) {
                 botao.addEventListener('click', function () { fecharModal(modal); });
             });
@@ -751,9 +760,7 @@
                 abrirDrawer();
             });
             if (loginFechar) { loginFechar.addEventListener('click', fecharDrawer); }
-            loginOverlay.addEventListener('click', function (ev) {
-                if (ev.target === loginOverlay) { fecharDrawer(); }   // clique no fundo
-            });
+            fecharAoClicarNoFundo(loginOverlay, fecharDrawer);
             document.addEventListener('keydown', function (ev) {
                 if (ev.key === 'Escape' && loginOverlay.classList.contains('aberto')) {
                     fecharDrawer();
@@ -1250,9 +1257,7 @@
                     if (lbNext) { lbNext.addEventListener('click', function () { irFoto(atualFoto + 1); }); }
 
                     // Clique no fundo escuro fecha.
-                    lightbox.addEventListener('click', function (ev) {
-                        if (ev.target === lightbox) { fecharLightbox(); }
-                    });
+                    fecharAoClicarNoFundo(lightbox, fecharLightbox);
                     // Teclado: setas navegam, Esc fecha (só com o lightbox aberto).
                     document.addEventListener('keydown', function (ev) {
                         if (!lightbox.classList.contains('aberto')) { return; }

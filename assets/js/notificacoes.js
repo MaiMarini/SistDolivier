@@ -111,7 +111,13 @@
             fechar();
             if (typeof aoConfirmar === 'function') { aoConfirmar(); }
         });
-        overlay.addEventListener('click', function (e) { if (e.target === overlay) { fechar(); } });
+        // Fecha no fundo só se o botão foi apertado E solto nele (arrastar de dentro não fecha).
+        var apertouNoFundo = false;
+        overlay.addEventListener('pointerdown', function (e) { apertouNoFundo = e.target === overlay; });
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay && apertouNoFundo) { fechar(); }
+            apertouNoFundo = false;
+        });
         document.addEventListener('keydown', onKey);
     }
 
