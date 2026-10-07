@@ -139,7 +139,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'is_admin' => false,
         ];
 
-        _entrar_ok('Cadastro realizado. Boas-vindas!', $ajax ? null : '');
+        $destino = destino_pos_login(false);   // ex.: voltar ao checkout
+        _entrar_ok('Cadastro realizado. Boas-vindas!', $destino ?? ($ajax ? null : ''));
     }
 
     // -------------------------------------------------------------------- LOGIN
@@ -168,7 +169,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
 
     // Pelo painel, o cliente continua na página em que estava; o admin vai ao painel.
-    _entrar_ok('Login efetuado. Olá, ' . $usuario['nome'] . '!', $is_admin ? 'admin' : ($ajax ? null : ''));
+    // Volta à página que exigiu o login (ex.: checkout); sem ela, o cliente fica
+    // na página atual (painel) ou vai à home (página /entrar); o admin vai ao painel.
+    $destino = destino_pos_login($is_admin);
+    _entrar_ok('Login efetuado. Olá, ' . $usuario['nome'] . '!', $destino ?? ($ajax ? null : ''));
 }
 
 // --- Exibição (GET) ----------------------------------------------------------

@@ -802,6 +802,9 @@
             });
             if (loginFechar) { loginFechar.addEventListener('click', fecharDrawer); }
             fecharAoClicarNoFundo(loginOverlay, fecharDrawer);
+            // Ex.: tentou abrir o admin ou o checkout sem login -> chega na home com o login aberto
+            // ("cadastro" abre direto na aba Criar conta; os botões de troca ficam mais abaixo).
+            var abrirAoCarregar = loginOverlay.getAttribute('data-abrir-ao-carregar');
             document.addEventListener('keydown', function (ev) {
                 if (ev.key === 'Escape' && loginOverlay.classList.contains('aberto')) {
                     fecharDrawer();
@@ -859,6 +862,11 @@
                     var c = painelLogin.querySelector('input');
                     if (c) { c.focus(); }
                 });
+            }
+
+            if (abrirAoCarregar) {
+                abrirDrawer();
+                if (abrirAoCarregar === 'cadastro' && irCadastro) { irCadastro.click(); }
             }
         }
 

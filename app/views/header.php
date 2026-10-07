@@ -18,6 +18,9 @@ try {
 }
 
 $qtd_carrinho = carrinho_quantidade();
+// Pedido para abrir o painel de login ao carregar (ex.: acesso ao admin sem estar logado).
+// Valor: "1" (login) ou "cadastro" (abre já na aba Criar conta).
+$abrir_login_auto = $usuario === null ? (string) flash_consumir('abrir_login') : '';
 $eh_admin = ($usuario !== null && ($usuario['papel'] ?? '') === 'admin');
 
 // Ícones (SVG inline, traço na cor do texto).
@@ -100,7 +103,7 @@ $ico_usuario  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 <?php if ($usuario === null): ?>
 <!-- Drawer de login (aprimoramento; sem JS, o ícone vai para /entrar). Reaproveita
      o backend de /entrar: os formulários postam para lá com CSRF + campo "acao". -->
-<div class="drawer-overlay" data-login-overlay>
+<div class="drawer-overlay" data-login-overlay<?= $abrir_login_auto !== '' ? ' data-abrir-ao-carregar="' . e($abrir_login_auto) . '"' : '' ?>>
     <aside class="drawer" role="dialog" aria-modal="true" aria-label="Acesso à conta">
         <button class="drawer-fechar" type="button" data-login-fechar aria-label="Fechar">&times;</button>
 

@@ -1,6 +1,9 @@
 <?php
 /**
- * O cadastro agora vive na página /entrar (aba "Criar conta"). Esta rota existe
- * apenas para não quebrar links antigos: redireciona para /entrar.
+ * Link antigo de cadastro: abre o painel lateral na home, já em "Criar conta".
  */
-redirect('entrar');
+if (usuario_atual() !== null) {
+    redirect('');
+}
+flash('abrir_login', 'cadastro');
+redirect('');

@@ -269,23 +269,76 @@ function usuario_atual()
     return $_SESSION['usuario'] ?? null;
 }
 
-/** Exige usuário logado; caso contrário, redireciona para o login. */
+/**
+ * Exige usuário logado. Sem login: vai para a home com o painel lateral de login
+ * aberto e, depois de entrar, volta à página que tentou abrir (ex.: o checkout).
+ */
 function exigir_login(): void
 {
-    if (usuario_atual() === null) {
-        flash('erro', 'Faça login para continuar.');
-        redirect('entrar');
+    if (usuario_atual() !== null) {
+        return;
     }
+    lembrar_destino();
+    abrir_login('Faça login para continuar.');
 }
 
-/** Exige usuário administrador; caso contrário, vai para o login do admin. */
+/** Guarda a página atual (só GET) para voltar a ela depois do login. */
+function lembrar_destino(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+        return;
+    }
+    $caminho = (string) ($GLOBALS['caminho'] ?? '');
+    $qs = (string) ($_SERVER['QUERY_STRING'] ?? '');
+    $_SESSION['voltar'] = $caminho . ($qs !== '' ? '?' . $qs : '');
+}
+
+/**
+ * Exige usuário administrador. Sem login: vai para a home com o painel lateral de
+ * login aberto e, depois de entrar, volta ao endereço do admin que tentou abrir.
+ */
 function exigir_admin(): void
 {
     $usuario = usuario_atual();
-    if ($usuario === null || empty($usuario['is_admin'])) {
-        flash('erro', 'Acesso restrito.');
-        redirect('admin/entrar');
+    if ($usuario !== null && !empty($usuario['is_admin'])) {
+        return;
     }
+    if ($usuario === null) {
+        lembrar_destino();
+        abrir_login('Entre com sua conta de administrador para acessar o painel.');
+    }
+    flash('erro', 'Acesso restrito.');
+    redirect('');
+}
+
+/** Vai para a home com o painel lateral de login aberto (o login antigo não é mais usado). */
+function abrir_login(string $mensagem = ''): void
+{
+    if ($mensagem !== '') {
+        flash('erro', $mensagem);
+    }
+    flash('abrir_login', '1');
+    redirect('');
+}
+
+/**
+ * Para onde ir depois do login: a página guardada por lembrar_destino(), se for
+ * um caminho interno válido. Sem destino: admin -> "admin"; cliente -> null
+ * (fica na página em que está). Cliente nunca é mandada para o admin.
+ */
+function destino_pos_login(bool $is_admin): ?string
+{
+    $v = (string) ($_SESSION['voltar'] ?? '');
+    unset($_SESSION['voltar']);
+    // Só caminhos internos do site (nada de URL externa, "//" ou de volta ao login).
+    $valido = $v !== ''
+        && preg_match('#^[A-Za-z0-9][A-Za-z0-9_\-/]*(\?[A-Za-z0-9_\-=&%.]*)?$#', $v)
+        && strpos($v, '//') === false
+        && !preg_match('#^(entrar|sair|admin/entrar|admin/sair)(/|\?|$)#', $v);
+    if ($valido && ($is_admin || !preg_match('#^admin(/|\?|$)#', $v))) {
+        return $v;
+    }
+    return $is_admin ? 'admin' : null;
 }
 
 // =============================================================================
