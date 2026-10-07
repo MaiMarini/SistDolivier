@@ -703,6 +703,46 @@
             ckCalcular();
         }
 
+        // --- Meus pedidos ------------------------------------------------------
+        // Selects de filtro aplicam ao mudar. No computador (>= 760px), clicar num
+        // pedido troca o detalhe à direita sem recarregar; no celular o link abre
+        // /pedido/{id} normalmente.
+        var mp = document.querySelector('[data-meus-pedidos]');
+        if (mp) {
+            mp.querySelectorAll('[data-mp-auto]').forEach(function (sel) {
+                sel.addEventListener('change', function () {
+                    if (sel.form.requestSubmit) { sel.form.requestSubmit(); } else { sel.form.submit(); }
+                });
+            });
+            var mpLargo = window.matchMedia('(min-width: 760px)');
+            mp.querySelectorAll('[data-mp-row]').forEach(function (row) {
+                row.addEventListener('click', function (ev) {
+                    if (!mpLargo.matches || ev.ctrlKey || ev.metaKey || ev.shiftKey) { return; }
+                    var id = row.getAttribute('data-mp-row');
+                    var alvo = mp.querySelector('[data-mp-detalhe="' + id + '"]');
+                    if (!alvo) { return; }
+                    ev.preventDefault();
+                    mp.querySelectorAll('[data-mp-detalhe]').forEach(function (d) { d.hidden = d !== alvo; });
+                    mp.querySelectorAll('[data-mp-row]').forEach(function (r) {
+                        r.setAttribute('aria-current', r === row ? 'true' : 'false');
+                    });
+                    // Mantém o pedido escolhido na URL (recarregar mostra o mesmo).
+                    try {
+                        var u = new URL(window.location.href);
+                        u.searchParams.set('pedido', id);
+                        window.history.replaceState(null, '', u.toString());
+                    } catch (e) { /* navegador antigo: segue sem atualizar a URL */ }
+                    var titulo = alvo.querySelector('h2');
+                    if (titulo) {
+                        titulo.setAttribute('tabindex', '-1');
+                        titulo.focus({ preventScroll: true });
+                    }
+                    var topo = alvo.getBoundingClientRect().top;
+                    if (topo < 0) { alvo.scrollIntoView({ block: 'start' }); }
+                });
+            });
+        }
+
         // --- Máscara de telefone BR: (11) 91234-5678 / (11) 1234-5678 -------
         function mascaraTelefone(valor) {
             var v = (valor || '').replace(/\D/g, '').slice(0, 11);

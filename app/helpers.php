@@ -204,7 +204,8 @@ function parcelamento_texto(int $total_centavos): string
         return 'à vista';
     }
 
-    $valor_parcela = (int) ceil($total_centavos / $parcelas);
+    // Arredonda para BAIXO (ex.: R$ 154,00 / 3 = R$ 51,33).
+    $valor_parcela = (int) floor($total_centavos / $parcelas);
     return 'em até ' . $parcelas . 'x de ' . money($valor_parcela) . ' sem juros';
 }
 

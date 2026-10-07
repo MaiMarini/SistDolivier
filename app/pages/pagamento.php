@@ -76,15 +76,20 @@ if ($acao === 'retorno') {
         redirect('meus-pedidos');
     }
 
-    $st = db()->prepare('SELECT pagamento_status FROM orders WHERE id = ? LIMIT 1');
+    $st = db()->prepare('SELECT pagamento_status, pagamento_tipo FROM orders WHERE id = ? LIMIT 1');
     $st->execute([$pedido_id]);
-    $ps = (string) $st->fetchColumn();
+    $p  = $st->fetch() ?: [];
+    $ps = (string) ($p['pagamento_status'] ?? '');
     if ($ps === 'aprovado') {
         flash('sucesso', 'Pagamento aprovado! Seu pedido entrou na fila de produção.');
-    } elseif (in_array($ps, ['pendente', 'em_analise'], true) && $pay_id !== '' && $pay_id !== 'null') {
-        flash('sucesso', 'Recebemos seu pedido. O pagamento está sendo processado e avisaremos aqui quando for confirmado.');
+    } elseif ($ps === 'em_analise' && pagamento_aguardando_pix_boleto($p)) {
+        flash('sucesso', 'Pedido recebido! Assim que o pagamento cair, o preparo começa.');
+    } elseif ($ps === 'em_analise') {
+        flash('sucesso', 'Recebemos seu pedido. O pagamento está em análise e avisaremos aqui quando for confirmado.');
+    } elseif (in_array($ps, ['recusado', 'cancelado'], true)) {
+        flash('erro', 'O pagamento não foi aprovado. Você pode tentar de novo pelo botão "Tentar novamente".');
     } else {
-        flash('erro', 'O pagamento não foi concluído. Você pode tentar de novo pelo botão "Pagar agora".');
+        flash('erro', 'O pagamento não foi concluído. Você pode pagar pelo botão "Pagar agora".');
     }
     redirect('pedido/' . $pedido_id);
 }
@@ -99,7 +104,7 @@ if ($acao === 'pagar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('erro', 'Sua sessão expirou. Tente novamente.');
         redirect('pedido/' . $pedido_id);
     }
-    $st = db()->prepare('SELECT user_id, status FROM orders WHERE id = ? LIMIT 1');
+    $st = db()->prepare('SELECT user_id, status, pagamento_status, pagamento_tipo FROM orders WHERE id = ? LIMIT 1');
     $st->execute([$pedido_id]);
     $p = $st->fetch();
     if (!$p || (int) $p['user_id'] !== (int) usuario_atual()['id']) {
@@ -107,6 +112,13 @@ if ($acao === 'pagar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if ($p['status'] !== 'aguardando_pagamento') {
         flash('erro', 'Este pedido não está aguardando pagamento.');
+        redirect('pedido/' . $pedido_id);
+    }
+    // Já existe um pagamento em curso: não gera outro (evita cobrar duas vezes).
+    if (!pagamento_pode_pagar($p)) {
+        flash('erro', pagamento_aguardando_pix_boleto($p)
+            ? 'Já existe um Pix/boleto gerado para este pedido. Use o link do pagamento na página do pedido.'
+            : 'Já existe um pagamento em análise para este pedido. Aguarde a confirmação.');
         redirect('pedido/' . $pedido_id);
     }
     $link = pagamento_iniciar($pedido_id);

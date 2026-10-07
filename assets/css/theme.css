@@ -335,6 +335,558 @@ main {
     display: none;
 }
 
+/* =============================================================================
+   Meus pedidos (lista + detalhe) e /pedido/{id}
+   Computador (>= 760px): lista ~380px à esquerda e detalhe à direita.
+   Celular: lista na largura toda; cada linha abre /pedido/{id}.
+   ============================================================================= */
+.mp {
+    --mp-linha: #eadfcd;
+    --mp-linha2: #d9cbb5;
+    --mp-sup2: #fbf4ea;
+    --mp-sec: #6e5848;
+    --mp-fraco: #7a6555;
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+}
+
+.mp [hidden],
+.mp-detalhe [hidden] {
+    display: none !important;
+}
+
+.mp-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 24px;
+}
+
+.mp-head h1 {
+    margin: 0;
+}
+
+.mp-busca {
+    display: flex;
+    gap: 10px;
+    flex: 0 1 460px;
+    min-width: 0;
+}
+
+.mp-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.mp-campo-busca {
+    flex: 1 1 220px;
+}
+
+.mp-busca .mp-campo:last-of-type {
+    flex: 0 0 170px;
+}
+
+.mp-campo input,
+.mp-campo select {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--mp-linha2, #d9cbb5);
+    border-radius: 10px;
+    background: var(--cor-superficie);
+    color: var(--cor-texto);
+    font: inherit;
+    font-size: .95rem;
+    font-weight: 400;
+}
+
+.mp-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+    padding: 0;
+}
+
+/* Abas: uma linha só, sem rolagem */
+.mp-abas {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 2px;
+    border-bottom: 1px solid var(--mp-linha2);
+    min-width: 0;
+}
+
+.mp-aba {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 0 12px;
+    margin-bottom: -1px;
+    border-bottom: 3px solid transparent;
+    color: var(--mp-sec);
+    font-weight: 700;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.mp-aba:hover {
+    color: var(--cor-texto);
+    text-decoration: none;
+}
+
+.mp-aba[aria-current="page"] {
+    color: var(--cor-texto);
+    border-bottom-color: var(--cor-pop);
+}
+
+.mp-count {
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--mp-sup2);
+    color: var(--mp-sec);
+    font-size: .75rem;
+    font-weight: 800;
+}
+
+.mp-aba[aria-current="page"] .mp-count {
+    background: var(--cor-pop);
+    color: #fff;
+}
+
+.mp-filtros-m {
+    display: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+/* Lista + detalhe */
+.mp-layout {
+    display: grid;
+    grid-template-columns: 380px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.mp-lista {
+    min-width: 0;
+    overflow: hidden;
+    background: var(--cor-superficie);
+    border: 1px solid var(--mp-linha);
+    border-radius: 14px;
+}
+
+.mp-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 14px 16px;
+    border-top: 1px solid var(--mp-linha);
+    color: var(--cor-texto);
+    text-decoration: none;
+}
+
+.mp-row:first-child {
+    border-top: 0;
+}
+
+.mp-row:hover {
+    background: var(--mp-sup2);
+    text-decoration: none;
+}
+
+.mp-row[aria-current="true"] {
+    background: var(--mp-sup2);
+    box-shadow: inset 4px 0 0 var(--cor-pop);
+}
+
+.mp-row-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.mp-row-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-weight: 800;
+}
+
+.mp-row-sub {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: .82rem;
+    color: var(--mp-sec);
+}
+
+.mp-chev {
+    display: none;
+    flex: none;
+    color: var(--mp-fraco);
+}
+
+.mp-num {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.mp-vazio {
+    margin: 0;
+    padding: 32px 20px;
+    text-align: center;
+    color: var(--mp-sec);
+}
+
+/* Etiquetas de status */
+.mp-pill {
+    align-self: flex-start;
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.st-pagar { background: #fbead9; color: #8a4310; }
+.st-analise { background: #efe7da; color: #5c4636; }
+.st-producao { background: #eef0de; color: #4f5a24; }
+.st-finalizado { background: #e4eee2; color: #2f6338; }
+.st-cancelado { background: #f6e0dc; color: #9a3324; }
+
+/* Detalhe (mesmo bloco em /pedido/{id}) */
+.mp-detalhe {
+    --mp-linha: #eadfcd;
+    --mp-sec: #6e5848;
+    --mp-fraco: #7a6555;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+    padding: 22px 24px;
+    background: var(--cor-superficie);
+    border: 1px solid var(--mp-linha);
+    border-radius: 14px;
+}
+
+.mp-pagina-pedido {
+    max-width: 760px;
+}
+
+.mp-voltar {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    font-weight: 800;
+    color: var(--cor-primaria);
+    text-decoration: none;
+}
+
+.mp-dhead {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.mp-dhead h2 {
+    margin: 0;
+    font-size: 1.6rem;
+}
+
+.mp-dhead h2:focus {
+    outline: none;
+}
+
+.mp-quando {
+    display: block;
+    font-size: .82rem;
+    color: var(--mp-sec);
+}
+
+.mp-callout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fbead9;
+    color: #8a4310;
+}
+
+.mp-callout.is-neutro {
+    background: #efe7da;
+    color: #5c4636;
+}
+
+.mp-callout > span {
+    flex: 1 1 200px;
+    font-weight: 700;
+}
+
+.mp-prazo {
+    display: block;
+    font-weight: 600;
+    opacity: .85;
+}
+
+.mp-callout form {
+    margin: 0;
+}
+
+.mp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: none;
+    font: inherit;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.mp-btn:hover {
+    text-decoration: none;
+    filter: brightness(.95);
+}
+
+.mp-btn-primary {
+    background: var(--cor-pop);
+    border-color: var(--cor-pop);
+    color: #fff;
+}
+
+.mp-btn-oliva {
+    border-color: var(--cor-acento);
+    color: #4f5a24;
+}
+
+.mp-btn-marrom {
+    border-color: var(--cor-primaria);
+    color: var(--cor-primaria);
+}
+
+.mp-btn:focus-visible,
+.mp-row:focus-visible,
+.mp-aba:focus-visible,
+.mp-voltar:focus-visible {
+    outline: 2px solid var(--cor-pop);
+    outline-offset: 2px;
+}
+
+.mp-eyebrow {
+    margin: 0 0 8px;
+    font-size: .75rem;
+    font-weight: 800;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--mp-sec);
+}
+
+/* Linha do tempo */
+.mp-timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.mp-timeline li {
+    display: flex;
+    gap: 12px;
+    min-height: 42px;
+}
+
+.mp-rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 16px;
+}
+
+.mp-dot {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    margin-top: 3px;
+    border-radius: 50%;
+    background: #e3d6c2;
+}
+
+.mp-line {
+    flex: 1;
+    width: 2px;
+    background: #e3d6c2;
+}
+
+.mp-timeline li:last-child .mp-line {
+    background: transparent;
+}
+
+.mp-timeline .is-done .mp-dot,
+.mp-timeline .is-now .mp-dot,
+.mp-timeline .is-done .mp-line {
+    background: var(--cor-acento);
+}
+
+.mp-timeline .is-now .mp-dot {
+    box-shadow: 0 0 0 4px #eef0de;
+}
+
+.mp-timeline .is-wait .mp-dot {
+    background: #d98a5f;
+    box-shadow: 0 0 0 4px #fbead9;
+}
+
+.mp-timeline .is-cancel .mp-dot {
+    background: #b5452f;
+}
+
+.mp-tl-texto {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 8px;
+}
+
+.mp-tl-texto b {
+    font-weight: 800;
+}
+
+.mp-todo {
+    color: var(--mp-fraco);
+}
+
+.mp-info {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.mp-info > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.mp-totais {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--mp-linha);
+}
+
+.mp-totais > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.mp-totais > div > span:first-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.mp-total {
+    padding-top: 10px;
+    border-top: 1px dashed var(--mp-linha);
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.mp-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.mp-acoes form {
+    margin: 0;
+}
+
+@media (max-width: 759px) {
+    .mp-abas,
+    .mp-busca,
+    .mp-detalhe-col {
+        display: none;
+    }
+
+    .mp-filtros-m {
+        display: grid;
+    }
+
+    .mp-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .mp-chev {
+        display: block;
+    }
+
+    .mp-row[aria-current="true"] {
+        background: var(--cor-superficie);
+        box-shadow: none;
+    }
+
+    .mp-detalhe {
+        padding: 16px;
+        gap: 16px;
+    }
+
+    .mp-dhead {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .mp-info {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .mp-acoes {
+        flex-direction: column;
+    }
+
+    .mp-acoes .mp-btn,
+    .mp-acoes form,
+    .mp-callout form,
+    .mp-callout .mp-btn {
+        width: 100%;
+    }
+
+    .mp-callout form .mp-btn {
+        width: 100%;
+    }
+}
+
 /* Aviso do status do pedido (aguardando pagamento / cancelado). */
 .pedido-aviso {
     margin: .6rem 0;

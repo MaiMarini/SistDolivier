@@ -153,7 +153,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('carrinho');
     }
 
-    if ($acao === 'adicionar') {
+    if ($acao === 'repetir') {
+        // "Pedir de novo": põe no carrinho os itens de um pedido DA CLIENTE LOGADA.
+        $u   = usuario_atual();
+        $pid = (int) ($_POST['pedido_id'] ?? 0);
+        $st  = db()->prepare(
+            'SELECT i.product_id, i.quantidade, p.id AS ativo
+               FROM orders o
+               JOIN order_items i ON i.order_id = o.id
+               LEFT JOIN products p ON p.id = i.product_id AND p.ativo = 1
+              WHERE o.id = ? AND o.user_id = ?'
+        );
+        $st->execute([$pid, $u ? (int) $u['id'] : 0]);
+        $linhas = $st->fetchAll();
+        $ok = false;
+        $fora = 0;
+        foreach ($linhas as $l) {
+            if ($l['ativo'] === null) {
+                $fora++;
+                continue;
+            }
+            carrinho_adicionar((int) $l['product_id'], (int) $l['quantidade']);
+            $ok = true;
+        }
+        if (!$linhas) {
+            $msg = 'Pedido não encontrado.';
+        } elseif (!$ok) {
+            $msg = 'Os produtos deste pedido não estão mais disponíveis.';
+        } else {
+            $msg = 'Itens do pedido #' . $pid . ' adicionados ao carrinho.'
+                 . ($fora ? ' ' . ($fora === 1 ? 'Um item não está mais disponível.' : $fora . ' itens não estão mais disponíveis.') : '');
+        }
+        if ($ajax) {
+            _carrinho_responder(['ok' => $ok, 'mensagem' => $msg, 'carrinho' => _carrinho_json()]);
+        }
+        flash($ok ? 'sucesso' : 'erro', $msg);
+    } elseif ($acao === 'adicionar') {
         // Vem da página de produto. Só adiciona se o produto existir e estiver ativo.
         $pid = (int) ($_POST['produto_id'] ?? 0);
         $qtd = (int) ($_POST['quantidade'] ?? 1);

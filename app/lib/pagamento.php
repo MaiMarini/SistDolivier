@@ -48,6 +48,182 @@ function pagamento_forma_rotulo(?string $f): string
     return $r[$f ?? ''] ?? ($f ? ucfirst($f) : '—');
 }
 
+/**
+ * Pode gerar um NOVO pagamento? Não, se já há um aprovado, um em análise (cartão
+ * em análise, Pix/boleto gerado e não pago) ou um com valor divergente.
+ */
+function pagamento_pode_pagar(array $p): bool
+{
+    return !in_array((string) ($p['pagamento_status'] ?? ''), ['aprovado', 'em_analise', 'divergente'], true);
+}
+
+/** Pix ou boleto gerado e ainda não pago (o "pending" do Mercado Pago). */
+function pagamento_aguardando_pix_boleto(array $p): bool
+{
+    return ($p['pagamento_status'] ?? '') === 'em_analise'
+        && in_array((string) ($p['pagamento_tipo'] ?? ''), ['bank_transfer', 'ticket'], true);
+}
+
+/**
+ * Situação do pedido para a cliente — o MESMO texto na lista e no detalhe.
+ * Devolve: rotulo, classe (st-*), aviso (faixa) e acao:
+ *   'pagar'   -> "Pagar agora · R$ X"       'tentar' -> "Tentar novamente · R$ X"
+ *   'ticket'  -> link do Pix/boleto já gerado (sem pagamento novo)
+ *   null      -> sem botão
+ */
+function pedido_situacao(array $p): array
+{
+    $status = (string) $p['status'];
+    $ps     = (string) ($p['pagamento_status'] ?? '');
+    $motoboy = ($p['entrega'] ?? '') === 'motoboy';
+    $s = ['rotulo' => '', 'classe' => 'st-analise', 'aviso' => '', 'acao' => null];
+
+    if ($status === 'cancelado') {
+        return ['rotulo' => 'Cancelado', 'classe' => 'st-cancelado', 'aviso' => '', 'acao' => null];
+    }
+    if ($status === 'aguardando_pagamento') {
+        if (pagamento_aguardando_pix_boleto($p)) {
+            $boleto = ($p['pagamento_tipo'] ?? '') === 'ticket';
+            return [
+                'rotulo' => $boleto ? 'Aguardando o pagamento do boleto' : 'Aguardando o pagamento do Pix',
+                'classe' => 'st-pagar',
+                'aviso'  => $boleto
+                    ? 'O boleto foi gerado. O preparo começa depois que ele for compensado.'
+                    : 'O Pix foi gerado. O preparo começa assim que o pagamento cair.',
+                'acao'   => !empty($p['pagamento_ticket_url']) ? 'ticket' : null,
+            ];
+        }
+        if ($ps === 'em_analise') {
+            return ['rotulo' => 'Pagamento em análise', 'classe' => 'st-analise',
+                    'aviso' => 'O Mercado Pago está analisando o pagamento. Avisaremos aqui quando for confirmado.', 'acao' => null];
+        }
+        if ($ps === 'divergente') {
+            return ['rotulo' => 'Pagamento em análise', 'classe' => 'st-analise',
+                    'aviso' => 'Estamos conferindo o pagamento. Se precisar, fale com a gente.', 'acao' => null];
+        }
+        if (in_array($ps, ['recusado', 'cancelado'], true)) {
+            return ['rotulo' => 'Pagamento não aprovado', 'classe' => 'st-pagar',
+                    'aviso' => 'O pagamento não foi aprovado.', 'acao' => mp_ativo() ? 'tentar' : null];
+        }
+        return ['rotulo' => 'Aguardando pagamento', 'classe' => 'st-pagar',
+                'aviso' => 'O preparo começa depois do pagamento.', 'acao' => mp_ativo() ? 'pagar' : null];
+    }
+    switch ($status) {
+        case 'realizado':
+            $s['rotulo'] = $ps === 'aprovado' ? 'Pagamento aprovado' : 'Pedido recebido';
+            $s['classe'] = $ps === 'aprovado' ? 'st-producao' : 'st-analise';
+            break;
+        case 'producao':
+            $s['rotulo'] = 'Em produção';
+            $s['classe'] = 'st-producao';
+            break;
+        case 'pronto':
+            $s['rotulo'] = $motoboy ? 'Pronto para entrega' : 'Pronto para retirar';
+            $s['classe'] = 'st-producao';
+            break;
+        case 'finalizado':
+            $s['rotulo'] = $motoboy ? 'Entregue' : 'Retirado';
+            $s['classe'] = 'st-finalizado';
+            break;
+    }
+    return $s;
+}
+
+/**
+ * Linha do tempo: Pedido recebido → Pagamento → Em produção → Pronto → Entregue.
+ * $quando: datas por status vindas de order_status_history (status => 'Y-m-d H:i:s').
+ * Cada passo: [rotulo, texto, estado] com estado done | now | wait | todo | cancel.
+ */
+function pedido_andamento(array $p, array $quando): array
+{
+    $fmt = fn ($d) => $d ? date('d/m, H:i', strtotime($d)) : '';
+    $status = (string) $p['status'];
+    $motoboy = ($p['entrega'] ?? '') === 'motoboy';
+
+    if ($status === 'cancelado') {
+        return [
+            ['Pedido recebido', $fmt($p['criado_em']), 'done'],
+            ['Cancelado', 'Sem pagamento em ' . PAGAMENTO_PRAZO_HORAS . ' h', 'cancel'],
+        ];
+    }
+
+    // Pagamento confirmado: aprovado, ou pedido já em produção (pago combinando com a loja).
+    $pago = ($p['pagamento_status'] ?? '') === 'aprovado'
+        || in_array($status, ['producao', 'pronto', 'finalizado'], true);
+    $ordem = ['producao' => 2, 'pronto' => 3, 'finalizado' => 5];
+    $atual = $pago ? ($ordem[$status] ?? 2) : 1;   // 1 = Pagamento, 2 = Em produção...
+
+    $passos = [
+        ['Pedido recebido', $fmt($p['criado_em'])],
+        ['Pagamento', ''],
+        ['Em produção', $fmt($quando['producao'] ?? null)],
+        [$motoboy ? 'Pronto para entrega' : 'Pronto para retirar', $fmt($quando['pronto'] ?? null)],
+        [$motoboy ? 'Entregue' : 'Retirado', $fmt($quando['finalizado'] ?? null)],
+    ];
+    $out = [];
+    foreach ($passos as $i => [$rotulo, $texto]) {
+        if ($i < $atual) {
+            $estado = 'done';
+            if ($i === 1) {
+                $texto = !empty($p['pago_em']) ? 'Aprovado em ' . $fmt($p['pago_em']) : 'Confirmado';
+            }
+        } elseif ($i === $atual) {
+            $estado = $i === 1 ? 'wait' : 'now';
+            if ($i === 1) {
+                $sit   = pedido_situacao($p);
+                $texto = $status === 'realizado' ? 'A combinar com a loja' : $sit['rotulo'];
+            } elseif ($texto === '') {
+                $texto = $status === 'realizado' ? 'A seguir' : 'Agora';
+            }
+        } else {
+            $estado = 'todo';
+            $texto  = '';
+        }
+        $out[] = [$rotulo, $texto, $estado];
+    }
+    return $out;
+}
+
+/**
+ * Itens e datas do histórico de vários pedidos, em 2 consultas.
+ * Devolve ['itens' => [id => [...]], 'quando' => [id => [status => data]]].
+ */
+function pedidos_complementos(array $ids): array
+{
+    $out = ['itens' => [], 'quando' => []];
+    $ids = array_values(array_unique(array_map('intval', $ids)));
+    if (!$ids) {
+        return $out;
+    }
+    $ph = implode(',', array_fill(0, count($ids), '?'));
+    $st = db()->prepare("SELECT order_id, nome, preco_centavos, quantidade FROM order_items
+                          WHERE order_id IN ($ph) ORDER BY id");
+    $st->execute($ids);
+    foreach ($st->fetchAll() as $i) {
+        $out['itens'][(int) $i['order_id']][] = $i;
+    }
+    // A data mais recente de cada status (se voltou a um status, vale a última vez).
+    $st = db()->prepare("SELECT order_id, status, MAX(criado_em) AS em FROM order_status_history
+                          WHERE order_id IN ($ph) GROUP BY order_id, status");
+    $st->execute($ids);
+    foreach ($st->fetchAll() as $h) {
+        $out['quando'][(int) $h['order_id']][$h['status']] = $h['em'];
+    }
+    return $out;
+}
+
+/** Abas de "Meus pedidos": chave => [rótulo curto, rótulo completo, condição SQL]. */
+function pedido_grupos(): array
+{
+    return [
+        'todos'      => ['Todos', 'Todos', '1 = 1'],
+        'andamento'  => ['Em andamento', 'Em andamento', "o.status IN ('aguardando_pagamento','realizado','producao','pronto')"],
+        'apagar'     => ['A pagar', 'Aguardando pagamento', "o.status = 'aguardando_pagamento'"],
+        'concluidos' => ['Concluídos', 'Concluídos', "o.status = 'finalizado'"],
+        'cancelados' => ['Cancelados', 'Cancelados', "o.status = 'cancelado'"],
+    ];
+}
+
 /** Segundos que faltam para o prazo de pagamento (relógio do banco). Negativo = vencido. */
 function pagamento_segundos_restantes(int $pedido_id): int
 {
@@ -76,13 +252,13 @@ function pagamento_iniciar(int $pedido_id): ?string
         return null;
     }
     $st = db()->prepare(
-        'SELECT o.id, o.status, o.frete_centavos, o.total_centavos, u.nome, u.email
+        'SELECT o.id, o.status, o.pagamento_status, o.frete_centavos, o.total_centavos, u.nome, u.email
            FROM orders o LEFT JOIN users u ON u.id = o.user_id
           WHERE o.id = ? LIMIT 1'
     );
     $st->execute([$pedido_id]);
     $p = $st->fetch();
-    if (!$p || $p['status'] !== 'aguardando_pagamento') {
+    if (!$p || $p['status'] !== 'aguardando_pagamento' || !pagamento_pode_pagar($p)) {
         return null;
     }
     if (pagamento_segundos_restantes($pedido_id) <= 60) {
@@ -125,15 +301,22 @@ function pagamento_aplicar(array $pg): int
         return 0;
     }
 
+    // "pending" (ex.: Pix gerado e ainda não pago) também conta como em análise:
+    // já existe um pagamento em curso, então não se gera outro.
     $mapa = [
         'approved' => 'aprovado', 'authorized' => 'em_analise', 'in_process' => 'em_analise',
-        'in_mediation' => 'em_analise', 'pending' => 'pendente', 'rejected' => 'recusado',
+        'in_mediation' => 'em_analise', 'pending' => 'em_analise', 'rejected' => 'recusado',
         'cancelled' => 'cancelado', 'refunded' => 'estornado', 'charged_back' => 'estornado',
     ];
     $novo  = $mapa[$pg['status'] ?? ''] ?? 'pendente';
     $tipo  = (string) ($pg['payment_type_id'] ?? '');
     $forma = ($pg['payment_method_id'] ?? '') === 'pix' ? 'pix'
-           : ($tipo === 'credit_card' ? 'credito' : ($tipo === 'debit_card' ? 'debito' : $tipo));
+           : ($tipo === 'credit_card' ? 'credito' : ($tipo === 'debit_card' ? 'debito'
+           : ($tipo === 'ticket' ? 'boleto' : $tipo)));
+    // Link do QR/código do Pix ou do boleto (só interessa enquanto está pendente).
+    $ticket = (string) ($pg['point_of_interaction']['transaction_data']['ticket_url']
+            ?? $pg['transaction_details']['external_resource_url'] ?? '');
+    $ticket = preg_match('#^https://#i', $ticket) ? mb_substr($ticket, 0, 500) : '';
 
     $pdo = db();
     $pdo->beginTransaction();
@@ -162,10 +345,15 @@ function pagamento_aplicar(array $pg): int
         }
 
         $pdo->prepare(
-            'UPDATE orders SET pagamento_status = ?, pagamento = ?, mp_payment_id = ?,
+            'UPDATE orders SET pagamento_status = ?, pagamento = ?, pagamento_tipo = ?,
+                    pagamento_ticket_url = ?, mp_payment_id = ?,
                     pago_em = IF(? = "aprovado" AND pago_em IS NULL, NOW(), pago_em)
               WHERE id = ?'
-        )->execute([$novo, $forma !== '' ? $forma : null, $pay_id, $novo, $pedido_id]);
+        )->execute([
+            $novo, $forma !== '' ? $forma : null, $tipo !== '' ? $tipo : null,
+            ($novo === 'em_analise' && $ticket !== '') ? $ticket : null,
+            $pay_id, $novo, $pedido_id,
+        ]);
 
         // Pago: o pedido entra na fila de produção (também se tinha sido cancelado por prazo).
         if ($novo === 'aprovado' && in_array($pedido['status'], ['aguardando_pagamento', 'cancelado'], true)) {
