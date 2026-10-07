@@ -887,6 +887,42 @@ main {
     }
 }
 
+/* Admin › detalhe do pedido: situação do pagamento e histórico. */
+.adm-pagamento {
+    margin: 0 0 1rem;
+    padding: .7rem .9rem;
+    border-radius: var(--raio);
+    background: #efe7da;
+    color: var(--cor-texto);
+}
+
+.adm-pagamento.is-alerta {
+    background: #fbead9;
+    color: #8a4310;
+}
+
+.adm-pagamento p {
+    margin: 0;
+}
+
+.adm-pagamento p + p {
+    margin-top: .3rem;
+}
+
+.adm-cliente-ve {
+    font-size: .85rem;
+    white-space: nowrap;
+}
+
+.adm-historico .is-pagamento {
+    list-style: none;
+    margin-left: -1.1em;
+}
+
+.adm-historico .is-pagamento::before {
+    content: "💳 ";
+}
+
 /* Aviso do status do pedido (aguardando pagamento / cancelado). */
 .pedido-aviso {
     margin: .6rem 0;

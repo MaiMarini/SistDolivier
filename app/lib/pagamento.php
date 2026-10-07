@@ -329,8 +329,11 @@ function pagamento_aplicar(array $pg): int
             return 0;
         }
 
+        $valor = isset($pg['transaction_amount']) ? (int) round(((float) $pg['transaction_amount']) * 100) : null;
+
         // Já pago por OUTRO pagamento (ex.: tentativa recusada antes): não volta atrás.
         if ($pedido['pagamento_status'] === 'aprovado' && $pedido['mp_payment_id'] !== $pay_id && $novo !== 'aprovado') {
+            _pagamento_registrar_evento($pedido_id, $pay_id, $novo, $forma, $valor);
             $pdo->commit();
             return $pedido_id;
         }
@@ -343,6 +346,8 @@ function pagamento_aplicar(array $pg): int
                 error_log('pagamento: pedido ' . $pedido_id . ' pago com valor diferente do total');
             }
         }
+
+        _pagamento_registrar_evento($pedido_id, $pay_id, $novo, $forma, $valor);
 
         $pdo->prepare(
             'UPDATE orders SET pagamento_status = ?, pagamento = ?, pagamento_tipo = ?,
@@ -367,6 +372,98 @@ function pagamento_aplicar(array $pg): int
         throw $e;
     }
     return $pedido_id;
+}
+
+/**
+ * Guarda uma tentativa de pagamento no histórico (order_payment_events), só quando a
+ * situação daquele pagamento muda — o webhook e o retorno repetem o mesmo aviso.
+ * Sem a tabela (migração ainda não rodada), não faz nada.
+ */
+function _pagamento_registrar_evento(int $pedido_id, string $pay_id, string $status, string $forma, ?int $valor): void
+{
+    try {
+        $st = db()->prepare(
+            'SELECT status FROM order_payment_events
+              WHERE order_id = ? AND mp_payment_id = ? ORDER BY id DESC LIMIT 1'
+        );
+        $st->execute([$pedido_id, $pay_id]);
+        if ($st->fetchColumn() === $status) {
+            return;
+        }
+        db()->prepare(
+            'INSERT INTO order_payment_events (order_id, mp_payment_id, status, forma, valor_centavos)
+             VALUES (?, ?, ?, ?, ?)'
+        )->execute([$pedido_id, $pay_id, $status, $forma !== '' ? $forma : null, $valor]);
+    } catch (PDOException $e) {
+        if ($e->getCode() !== '42S02') {   // 42S02 = tabela não existe
+            throw $e;
+        }
+    }
+}
+
+/** Texto de uma tentativa de pagamento no histórico do admin. */
+function pagamento_evento_texto(array $ev): string
+{
+    $pix = ($ev['forma'] ?? '') === 'pix';
+    $t = [
+        'aprovado'   => 'Pagamento aprovado',
+        'recusado'   => 'Pagamento recusado',
+        'cancelado'  => $pix ? 'Pix expirado ou cancelado' : 'Pagamento cancelado pela cliente',
+        'em_analise' => $pix ? 'Pix gerado, aguardando pagamento' : 'Pagamento em análise',
+        'estornado'  => 'Pagamento estornado',
+        'divergente' => 'Pagamento com valor diferente do pedido',
+        'pendente'   => 'Pagamento pendente',
+    ][$ev['status']] ?? ('Pagamento: ' . $ev['status']);
+    $extra = array_filter([
+        !empty($ev['forma']) ? pagamento_forma_rotulo($ev['forma']) : '',
+        isset($ev['valor_centavos']) ? money((int) $ev['valor_centavos']) : '',
+        'nº ' . $ev['mp_payment_id'],
+    ]);
+    return $t . ' (' . implode(' · ', $extra) . ')';
+}
+
+/**
+ * Situação do pagamento explicada para o admin (o que está acontecendo e o que fazer).
+ * Devolve ['texto' => ..., 'alerta' => bool].
+ */
+function pagamento_resumo_admin(array $p): array
+{
+    $ps = (string) ($p['pagamento_status'] ?? '');
+    $status = (string) $p['status'];
+    $prazo = '';
+    if ($status === 'aguardando_pagamento') {
+        $d = pagamento_prazo((int) $p['id']);
+        $prazo = $d->format('d/m') . ' às ' . $d->format('H:i');
+    }
+    if ($ps === 'aprovado') {
+        $quando = !empty($p['pago_em']) ? ' em ' . date('d/m/Y H:i', strtotime($p['pago_em'])) : '';
+        return ['texto' => 'Pago' . $quando . ' (' . pagamento_forma_rotulo($p['pagamento'] ?? null) . '). Pode produzir.', 'alerta' => false];
+    }
+    if ($status === 'cancelado') {
+        return ['texto' => 'Cancelado automaticamente: sem pagamento em ' . PAGAMENTO_PRAZO_HORAS . ' h.', 'alerta' => false];
+    }
+    if ($status !== 'aguardando_pagamento') {
+        return ['texto' => 'Pagamento combinado fora do site (pedido sem pagamento online registrado).', 'alerta' => false];
+    }
+    if ($ps === 'divergente') {
+        return ['texto' => 'O valor pago é diferente do total. Confira no Mercado Pago antes de produzir.', 'alerta' => true];
+    }
+    if (pagamento_aguardando_pix_boleto($p)) {
+        return ['texto' => 'Pix/boleto gerado, aguardando o pagamento até ' . $prazo . '. Não produza ainda.', 'alerta' => false];
+    }
+    if ($ps === 'em_analise') {
+        return ['texto' => 'Pagamento em análise pelo Mercado Pago. Não produza ainda.', 'alerta' => false];
+    }
+    if ($ps === 'recusado') {
+        return ['texto' => 'A última tentativa foi recusada. A cliente pode tentar de novo até ' . $prazo
+            . '; depois disso o pedido é cancelado automaticamente.', 'alerta' => false];
+    }
+    if ($ps === 'cancelado') {
+        return ['texto' => 'A cliente cancelou a última tentativa no Mercado Pago. Ela pode tentar de novo até ' . $prazo
+            . '; depois disso o pedido é cancelado automaticamente.', 'alerta' => false];
+    }
+    return ['texto' => 'A cliente ainda não pagou. Prazo: até ' . $prazo
+        . '; depois disso o pedido é cancelado automaticamente.', 'alerta' => false];
 }
 
 /**

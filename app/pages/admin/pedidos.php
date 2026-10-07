@@ -73,6 +73,26 @@ if ($acao !== '' && ctype_digit((string) $acao)) {
     $stmt->execute([$id]);
     $hist = $stmt->fetchAll();
 
+    // Histórico único: mudanças do pedido + tentativas de pagamento, por data.
+    $linha_tempo = [];
+    foreach ($hist as $h) {
+        $linha_tempo[] = ['em' => $h['criado_em'], 'texto' => $STATUS[$h['status']] ?? $h['status'], 'pag' => false];
+    }
+    try {
+        $stmt = db()->prepare('SELECT * FROM order_payment_events WHERE order_id = ? ORDER BY id ASC');
+        $stmt->execute([$id]);
+        foreach ($stmt->fetchAll() as $ev) {
+            $linha_tempo[] = ['em' => $ev['criado_em'], 'texto' => pagamento_evento_texto($ev), 'pag' => true];
+        }
+    } catch (PDOException $e) {
+        // Tabela de eventos ainda não criada (migração pendente): só o histórico do pedido.
+    }
+    // Por data; no mesmo instante, o pagamento vem antes (é ele que muda o status do pedido).
+    usort($linha_tempo, fn ($a, $b) => strcmp($a['em'], $b['em']) ?: ((int) $b['pag'] <=> (int) $a['pag']));
+
+    $sit_cliente = pedido_situacao($pedido);
+    $resumo_pag  = pagamento_resumo_admin($pedido);
+
     // WhatsApp do cliente (contato do pedido ou telefone do cadastro).
     $tel = preg_replace('/\D+/', '', (string) ($pedido['contato_telefone'] ?: $pedido['cliente_tel']));
     $wpp_link = '';
@@ -100,6 +120,13 @@ if ($acao !== '' && ctype_digit((string) $acao)) {
                     </option>
                 <?php endforeach; ?>
             </select>
+        </div>
+        <!-- O que está acontecendo com o pagamento (o status do pedido sozinho não diz). -->
+        <div class="adm-pagamento<?= $resumo_pag['alerta'] ? ' is-alerta' : '' ?>">
+            <p><strong>Pagamento:</strong> <?= e(pagamento_status_rotulo($pedido['pagamento_status'])) ?>
+                · <span class="adm-cliente-ve">a cliente vê
+                    <span class="mp-pill <?= e($sit_cliente['classe']) ?>"><?= e($sit_cliente['rotulo']) ?></span></span></p>
+            <p><?= e($resumo_pag['texto']) ?></p>
         </div>
         <button class="btn" type="submit">Atualizar status</button>
     </form>
@@ -180,14 +207,15 @@ if ($acao !== '' && ctype_digit((string) $acao)) {
     </p>
 
     <!-- Histórico -->
-    <?php if (!empty($hist)): ?>
+    <?php if (!empty($linha_tempo)): ?>
         <h2 class="mt-1">Histórico</h2>
-        <ul>
-            <?php foreach ($hist as $h): ?>
-                <li><?= e($STATUS[$h['status']] ?? $h['status']) ?>
-                    — <?= e(date('d/m/Y H:i', strtotime($h['criado_em']))) ?></li>
+        <ul class="adm-historico">
+            <?php foreach ($linha_tempo as $h): ?>
+                <li<?= $h['pag'] ? ' class="is-pagamento"' : '' ?>><?= e($h['texto']) ?>
+                    — <?= e(date('d/m/Y H:i', strtotime($h['em']))) ?></li>
             <?php endforeach; ?>
         </ul>
+        <p><small>Linhas marcadas com 💳 são tentativas de pagamento no Mercado Pago; as demais, mudanças no status do pedido.</small></p>
     <?php endif; ?>
     <?php
     view('admin_layout', ['titulo' => 'Pedido #' . $id, 'conteudo' => ob_get_clean()]);
