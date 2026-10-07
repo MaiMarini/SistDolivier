@@ -3,7 +3,8 @@
  * Checkout: /checkout — EXIGE LOGIN.
  * Revisão do pedido + entrega (retirada/motoboy) + endereço + observações +
  * totais (subtotal + frete) + parcelamento + aceite das regras. Cria o pedido
- * (status "realizado", pagamento "pendente"). O pagamento entra na Fase 3.
+ * (pagamento "pendente"). Com o Mercado Pago ligado, nasce "aguardando_pagamento"
+ * e vai direto para o pagamento; sem ele, nasce "realizado" (combinar no WhatsApp).
  * Valores sempre em CENTAVOS; preços recomputados do banco (nunca do cliente).
  */
 exigir_login();
@@ -133,6 +134,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $frete_cent = (int) $frete['frete_centavos'];
     $total      = $subtotal + $frete_cent;
 
+    // Pagamento online ligado (MP_ACCESS_TOKEN no .env): o pedido só entra na
+    // produção depois de pago. Desligado: segue como antes (combinar no WhatsApp).
+    $online        = mp_ativo();
+    $status_inicial = $online ? 'aguardando_pagamento' : 'realizado';
+
     $pdo = db();
     $pdo->beginTransaction();
     try {
@@ -142,10 +148,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  pagamento_status, aceitou_termos, observacoes, endereco_entrega,
                  contato_nome, contato_telefone, entrega_distancia_km,
                  presente, presente_para, presente_telefone, presente_mensagem)
-             VALUES (?, "realizado", ?, ?, ?, ?, "pendente", 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+             VALUES (?, ?, ?, ?, ?, ?, "pendente", 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $ins->execute([
-            (int) $usuario['id'], $entrega, $subtotal, $frete_cent, $total,
+            (int) $usuario['id'], $status_inicial, $entrega, $subtotal, $frete_cent, $total,
             $observacoes !== '' ? $observacoes : null,
             $endereco_entrega,
             $contato_nome !== '' ? $contato_nome : null,
@@ -168,8 +174,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 (int) $l['produto']['preco_centavos'], (int) $l['qtd'],
             ]);
         }
-        $pdo->prepare('INSERT INTO order_status_history (order_id, status) VALUES (?, "realizado")')
-            ->execute([$order_id]);
+        $pdo->prepare('INSERT INTO order_status_history (order_id, status) VALUES (?, ?)')
+            ->execute([$order_id, $status_inicial]);
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();
@@ -178,6 +184,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     carrinho_limpar();
+    if ($online) {
+        $link = pagamento_iniciar($order_id);
+        if ($link !== null) {
+            redirect($link);   // Mercado Pago (Pix ou cartão)
+        }
+        flash('erro', 'Seu pedido foi criado, mas não conseguimos abrir o pagamento agora. '
+            . 'Use o botão "Pagar agora" abaixo para tentar de novo.');
+        redirect('pedido/' . $order_id);
+    }
     flash('sucesso', 'Pedido realizado! Veja os detalhes abaixo.');
     redirect('pedido/' . $order_id);
 }
@@ -204,8 +219,8 @@ $subtotal = (int) $c['subtotal'];
 $frete_ativo = cfg('frete_provedor', 'off') !== 'off';
 // Começa em Motoboy quando dá para estimar já ao abrir (endereço do perfil completo).
 $modo_inicial = ($frete_ativo && $tem_end_cad) ? 'motoboy' : 'retirada';
-// Fase 3 (Mercado Pago) ainda não existe: o botão só confirma o pedido.
-$pagamento_online = false;
+// Com o Mercado Pago ligado, o botão leva ao pagamento; senão, só confirma o pedido.
+$pagamento_online = mp_ativo();
 
 // "Seus dados": com nome e telefone já preenchidos, mostra uma linha só.
 $contato_completo = $cad('nome') !== '' && $cad('telefone') !== '';

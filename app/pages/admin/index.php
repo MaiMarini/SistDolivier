@@ -6,6 +6,8 @@
  */
 exigir_admin();
 
+pagamento_cancelar_expirados();   // pedidos não pagos em 24h viram "cancelado"
+
 $total_pedidos  = (int) db()->query('SELECT COUNT(*) FROM orders')->fetchColumn();
 $total_produtos = (int) db()->query('SELECT COUNT(*) FROM products')->fetchColumn();
 $total_clientes = (int) db()->query(
@@ -19,10 +21,7 @@ $recentes = db()->query(
       ORDER BY o.id DESC LIMIT 8'
 )->fetchAll();
 
-$STATUS = [
-    'realizado' => 'Pedido realizado', 'producao' => 'Em produção',
-    'pronto' => 'Pronto p/ entrega', 'finalizado' => 'Finalizado',
-];
+$STATUS = pedido_status_rotulos();
 
 ob_start();
 ?>

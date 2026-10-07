@@ -335,6 +335,25 @@ main {
     display: none;
 }
 
+/* Aviso do status do pedido (aguardando pagamento / cancelado). */
+.pedido-aviso {
+    margin: .6rem 0;
+    padding: .7rem .9rem;
+    border-radius: var(--raio);
+    background: #fbf3dc;
+    color: var(--cor-texto);
+    font-weight: 600;
+}
+
+.pedido-aviso.is-erro {
+    background: #fbead9;
+    color: #a5561c;
+}
+
+.pedido-aviso a {
+    color: var(--cor-pop);
+}
+
 /* Aviso de erro do login/cadastro dentro do painel lateral. */
 .drawer-erro {
     margin: 0 0 1rem;

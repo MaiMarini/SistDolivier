@@ -9,6 +9,8 @@ exigir_login();
 
 $usuario = usuario_atual();
 
+pagamento_cancelar_expirados();   // pedidos não pagos em 24h viram "cancelado"
+
 // 1) Pedidos do usuário.
 $stmt = db()->prepare(
     'SELECT id, status, total_centavos, criado_em
@@ -77,6 +79,12 @@ ob_start();
                 </span>
             </div>
 
+            <?php if ($pedido['status'] === 'cancelado'): ?>
+                <p class="pedido-aviso is-erro">Pedido cancelado: o pagamento não foi feito dentro do prazo.</p>
+            <?php elseif ($pedido['status'] === 'aguardando_pagamento'): ?>
+                <p class="pedido-aviso">Aguardando pagamento.
+                    <a href="<?= e(url('pedido/' . (int) $pedido['id'])) ?>">Pagar agora</a></p>
+            <?php else: ?>
             <ul class="passos">
                 <?php foreach ($chaves as $i => $chave): ?>
                     <?php
@@ -90,6 +98,7 @@ ob_start();
                     <li class="<?= $classe ?>"><?= e($passos[$chave]) ?></li>
                 <?php endforeach; ?>
             </ul>
+            <?php endif; ?>
 
             <?php if (!empty($itens)): ?>
                 <div class="mt-1">

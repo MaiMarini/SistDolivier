@@ -46,6 +46,7 @@ $rotas = [
     'checkout'     => 'checkout',
     'frete'        => 'frete',         // POST JSON: estimativa de frete (página do produto)
     'pedido'       => 'pedido',
+    'pagamento'    => 'pagamento',     // /pagamento/retorno | /pagamento/pagar | /pagamento/webhook
     'sobre'        => 'sobre',
     'regras'       => 'regras',
     'politica-de-privacidade' => 'politica_privacidade',

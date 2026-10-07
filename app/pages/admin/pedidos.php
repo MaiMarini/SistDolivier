@@ -8,12 +8,9 @@
  */
 exigir_admin();
 
-$STATUS = [
-    'realizado'  => 'Pedido realizado',
-    'producao'   => 'Em produção',
-    'pronto'     => 'Pronto p/ entrega',
-    'finalizado' => 'Finalizado',
-];
+$STATUS = pedido_status_rotulos();
+
+pagamento_cancelar_expirados();   // pedidos não pagos em 24h viram "cancelado"
 
 // -----------------------------------------------------------------------------
 // POST: mudar status
@@ -166,7 +163,21 @@ if ($acao !== '' && ctype_digit((string) $acao)) {
             <tr><td colspan="2"><strong>Total</strong></td><td class="col-acoes"><strong><?= e(money((int) $pedido['total_centavos'])) ?></strong></td></tr>
         </tfoot>
     </table>
-    <p><small>Pagamento: <strong><?= e($pedido['pagamento_status'] ?: 'pendente') ?></strong></small></p>
+    <!-- Pagamento -->
+    <h2 class="mt-1">Pagamento</h2>
+    <?php if (($pedido['pagamento_status'] ?? '') === 'divergente'): ?>
+        <p class="pedido-aviso is-erro">O valor pago no Mercado Pago é diferente do total do pedido.
+            Confira no painel do Mercado Pago antes de produzir.</p>
+    <?php endif; ?>
+    <p>
+        Status: <strong><?= e(pagamento_status_rotulo($pedido['pagamento_status'])) ?></strong><br>
+        <?php if (!empty($pedido['pagamento'])): ?>Forma: <?= e(pagamento_forma_rotulo($pedido['pagamento'])) ?><br><?php endif; ?>
+        <?php if (!empty($pedido['pago_em'])): ?>Pago em: <?= e(date('d/m/Y H:i', strtotime($pedido['pago_em']))) ?><br><?php endif; ?>
+        <?php if (!empty($pedido['mp_payment_id'])): ?>
+            Nº da operação no Mercado Pago: <strong><?= e($pedido['mp_payment_id']) ?></strong>
+            <small>(busque por este número em “Vendas” no painel do Mercado Pago)</small>
+        <?php endif; ?>
+    </p>
 
     <!-- Histórico -->
     <?php if (!empty($hist)): ?>
@@ -187,6 +198,7 @@ if ($acao !== '' && ctype_digit((string) $acao)) {
 // LISTA: /admin/pedidos  (com filtros)
 // -----------------------------------------------------------------------------
 $f_status = $_GET['status'] ?? '';
+$f_pag    = $_GET['pagamento'] ?? '';
 $f_busca  = trim($_GET['q'] ?? '');
 $f_de     = $_GET['de'] ?? '';
 $f_ate    = $_GET['ate'] ?? '';
@@ -196,6 +208,12 @@ $args  = [];
 if (isset($STATUS[$f_status])) {
     $where[] = 'o.status = ?';
     $args[]  = $f_status;
+}
+$PAG_FILTRO = ['aprovado', 'pendente', 'em_analise', 'recusado', 'expirado', 'estornado', 'divergente'];
+if (in_array($f_pag, $PAG_FILTRO, true)) {
+    // "pendente" inclui pedidos antigos sem status de pagamento gravado.
+    $where[] = $f_pag === 'pendente' ? '(o.pagamento_status = ? OR o.pagamento_status IS NULL)' : 'o.pagamento_status = ?';
+    $args[]  = $f_pag;
 }
 if ($f_busca !== '') {
     $where[] = '(u.nome LIKE ? OR u.email LIKE ?)';
@@ -231,11 +249,17 @@ ob_start();
             <option value="<?= e($chave) ?>" <?= $f_status === $chave ? 'selected' : '' ?>><?= e($rotulo) ?></option>
         <?php endforeach; ?>
     </select>
+    <select name="pagamento" aria-label="Pagamento">
+        <option value="">Todos os pagamentos</option>
+        <?php foreach ($PAG_FILTRO as $s): ?>
+            <option value="<?= e($s) ?>" <?= $f_pag === $s ? 'selected' : '' ?>><?= e(pagamento_status_rotulo($s)) ?></option>
+        <?php endforeach; ?>
+    </select>
     <input type="text" name="q" value="<?= e($f_busca) ?>" placeholder="Cliente (nome ou e-mail)">
     <input type="date" name="de" value="<?= e($f_de) ?>" aria-label="De">
     <input type="date" name="ate" value="<?= e($f_ate) ?>" aria-label="Até">
     <button class="btn sec" type="submit">Filtrar</button>
-    <?php if ($f_status !== '' || $f_busca !== '' || $f_de !== '' || $f_ate !== ''): ?>
+    <?php if ($f_status !== '' || $f_pag !== '' || $f_busca !== '' || $f_de !== '' || $f_ate !== ''): ?>
         <a class="btn sec" href="<?= e(url('admin/pedidos')) ?>">Limpar</a>
     <?php endif; ?>
 </form>
@@ -263,7 +287,7 @@ ob_start();
                     <td><?= e($p['cliente'] ?: '—') ?></td>
                     <td class="t-centro"><?= e(date('d/m/Y', strtotime($p['criado_em']))) ?></td>
                     <td class="t-centro"><?= $p['entrega'] === 'motoboy' ? 'Motoboy' : 'Retirada' ?><?= !empty($p['presente']) ? '<br><small>Presente</small>' : '' ?></td>
-                    <td class="t-centro"><?= e($p['pagamento_status'] ?: 'pendente') ?></td>
+                    <td class="t-centro"><?= e(pagamento_status_rotulo($p['pagamento_status'])) ?></td>
                     <td class="t-centro"><?= e($STATUS[$p['status']] ?? $p['status']) ?></td>
                     <td class="col-acoes"><?= e(money((int) $p['total_centavos'])) ?></td>
                     <td class="col-acoes">

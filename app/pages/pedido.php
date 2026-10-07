@@ -10,6 +10,8 @@ $eh_admin = !empty($usuario['is_admin']);
 
 $id = (int) ($params[0] ?? 0);
 
+pagamento_cancelar_expirados();   // pedidos não pagos em 24h viram "cancelado"
+
 $stmt = db()->prepare('SELECT * FROM orders WHERE id = ? LIMIT 1');
 $stmt->execute([$id]);
 $pedido = $stmt->fetch();
@@ -48,7 +50,10 @@ if ($atual === false) {
     $atual = 0;
 }
 
-$pago = ($pedido['pagamento_status'] ?? '') === 'aprovado';
+$pago      = ($pedido['pagamento_status'] ?? '') === 'aprovado';
+$aguardando = $pedido['status'] === 'aguardando_pagamento';
+$cancelado  = $pedido['status'] === 'cancelado';
+$prazo      = $aguardando ? pagamento_prazo((int) $pedido['id']) : null;
 
 // Link de WhatsApp para combinar o pagamento (se configurado).
 $wpp = preg_replace('/\D+/', '', (string) cfg('whatsapp_numero', ''));
@@ -66,12 +71,18 @@ ob_start();
 <p class="data"><?= e(date('d/m/Y H:i', strtotime($pedido['criado_em']))) ?></p>
 
 <!-- Status -->
-<ul class="passos">
-    <?php foreach ($chaves as $i => $chave): ?>
-        <?php $classe = $i < $atual ? 'concluido' : ($i === $atual ? 'ativo' : ''); ?>
-        <li class="<?= $classe ?>"><?= e($passos[$chave]) ?></li>
-    <?php endforeach; ?>
-</ul>
+<?php if ($cancelado): ?>
+    <p class="pedido-aviso is-erro">Pedido cancelado: o pagamento não foi feito dentro do prazo.</p>
+<?php elseif ($aguardando): ?>
+    <p class="pedido-aviso">Aguardando pagamento. O pedido entra em produção assim que o pagamento for confirmado.</p>
+<?php else: ?>
+    <ul class="passos">
+        <?php foreach ($chaves as $i => $chave): ?>
+            <?php $classe = $i < $atual ? 'concluido' : ($i === $atual ? 'ativo' : ''); ?>
+            <li class="<?= $classe ?>"><?= e($passos[$chave]) ?></li>
+        <?php endforeach; ?>
+    </ul>
+<?php endif; ?>
 
 <!-- Itens -->
 <h2 class="mt-1">Itens</h2>
@@ -148,11 +159,29 @@ ob_start();
 
 <!-- Pagamento -->
 <h2 class="mt-1">Pagamento</h2>
+<?php $ps = (string) ($pedido['pagamento_status'] ?? ''); ?>
 <?php if ($pago): ?>
-    <p>Pagamento confirmado. 🎉</p>
+    <p>Pagamento confirmado<?= !empty($pedido['pagamento']) ? ' (' . e(pagamento_forma_rotulo($pedido['pagamento'])) . ')' : '' ?>. 🎉</p>
+<?php elseif ($cancelado): ?>
+    <p>Este pedido foi cancelado. Se quiser, é só fazer um novo pedido.</p>
+<?php elseif ($aguardando && mp_ativo()): ?>
+    <?php if ($ps === 'em_analise'): ?>
+        <p>Seu pagamento está <strong>em análise</strong> pelo Mercado Pago. Avisaremos aqui quando for confirmado.</p>
+    <?php else: ?>
+        <?php if ($ps === 'recusado'): ?>
+            <p>O pagamento foi <strong>recusado</strong>. Tente de novo com outro cartão ou com Pix.</p>
+        <?php else: ?>
+            <p>Falta pagar o pedido: <strong><?= e(money((int) $pedido['total_centavos'])) ?></strong>, com Pix ou cartão.</p>
+        <?php endif; ?>
+        <form method="post" action="<?= e(url('pagamento/pagar')) ?>" class="mt-1">
+            <?= csrf_input() ?>
+            <input type="hidden" name="pedido_id" value="<?= (int) $pedido['id'] ?>">
+            <button class="btn" type="submit">Pagar agora</button>
+        </form>
+        <p><small>Pague até <?= e($prazo->format('d/m') . ' às ' . $prazo->format('H:i')) ?>. Depois disso o pedido é cancelado.</small></p>
+    <?php endif; ?>
 <?php else: ?>
-    <p>Pagamento <strong>pendente</strong>. O pagamento online (Pix, cartão) será
-       adicionado em breve — por enquanto, combine com a gente para concluir.</p>
+    <p>Pagamento <strong>pendente</strong>. Combine com a gente pelo WhatsApp para concluir.</p>
     <?php if ($wpp_link !== ''): ?>
         <p class="mt-1"><a class="btn wpp" href="<?= e($wpp_link) ?>" target="_blank" rel="noopener">
             Combinar pagamento no WhatsApp</a></p>

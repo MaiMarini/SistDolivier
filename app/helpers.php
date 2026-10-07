@@ -9,6 +9,8 @@ require_once __DIR__ . '/lib/imagem.php';
 
 // Cálculo de frete por distância (valor final + distância plugável).
 require_once __DIR__ . '/lib/frete.php';
+require_once __DIR__ . '/lib/mercadopago.php';
+require_once __DIR__ . '/lib/pagamento.php';
 
 // =============================================================================
 // Acesso ao banco
@@ -172,14 +174,15 @@ function centavos_para_input(int $centavos): string
  * O nº de parcelas é o maior possível mantendo a parcela >= mínimo (e <= teto).
  * Abaixo do limite -> "à vista".
  */
-function parcelamento_texto(int $total_centavos): string
+/** Número máximo de parcelas para um total (1 = só à vista). Regras em Configurações. */
+function parcelamento_parcelas(int $total_centavos): int
 {
     $limite = (int) cfg('parcelamento_limite_centavos', 0);
     $minima = (int) cfg('parcela_minima_centavos', 0);
     $max    = (int) cfg('parcelamento_max', 0);
 
     if ($total_centavos <= 0 || $total_centavos < $limite) {
-        return 'à vista';
+        return 1;
     }
 
     // Parcelas: cada uma >= parcela mínima (se definida); senão, usa o teto.
@@ -191,6 +194,12 @@ function parcelamento_texto(int $total_centavos): string
     if ($max >= 2) {
         $parcelas = min($parcelas, $max); // aplica teto só quando >= 2
     }
+    return max(1, $parcelas);
+}
+
+function parcelamento_texto(int $total_centavos): string
+{
+    $parcelas = parcelamento_parcelas($total_centavos);
     if ($parcelas < 2) {
         return 'à vista';
     }
