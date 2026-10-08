@@ -2,9 +2,11 @@
 /**
  * Pagamento dos pedidos (Fase 3) — regras da loja em cima do Mercado Pago.
  *
- * Ciclo do pedido com pagamento online:
- *   aguardando_pagamento --(pago)--> realizado --> producao --> pronto --> finalizado
- *            \--(24h sem pagar)--> cancelado   (se o pagamento chegar depois, volta a "realizado")
+ * Ciclo do pedido com pagamento online (etapas em pedido_status.php):
+ *   aguardando_pagamento --(pago)--> realizado ("Novo") --> producao --> ...
+ *            \--(24h sem pagar)--> cancelado
+ *   Pagamento aprovado DEPOIS do cancelamento: o pedido continua cancelado e fica
+ *   com "estorno pendente" para a loja decidir (não reabre sozinho).
  *
  * orders.pagamento_status: pendente | em_analise | aprovado | recusado |
  *                          cancelado | estornado | expirado | divergente
@@ -12,20 +14,22 @@
 
 const PAGAMENTO_PRAZO_HORAS = 24;
 
-/** Rótulos do status do pedido (admin e cliente). */
+/** Rótulos genéricos dos status (filtros e listas do admin). */
 function pedido_status_rotulos(): array
 {
     return [
         'aguardando_pagamento' => 'Aguardando pagamento',
-        'realizado'  => 'Pedido realizado',
+        'realizado'  => 'Novo',
         'producao'   => 'Em produção',
-        'pronto'     => 'Pronto p/ entrega',
+        'embalagem'  => 'Embalagem',
+        'pronto'     => 'Pronto',
+        'em_rota'    => 'Em rota de entrega',
         'finalizado' => 'Finalizado',
         'cancelado'  => 'Cancelado',
     ];
 }
 
-/** Rótulos do status do pagamento. */
+/** Rótulos do status do pagamento. "cancelado" = a cliente desistiu no Mercado Pago. */
 function pagamento_status_rotulo(?string $s): string
 {
     $r = [
@@ -33,9 +37,9 @@ function pagamento_status_rotulo(?string $s): string
         'em_analise' => 'Em análise',
         'aprovado'   => 'Aprovado',
         'recusado'   => 'Recusado',
-        'cancelado'  => 'Cancelado',
+        'cancelado'  => 'Cancelado pela cliente',
         'estornado'  => 'Estornado',
-        'expirado'   => 'Expirado',
+        'expirado'   => 'Não pago',
         'divergente' => 'Valor divergente',
     ];
     return $r[$s ?? ''] ?? 'Pendente';
@@ -79,7 +83,8 @@ function pedido_situacao(array $p): array
     $s = ['rotulo' => '', 'classe' => 'st-analise', 'aviso' => '', 'acao' => null];
 
     if ($status === 'cancelado') {
-        return ['rotulo' => 'Cancelado', 'classe' => 'st-cancelado', 'aviso' => '', 'acao' => null];
+        $aviso = trim(pedido_cancelamento_texto($p) . ' ' . pedido_reembolso_texto($p));
+        return ['rotulo' => 'Cancelado', 'classe' => 'st-cancelado', 'aviso' => $aviso, 'acao' => null];
     }
     if ($status === 'aguardando_pagamento') {
         if (pagamento_aguardando_pix_boleto($p)) {
@@ -108,58 +113,52 @@ function pedido_situacao(array $p): array
         return ['rotulo' => 'Aguardando pagamento', 'classe' => 'st-pagar',
                 'aviso' => 'O preparo começa depois do pagamento.', 'acao' => mp_ativo() ? 'pagar' : null];
     }
-    switch ($status) {
-        case 'realizado':
-            $s['rotulo'] = $ps === 'aprovado' ? 'Pagamento aprovado' : 'Pedido recebido';
-            $s['classe'] = $ps === 'aprovado' ? 'st-producao' : 'st-analise';
-            break;
-        case 'producao':
-            $s['rotulo'] = 'Em produção';
-            $s['classe'] = 'st-producao';
-            break;
-        case 'pronto':
-            $s['rotulo'] = $motoboy ? 'Pronto para entrega' : 'Pronto para retirar';
-            $s['classe'] = 'st-producao';
-            break;
-        case 'finalizado':
-            $s['rotulo'] = $motoboy ? 'Entregue' : 'Retirado';
-            $s['classe'] = 'st-finalizado';
-            break;
-    }
+    // Etapas de produção: mesmos rótulos da linha do tempo da cliente.
+    $s['rotulo'] = ($status === 'realizado' && $ps !== 'aprovado')
+        ? 'Pedido recebido'
+        : pedido_status_rotulo($status, $motoboy ? 'motoboy' : 'retirada', 'cliente');
+    $s['classe'] = $status === 'finalizado' ? 'st-finalizado'
+        : (($status === 'realizado' && $ps !== 'aprovado') ? 'st-analise' : 'st-producao');
     return $s;
 }
 
 /**
- * Linha do tempo: Pedido recebido → Pagamento → Em produção → Pronto → Entregue.
- * $quando: datas por status vindas de order_status_history (status => 'Y-m-d H:i:s').
+ * Linha do tempo da cliente:
+ *   Pedido recebido → Pagamento → Em produção → Embalagem → Pronto para retirada → Retirado
+ *   Pedido recebido → Pagamento → Em produção → Embalagem → Pronto para entrega → Saiu para entrega → Entregue
+ * $quando: data da última vez em cada status (pedido_historico), status => 'Y-m-d H:i:s'.
  * Cada passo: [rotulo, texto, estado] com estado done | now | wait | todo | cancel.
  */
 function pedido_andamento(array $p, array $quando): array
 {
     $fmt = fn ($d) => $d ? date('d/m, H:i', strtotime($d)) : '';
     $status = (string) $p['status'];
-    $motoboy = ($p['entrega'] ?? '') === 'motoboy';
+    $entrega = ($p['entrega'] ?? '') === 'motoboy' ? 'motoboy' : 'retirada';
 
     if ($status === 'cancelado') {
         return [
             ['Pedido recebido', $fmt($p['criado_em']), 'done'],
-            ['Cancelado', 'Sem pagamento em ' . PAGAMENTO_PRAZO_HORAS . ' h', 'cancel'],
+            ['Cancelado', pedido_cancelamento_texto($p), 'cancel'],
         ];
     }
 
+    // Etapas de produção depois de "Pagamento" (sem "realizado", que é o próprio pagamento).
+    $etapas = array_values(array_filter(pedido_fluxo($entrega), fn ($e) => $e !== 'realizado'));
     // Pagamento confirmado: aprovado, ou pedido já em produção (pago combinando com a loja).
-    $pago = ($p['pagamento_status'] ?? '') === 'aprovado'
-        || in_array($status, ['producao', 'pronto', 'finalizado'], true);
-    $ordem = ['producao' => 2, 'pronto' => 3, 'finalizado' => 5];
-    $atual = $pago ? ($ordem[$status] ?? 2) : 1;   // 1 = Pagamento, 2 = Em produção...
+    $pago = ($p['pagamento_status'] ?? '') === 'aprovado' || in_array($status, $etapas, true);
+    if (!$pago) {
+        $atual = 1;                                            // Pagamento
+    } elseif ($status === 'realizado') {
+        $atual = 2;                                            // próxima: Em produção
+    } else {
+        $i = array_search($status, $etapas, true);
+        $atual = $status === 'finalizado' ? 99 : 2 + (int) $i; // finalizado: tudo concluído
+    }
 
-    $passos = [
-        ['Pedido recebido', $fmt($p['criado_em'])],
-        ['Pagamento', ''],
-        ['Em produção', $fmt($quando['producao'] ?? null)],
-        [$motoboy ? 'Pronto para entrega' : 'Pronto para retirar', $fmt($quando['pronto'] ?? null)],
-        [$motoboy ? 'Entregue' : 'Retirado', $fmt($quando['finalizado'] ?? null)],
-    ];
+    $passos = [['Pedido recebido', $fmt($p['criado_em'])], ['Pagamento', '']];
+    foreach ($etapas as $e) {
+        $passos[] = [pedido_status_rotulo($e, $entrega, 'cliente'), $fmt($quando[$e] ?? null)];
+    }
     $out = [];
     foreach ($passos as $i => [$rotulo, $texto]) {
         if ($i < $atual) {
@@ -203,11 +202,15 @@ function pedidos_complementos(array $ids): array
         $out['itens'][(int) $i['order_id']][] = $i;
     }
     // A data mais recente de cada status (se voltou a um status, vale a última vez).
-    $st = db()->prepare("SELECT order_id, status, MAX(criado_em) AS em FROM order_status_history
-                          WHERE order_id IN ($ph) GROUP BY order_id, status");
-    $st->execute($ids);
-    foreach ($st->fetchAll() as $h) {
-        $out['quando'][(int) $h['order_id']][$h['status']] = $h['em'];
+    try {
+        $st = db()->prepare("SELECT order_id, status_para AS status, MAX(criado_em) AS em FROM pedido_historico
+                              WHERE order_id IN ($ph) GROUP BY order_id, status_para");
+        $st->execute($ids);
+        foreach ($st->fetchAll() as $h) {
+            $out['quando'][(int) $h['order_id']][$h['status']] = $h['em'];
+        }
+    } catch (PDOException $e) {
+        // pedido_historico ainda não criada: a linha do tempo sai sem as datas das etapas.
     }
     return $out;
 }
@@ -217,7 +220,7 @@ function pedido_grupos(): array
 {
     return [
         'todos'      => ['Todos', 'Todos', '1 = 1'],
-        'andamento'  => ['Em andamento', 'Em andamento', "o.status IN ('aguardando_pagamento','realizado','producao','pronto')"],
+        'andamento'  => ['Em andamento', 'Em andamento', "o.status IN ('aguardando_pagamento','realizado','producao','embalagem','pronto','em_rota')"],
         'apagar'     => ['A pagar', 'Aguardando pagamento', "o.status = 'aguardando_pagamento'"],
         'concluidos' => ['Concluídos', 'Concluídos', "o.status = 'finalizado'"],
         'cancelados' => ['Cancelados', 'Cancelados', "o.status = 'cancelado'"],
@@ -360,11 +363,24 @@ function pagamento_aplicar(array $pg): int
             $pay_id, $novo, $pedido_id,
         ]);
 
-        // Pago: o pedido entra na fila de produção (também se tinha sido cancelado por prazo).
-        if ($novo === 'aprovado' && in_array($pedido['status'], ['aguardando_pagamento', 'cancelado'], true)) {
-            $pdo->prepare('UPDATE orders SET status = "realizado" WHERE id = ?')->execute([$pedido_id]);
-            $pdo->prepare('INSERT INTO order_status_history (order_id, status) VALUES (?, "realizado")')
+        if ($novo === 'aprovado' && $pedido['status'] === 'aguardando_pagamento') {
+            // Pago: o pedido entra na fila de produção ("Novo").
+            $pdo->prepare('UPDATE orders SET status = "realizado" WHERE id = ? AND status = "aguardando_pagamento"')
                 ->execute([$pedido_id]);
+            pedido_historico_gravar($pedido_id, 'aguardando_pagamento', 'realizado', 'sistema', null, 'Pagamento aprovado');
+        } elseif ($novo === 'aprovado' && $pedido['status'] === 'cancelado') {
+            // Pago DEPOIS de cancelado: não reabre. Fica "estorno pendente" para a loja decidir.
+            $pdo->prepare('UPDATE orders SET estorno_status = COALESCE(estorno_status, "pendente") WHERE id = ?')
+                ->execute([$pedido_id]);
+            pedido_historico_gravar($pedido_id, 'cancelado', 'cancelado', 'sistema', null,
+                'Pagamento aprovado depois do cancelamento: estorno pendente');
+        } elseif ($novo === 'estornado') {
+            // Estorno confirmado (pela loja ou pelo painel do Mercado Pago): só registra.
+            $pdo->prepare(
+                'UPDATE orders SET estorno_status = "aprovado", estorno_em = COALESCE(estorno_em, NOW()),
+                        estorno_valor_centavos = COALESCE(estorno_valor_centavos, ?)
+                  WHERE id = ?'
+            )->execute([$valor, $pedido_id]);
         }
         $pdo->commit();
     } catch (Throwable $e) {
@@ -435,12 +451,21 @@ function pagamento_resumo_admin(array $p): array
         $d = pagamento_prazo((int) $p['id']);
         $prazo = $d->format('d/m') . ' às ' . $d->format('H:i');
     }
+    if ($ps === 'aprovado' && $status === 'cancelado') {
+        $falhou = ($p['estorno_status'] ?? '') === 'falhou';
+        return ['texto' => 'Pedido cancelado com pagamento aprovado: a cliente ainda não recebeu o dinheiro de volta.'
+            . ($falhou ? ' O estorno automático falhou: estorne pelo painel do Mercado Pago em Atividade → venda → Devolver dinheiro.' : ''),
+            'alerta' => true];
+    }
     if ($ps === 'aprovado') {
         $quando = !empty($p['pago_em']) ? ' em ' . date('d/m/Y H:i', strtotime($p['pago_em'])) : '';
-        return ['texto' => 'Pago' . $quando . ' (' . pagamento_forma_rotulo($p['pagamento'] ?? null) . '). Pode produzir.', 'alerta' => false];
+        return ['texto' => 'Pago' . $quando . ' (' . pagamento_forma_rotulo($p['pagamento'] ?? null) . ').', 'alerta' => false];
+    }
+    if ($ps === 'estornado') {
+        return ['texto' => pedido_reembolso_texto($p) ?: 'Pagamento estornado.', 'alerta' => false];
     }
     if ($status === 'cancelado') {
-        return ['texto' => 'Cancelado automaticamente: sem pagamento em ' . PAGAMENTO_PRAZO_HORAS . ' h.', 'alerta' => false];
+        return ['texto' => pedido_cancelamento_texto($p), 'alerta' => false];
     }
     if ($status !== 'aguardando_pagamento') {
         return ['texto' => 'Pagamento combinado fora do site (pedido sem pagamento online registrado).', 'alerta' => false];
@@ -478,23 +503,27 @@ function pagamento_cancelar_expirados(): int
     }
     $feito = true;
 
+    // Só pedidos aguardando pagamento E sem pagamento aprovado (dupla trava).
     $ids = db()->query(
         'SELECT id FROM orders
           WHERE status = "aguardando_pagamento"
+            AND (pagamento_status IS NULL OR pagamento_status <> "aprovado")
             AND criado_em < NOW() - INTERVAL ' . PAGAMENTO_PRAZO_HORAS . ' HOUR'
     )->fetchAll(PDO::FETCH_COLUMN);
 
     $n = 0;
     foreach ($ids as $id) {
         $up = db()->prepare(
-            'UPDATE orders SET status = "cancelado",
-                    pagamento_status = IF(pagamento_status IN ("aprovado", "em_analise"), pagamento_status, "expirado")
-              WHERE id = ? AND status = "aguardando_pagamento"'
+            'UPDATE orders SET status = "cancelado", cancelado_por = "sistema",
+                    cancelamento_motivo = "Prazo de pagamento expirado", cancelado_em = NOW(),
+                    pagamento_status = IF(pagamento_status = "em_analise", pagamento_status, "expirado")
+              WHERE id = ? AND status = "aguardando_pagamento"
+                AND (pagamento_status IS NULL OR pagamento_status <> "aprovado")'
         );
         $up->execute([(int) $id]);
         if ($up->rowCount() > 0) {
-            db()->prepare('INSERT INTO order_status_history (order_id, status) VALUES (?, "cancelado")')
-                ->execute([(int) $id]);
+            pedido_historico_gravar((int) $id, 'aguardando_pagamento', 'cancelado', 'sistema', null,
+                'Prazo de pagamento expirado (' . PAGAMENTO_PRAZO_HORAS . ' h)');
             $n++;
         }
     }

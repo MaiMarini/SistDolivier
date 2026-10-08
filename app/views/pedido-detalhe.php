@@ -2,7 +2,7 @@
 /**
  * Detalhe de um pedido — usado em "Meus pedidos" (painel à direita) e em /pedido/{id}.
  * Espera: $pedido (linha de orders), $itens (order_items), $quando (status => data,
- * de order_status_history) e $voltar (bool: mostra "← Meus pedidos").
+ * de pedido_historico) e $voltar (bool: mostra "← Meus pedidos").
  * Quem inclui já conferiu que o pedido é da cliente logada.
  */
 $pid   = (int) $pedido['id'];
@@ -12,14 +12,22 @@ $total = money((int) $pedido['total_centavos']);
 $motoboy = $pedido['entrega'] === 'motoboy';
 $ps    = (string) ($pedido['pagamento_status'] ?? '');
 
-// Pagamento: forma + situação.
-if ($ps === 'aprovado') {
+// Pagamento: forma + situação (o cancelamento vem primeiro: um pedido pago pode ter sido cancelado).
+if ($pedido['status'] === 'cancelado') {
+    if ($ps === 'estornado' || in_array((string) ($pedido['estorno_status'] ?? ''), ['aprovado', 'approved'], true)) {
+        $pag_titulo = 'Reembolsado';
+        $pag_texto  = pedido_reembolso_texto($pedido);
+    } elseif ($ps === 'aprovado') {
+        $pag_titulo = pagamento_forma_rotulo($pedido['pagamento'] ?? null);
+        $pag_texto  = 'Pago. A loja vai devolver o valor.';
+    } else {
+        $pag_titulo = 'Não pago';
+        $pag_texto  = 'Nenhum valor foi cobrado.';
+    }
+} elseif ($ps === 'aprovado') {
     $pag_titulo = pagamento_forma_rotulo($pedido['pagamento'] ?? null);
     $pag_texto  = !empty($pedido['pago_em']) ? 'Aprovado em ' . date('d/m, H:i', strtotime($pedido['pago_em'])) : 'Aprovado';
-} elseif ($pedido['status'] === 'cancelado') {
-    $pag_titulo = 'Não pago';
-    $pag_texto  = 'Cancelado após ' . PAGAMENTO_PRAZO_HORAS . ' h sem pagamento';
-} elseif (in_array($pedido['status'], ['producao', 'pronto', 'finalizado'], true)) {
+} elseif (in_array($pedido['status'], ['producao', 'embalagem', 'pronto', 'em_rota', 'finalizado'], true)) {
     $pag_titulo = 'Confirmado';
     $pag_texto  = 'Combinado com a loja';
 } else {
@@ -52,7 +60,7 @@ $ico = fn ($d) => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" s
     </div>
 
     <?php if ($sit['aviso'] !== ''): ?>
-        <div class="mp-callout <?= $sit['classe'] === 'st-pagar' ? '' : 'is-neutro' ?>">
+        <div class="mp-callout <?= $sit['classe'] === 'st-pagar' ? '' : ($sit['classe'] === 'st-cancelado' ? 'is-cancelado' : 'is-neutro') ?>">
             <span><?= e($sit['aviso']) ?>
                 <?php if ($prazo && $sit['acao'] !== null): ?>
                     <small class="mp-prazo">Pague até <?= e($prazo->format('d/m') . ' às ' . $prazo->format('H:i')) ?>.</small>

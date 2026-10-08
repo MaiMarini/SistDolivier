@@ -174,8 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 (int) $l['produto']['preco_centavos'], (int) $l['qtd'],
             ]);
         }
-        $pdo->prepare('INSERT INTO order_status_history (order_id, status) VALUES (?, ?)')
-            ->execute([$order_id, $status_inicial]);
+        pedido_historico_gravar($order_id, null, $status_inicial, 'cliente', (int) $usuario['id'], 'Pedido feito no site');
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();

@@ -46,6 +46,8 @@ function mp_requisicao(string $metodo, string $caminho, ?array $corpo = null, ?s
     ]);
     if ($corpo !== null) {
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($corpo, JSON_UNESCAPED_UNICODE));
+    } elseif ($metodo === 'POST' || $metodo === 'PUT') {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, '');   // sem corpo (ex.: estorno total)
     }
     $resp = curl_exec($ch);
     $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -132,6 +134,43 @@ function mp_buscar_pagamento(string $payment_id): ?array
     }
     $r = mp_requisicao('GET', '/v1/payments/' . $payment_id);
     return ($r['http'] === 200 && is_array($r['json'])) ? $r['json'] : null;
+}
+
+/**
+ * Estorno TOTAL de um pagamento aprovado: POST /v1/payments/{id}/refunds sem corpo.
+ * A chave de idempotência "estorno-{pedido}" faz um clique repetido não estornar duas vezes.
+ * Devolve ['ok' => bool, 'id' => ?string, 'status' => ?string, 'valor_centavos' => ?int, 'erro' => ?string].
+ */
+function mp_estornar(array $pedido): array
+{
+    $pay = (string) ($pedido['mp_payment_id'] ?? '');
+    if (!preg_match('/^\d+$/', $pay)) {
+        return ['ok' => false, 'id' => null, 'status' => null, 'valor_centavos' => null,
+                'erro' => 'Pedido sem número de pagamento do Mercado Pago.'];
+    }
+    $r = mp_requisicao('POST', '/v1/payments/' . $pay . '/refunds', null, 'estorno-' . (int) $pedido['id']);
+    $j = $r['json'] ?? [];
+    if ($r['http'] >= 200 && $r['http'] < 300 && !empty($j['id'])) {
+        return [
+            'ok'             => true,
+            'id'             => (string) $j['id'],
+            'status'         => (string) ($j['status'] ?? 'approved'),
+            'valor_centavos' => isset($j['amount']) ? (int) round(((float) $j['amount']) * 100) : null,
+            'erro'           => null,
+        ];
+    }
+    return ['ok' => false, 'id' => null, 'status' => null, 'valor_centavos' => null,
+            'erro' => (string) ($j['message'] ?? ('HTTP ' . $r['http']))];
+}
+
+/** Cancela um pagamento ainda pendente (ex.: Pix gerado e não pago). */
+function mp_cancelar_pagamento(string $payment_id): bool
+{
+    if (!preg_match('/^\d+$/', $payment_id)) {
+        return false;
+    }
+    $r = mp_requisicao('PUT', '/v1/payments/' . $payment_id, ['status' => 'cancelled']);
+    return $r['http'] >= 200 && $r['http'] < 300;
 }
 
 /**

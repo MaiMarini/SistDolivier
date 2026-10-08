@@ -11,6 +11,7 @@ require_once __DIR__ . '/lib/imagem.php';
 require_once __DIR__ . '/lib/frete.php';
 require_once __DIR__ . '/lib/mercadopago.php';
 require_once __DIR__ . '/lib/pagamento.php';
+require_once __DIR__ . '/lib/pedido_status.php';
 
 // =============================================================================
 // Acesso ao banco

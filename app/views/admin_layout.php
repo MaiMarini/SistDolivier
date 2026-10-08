@@ -45,7 +45,7 @@ $menu = [
     <link rel="stylesheet" href="<?= e(asset('assets/css/theme.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset('assets/css/notificacoes.css')) ?>">
 </head>
-<body>
+<body<?= !empty($layout_largo) ? ' class="admin-largo"' : '' ?>>
 
 <header class="admin-topo">
     <div class="admin-topo-inner">
@@ -78,7 +78,15 @@ $menu = [
         $flash_sucesso = flash_consumir('sucesso');
         $flash_erro    = flash_consumir('erro');
         ?>
-        <h1><?= e($titulo) ?></h1>
+        <?php if (!empty($titulo_acoes)): ?>
+            <!-- Título com controles à direita (ex.: Lista | Quadro em Pedidos) -->
+            <div class="admin-titulo-linha">
+                <h1><?= e($titulo) ?></h1>
+                <?= $titulo_acoes ?>
+            </div>
+        <?php else: ?>
+            <h1><?= e($titulo) ?></h1>
+        <?php endif; ?>
         <?= $conteudo ?>
     </main>
 </div>
