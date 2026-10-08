@@ -53,8 +53,9 @@ $form = function (string $op, array $campos, string $rotulo, string $classe) use
             <span>Cancelado por: <?= e($por) ?>. Motivo: <?= e($p['cancelamento_motivo'] ?: '—') ?>.
                 O pagamento de <?= e($total) ?> continua aprovado.
                 <?php if (($p['estorno_status'] ?? '') === 'falhou'): ?>
-                    <br>O estorno automático falhou. Se tentar de novo e falhar, estorne pelo painel do
-                    Mercado Pago em Atividade → venda → Devolver dinheiro.
+                    <?php $erro_estorno = pedido_ultimo_erro_estorno($pid); ?>
+                    <br>O estorno automático falhou<?= $erro_estorno !== '' ? ': ' . e(pedido_estorno_erro_texto($erro_estorno)) : '.' ?>
+                    <br>Se tentar de novo e falhar, estorne pelo painel do Mercado Pago em Atividade → venda → Devolver dinheiro.
                 <?php endif; ?></span>
             <?= $form('estornar', [], 'Estornar ' . $total, 'ap-btn-perigo-cheio') ?>
         </div>

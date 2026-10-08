@@ -48,7 +48,8 @@ function pagamento_status_rotulo(?string $s): string
 /** Rótulo da forma de pagamento gravada em orders.pagamento. */
 function pagamento_forma_rotulo(?string $f): string
 {
-    $r = ['pix' => 'Pix', 'credito' => 'Cartão de crédito', 'debito' => 'Cartão de débito'];
+    $r = ['pix' => 'Pix', 'credito' => 'Cartão de crédito', 'debito' => 'Cartão de débito',
+          'boleto' => 'Boleto', 'account_money' => 'Saldo Mercado Pago', 'saldo' => 'Saldo Mercado Pago'];
     return $r[$f ?? ''] ?? ($f ? ucfirst($f) : '—');
 }
 
@@ -315,7 +316,7 @@ function pagamento_aplicar(array $pg): int
     $tipo  = (string) ($pg['payment_type_id'] ?? '');
     $forma = ($pg['payment_method_id'] ?? '') === 'pix' ? 'pix'
            : ($tipo === 'credit_card' ? 'credito' : ($tipo === 'debit_card' ? 'debito'
-           : ($tipo === 'ticket' ? 'boleto' : $tipo)));
+           : ($tipo === 'ticket' ? 'boleto' : ($tipo === 'account_money' ? 'saldo' : $tipo))));
     // Link do QR/código do Pix ou do boleto (só interessa enquanto está pendente).
     $ticket = (string) ($pg['point_of_interaction']['transaction_data']['ticket_url']
             ?? $pg['transaction_details']['external_resource_url'] ?? '');
