@@ -170,7 +170,7 @@ function mp_conferir_estorno(string $payment_id): array
         return $nao('Este pagamento não pertence à conta configurada.');
     }
     if ($r['http'] !== 200) {
-        return $nao((string) ($j['message'] ?? ('HTTP ' . $r['http'])));
+        return $nao('Consulta do pagamento: ' . mp_erro_detalhe($r));
     }
     $coletor = (string) ($j['collector_id'] ?? ($j['collector']['id'] ?? ''));
     $dono = mp_dono_token();
@@ -185,7 +185,8 @@ function mp_conferir_estorno(string $payment_id): array
     if ($status !== 'approved') {
         return $nao('O pagamento está com status "' . $status . '" no Mercado Pago; só pagamento aprovado pode ser estornado.');
     }
-    return ['ok' => true, 'erro' => null, 'estornado' => false, 'valor_centavos' => null];
+    return ['ok' => true, 'erro' => null, 'estornado' => false, 'valor_centavos' => null,
+            'pagador' => (string) ($j['payer']['email'] ?? '')];
 }
 
 /**
@@ -213,7 +214,23 @@ function mp_estornar(array $pedido, string $chave): array
         ];
     }
     return ['ok' => false, 'id' => null, 'status' => null, 'valor_centavos' => null,
-            'erro' => (string) ($j['message'] ?? ('HTTP ' . $r['http']))];
+            'erro' => mp_erro_detalhe($r)];
+}
+
+/** "message [HTTP 401 · error · causa]" de uma resposta de erro, para o histórico do pedido. */
+function mp_erro_detalhe(array $r): string
+{
+    $j = $r['json'] ?? [];
+    $extra = ['HTTP ' . $r['http']];
+    if (!empty($j['error']) && $j['error'] !== ($j['message'] ?? '')) {
+        $extra[] = (string) $j['error'];
+    }
+    foreach ((array) ($j['cause'] ?? []) as $c) {
+        if (is_array($c)) {
+            $extra[] = trim(($c['code'] ?? '') . ' ' . ($c['description'] ?? ''));
+        }
+    }
+    return mb_substr((string) ($j['message'] ?? 'sem mensagem') . ' [' . implode(' · ', array_filter($extra)) . ']', 0, 240);
 }
 
 /** Cancela um pagamento ainda pendente (ex.: Pix gerado e não pago). */

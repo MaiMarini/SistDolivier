@@ -251,7 +251,9 @@ function pedido_estornar(int $id, ?int $usuario): array
 
     $r = mp_estornar($p, $chave);
     if (!$r['ok']) {
-        return $falhou((string) $r['erro']);
+        // Quem pagou ajuda a achar a causa (ex.: comprador real numa venda de vendedor de teste).
+        $pagador = $c['pagador'] !== '' ? ' · comprador no MP: ' . $c['pagador'] : '';
+        return $falhou(mb_substr((string) $r['erro'] . $pagador, 0, 280));
     }
     $aprovado = in_array($r['status'], ['approved', 'aprovado'], true);
     db()->prepare(
