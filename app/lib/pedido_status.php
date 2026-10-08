@@ -175,7 +175,7 @@ function pedido_estorno_erro_texto(string $erro): string
 {
     $conhecidos = [
         'live credentials'  => 'As credenciais do Mercado Pago no servidor não podem estornar este pagamento '
-                             . '(pagamento de teste com credenciais da conta real, ou o contrário).',
+                             . '(credenciais de produção não ativadas na aplicação, ou pagamento de teste com credenciais da conta real).',
         'insufficient'      => 'Saldo insuficiente na conta do Mercado Pago para devolver o valor.',
         'not found'         => 'O Mercado Pago não encontrou este pagamento com as credenciais do servidor.',
         'already refunded'  => 'Este pagamento já foi estornado no Mercado Pago.',
@@ -217,12 +217,41 @@ function pedido_estornar(int $id, ?int $usuario): array
     if (in_array((string) $p['estorno_status'], ['aprovado', 'approved', 'in_process'], true)) {
         return ['ok' => true, 'mensagem' => 'O estorno deste pedido já foi feito.'];
     }
-    $r = mp_estornar($p);
-    if (!$r['ok']) {
+    $falhou = function (string $erro) use ($id, $p, $usuario): array {
         db()->prepare('UPDATE orders SET estorno_status = "falhou" WHERE id = ?')->execute([$id]);
-        pedido_historico_gravar($id, $p['status'], $p['status'], 'admin', $usuario, 'Estorno falhou: ' . $r['erro']);
-        return ['ok' => false, 'mensagem' => 'O Mercado Pago não fez o estorno: ' . pedido_estorno_erro_texto((string) $r['erro'])
+        pedido_historico_gravar($id, $p['status'], $p['status'], 'admin', $usuario, 'Estorno falhou: ' . $erro);
+        return ['ok' => false, 'mensagem' => 'O Mercado Pago não fez o estorno: ' . pedido_estorno_erro_texto($erro)
             . ' Estorne pelo painel do Mercado Pago em Atividade → venda → Devolver dinheiro.'];
+    };
+
+    // Antes de estornar: o pagamento é desta conta e ainda está aprovado?
+    $c = mp_conferir_estorno((string) ($p['mp_payment_id'] ?? ''));
+    if ($c['estornado']) {
+        // Já foi devolvido (ex.: pelo painel do Mercado Pago): só atualiza o pedido.
+        $valor = $c['valor_centavos'] ?? (int) $p['total_centavos'];
+        db()->prepare('UPDATE orders SET estorno_status = "aprovado", estorno_valor_centavos = ?,
+                              estorno_em = COALESCE(estorno_em, NOW()), pagamento_status = "estornado" WHERE id = ?')
+            ->execute([$valor, $id]);
+        pedido_historico_gravar($id, $p['status'], $p['status'], 'admin', $usuario,
+            'Estorno de ' . money($valor) . ' já constava no Mercado Pago');
+        return ['ok' => true, 'mensagem' => 'Este pagamento já estava estornado no Mercado Pago. Pedido atualizado.'];
+    }
+    if (!$c['ok']) {
+        return $falhou((string) $c['erro']);
+    }
+
+    // Chave de idempotência nova a cada tentativa: depois de uma falha, o Mercado Pago
+    // devolveria a mesma resposta guardada se a chave se repetisse.
+    try {
+        db()->prepare('UPDATE orders SET estorno_tentativa = LAST_INSERT_ID(estorno_tentativa + 1) WHERE id = ?')->execute([$id]);
+        $chave = 'estorno-' . $id . '-' . (int) db()->lastInsertId();
+    } catch (PDOException $e) {
+        $chave = 'estorno-' . $id . '-' . bin2hex(random_bytes(6));   // sem a migração da tentativa
+    }
+
+    $r = mp_estornar($p, $chave);
+    if (!$r['ok']) {
+        return $falhou((string) $r['erro']);
     }
     $aprovado = in_array($r['status'], ['approved', 'aprovado'], true);
     db()->prepare(

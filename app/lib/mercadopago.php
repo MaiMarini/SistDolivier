@@ -55,9 +55,13 @@ function mp_requisicao(string $metodo, string $caminho, ?array $corpo = null, ?s
 
     $json = is_string($resp) ? json_decode($resp, true) : null;
     if ($http < 200 || $http >= 300) {
-        // Sem token nem dados do cliente no log: só o código e a mensagem da API.
-        error_log('mercadopago: ' . $metodo . ' ' . $caminho . ' -> HTTP ' . $http
-            . (is_array($json) && isset($json['message']) ? ' (' . $json['message'] . ')' : ''));
+        // Corpo do erro (status, message, error, cause). O token só vai no cabeçalho
+        // da requisição, nunca aparece aqui.
+        $det = is_array($json)
+            ? array_intersect_key($json, array_flip(['status', 'message', 'error', 'cause']))
+            : (is_string($resp) ? mb_substr($resp, 0, 500) : 'sem resposta');
+        error_log('mercadopago: ' . $metodo . ' ' . $caminho . ' -> HTTP ' . $http . ' '
+            . mb_substr(is_array($det) ? json_encode($det, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : $det, 0, 1500));
     }
     return ['http' => $http, 'json' => is_array($json) ? $json : null];
 }
@@ -136,19 +140,68 @@ function mp_buscar_pagamento(string $payment_id): ?array
     return ($r['http'] === 200 && is_array($r['json'])) ? $r['json'] : null;
 }
 
+/** Id da conta dona do access token (GET /users/me; reserva: o fim do token). null se não souber. */
+function mp_dono_token(): ?string
+{
+    static $dono = false;
+    if ($dono === false) {
+        $r = mp_requisicao('GET', '/users/me');
+        $dono = isset($r['json']['id']) ? (string) $r['json']['id'] : null;
+        if ($dono === null && preg_match('/-(\d+)$/', mp_token(), $m)) {
+            $dono = $m[1];   // APP_USR-{app}-{data}-{hash}-{id da conta}
+        }
+    }
+    return $dono;
+}
+
+/**
+ * Confere, antes de estornar, se o pagamento é da conta do token e está aprovado.
+ * Devolve ['ok' => bool, 'erro' => ?string, 'estornado' => bool, 'valor_centavos' => ?int].
+ */
+function mp_conferir_estorno(string $payment_id): array
+{
+    $nao = fn (string $erro) => ['ok' => false, 'erro' => $erro, 'estornado' => false, 'valor_centavos' => null];
+    if (!preg_match('/^\d+$/', $payment_id)) {
+        return $nao('Pedido sem número de pagamento do Mercado Pago.');
+    }
+    $r = mp_requisicao('GET', '/v1/payments/' . $payment_id);
+    $j = $r['json'] ?? [];
+    if ($r['http'] === 404) {
+        return $nao('Este pagamento não pertence à conta configurada.');
+    }
+    if ($r['http'] !== 200) {
+        return $nao((string) ($j['message'] ?? ('HTTP ' . $r['http'])));
+    }
+    $coletor = (string) ($j['collector_id'] ?? ($j['collector']['id'] ?? ''));
+    $dono = mp_dono_token();
+    if ($coletor === '' || $dono === null || $coletor !== $dono) {
+        return $nao('Este pagamento não pertence à conta configurada.');
+    }
+    $status = (string) ($j['status'] ?? '');
+    if (in_array($status, ['refunded', 'charged_back'], true)) {
+        $valor = isset($j['transaction_amount_refunded']) ? (int) round(((float) $j['transaction_amount_refunded']) * 100) : null;
+        return ['ok' => false, 'erro' => null, 'estornado' => true, 'valor_centavos' => $valor ?: null];
+    }
+    if ($status !== 'approved') {
+        return $nao('O pagamento está com status "' . $status . '" no Mercado Pago; só pagamento aprovado pode ser estornado.');
+    }
+    return ['ok' => true, 'erro' => null, 'estornado' => false, 'valor_centavos' => null];
+}
+
 /**
  * Estorno TOTAL de um pagamento aprovado: POST /v1/payments/{id}/refunds sem corpo.
- * A chave de idempotência "estorno-{pedido}" faz um clique repetido não estornar duas vezes.
+ * $chave: idempotência da tentativa ("estorno-{pedido}-{tentativa}"). Cada clique em
+ * "Estornar" usa uma nova; com a mesma chave o Mercado Pago devolve a resposta guardada.
  * Devolve ['ok' => bool, 'id' => ?string, 'status' => ?string, 'valor_centavos' => ?int, 'erro' => ?string].
  */
-function mp_estornar(array $pedido): array
+function mp_estornar(array $pedido, string $chave): array
 {
     $pay = (string) ($pedido['mp_payment_id'] ?? '');
     if (!preg_match('/^\d+$/', $pay)) {
         return ['ok' => false, 'id' => null, 'status' => null, 'valor_centavos' => null,
                 'erro' => 'Pedido sem número de pagamento do Mercado Pago.'];
     }
-    $r = mp_requisicao('POST', '/v1/payments/' . $pay . '/refunds', null, 'estorno-' . (int) $pedido['id']);
+    $r = mp_requisicao('POST', '/v1/payments/' . $pay . '/refunds', null, $chave);
     $j = $r['json'] ?? [];
     if ($r['http'] >= 200 && $r['http'] < 300 && !empty($j['id'])) {
         return [
