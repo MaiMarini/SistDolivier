@@ -23,7 +23,7 @@ function _carrinho_montar(): array
         $stmt = db()->prepare(
             "SELECT id, slug, nome, preco_centavos, imagem
                FROM products
-              WHERE id IN ($marcadores) AND ativo = 1"
+              WHERE id IN ($marcadores) AND ativo = 1 AND preco_centavos > 0"
         );
         $stmt->execute($ids);
         $por_id = [];
@@ -116,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($itens)) {
                 $ids = array_keys($itens);
                 $ph = implode(',', array_fill(0, count($ids), '?'));
-                $st = db()->prepare("SELECT id, preco_centavos FROM products WHERE id IN ($ph) AND ativo = 1");
+                $st = db()->prepare("SELECT id, preco_centavos FROM products WHERE id IN ($ph) AND ativo = 1 AND preco_centavos > 0");
                 $st->execute($ids);
                 $preco = [];
                 foreach ($st->fetchAll() as $r) {
@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'SELECT i.product_id, i.quantidade, p.id AS ativo
                FROM orders o
                JOIN order_items i ON i.order_id = o.id
-               LEFT JOIN products p ON p.id = i.product_id AND p.ativo = 1
+               LEFT JOIN products p ON p.id = i.product_id AND p.ativo = 1 AND p.preco_centavos > 0
               WHERE o.id = ? AND o.user_id = ?'
         );
         $st->execute([$pid, $u ? (int) $u['id'] : 0]);
@@ -194,10 +194,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $qtd = (int) ($_POST['quantidade'] ?? 1);
         $ok = false;
         if ($pid > 0) {
-            $stmt = db()->prepare('SELECT nome FROM products WHERE id = ? AND ativo = 1 LIMIT 1');
+            // Sem preço ("Sob consulta") não entra no carrinho: é combinado pelo WhatsApp.
+            $stmt = db()->prepare('SELECT preco_centavos FROM products WHERE id = ? AND ativo = 1 LIMIT 1');
             $stmt->execute([$pid]);
-            if ($stmt->fetchColumn() === false) {
+            $preco_p = $stmt->fetchColumn();
+            if ($preco_p === false) {
                 $msg = 'Este produto não está mais disponível.';
+            } elseif ((int) $preco_p <= 0) {
+                $msg = 'Este produto é sob consulta: fale com a loja pelo WhatsApp.';
             } else {
                 carrinho_adicionar($pid, $qtd);
                 $ok = true;

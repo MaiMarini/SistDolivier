@@ -20,7 +20,7 @@ function _checkout_carrinho(): array
         $ids = array_keys($itens);
         $ph = implode(',', array_fill(0, count($ids), '?'));
         $st = db()->prepare(
-            "SELECT id, slug, nome, preco_centavos, imagem FROM products WHERE id IN ($ph) AND ativo = 1"
+            "SELECT id, slug, nome, preco_centavos, imagem FROM products WHERE id IN ($ph) AND ativo = 1 AND preco_centavos > 0"
         );
         $st->execute($ids);
         $por_id = [];

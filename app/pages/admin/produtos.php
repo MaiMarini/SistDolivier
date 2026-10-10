@@ -1,15 +1,14 @@
 <?php
 /**
- * Admin: gerenciamento de produtos + galeria de imagens. Rotas:
- *   /admin/produtos               -> listar
- *   /admin/produtos/novo          -> form de criação
- *   /admin/produtos/editar/{id}   -> form de edição + galeria
- *   POST op=salvar                -> cria/atualiza (preço em reais -> centavos)
- *   POST op=excluir               -> exclui produto (+ imagens: arquivos e registros)
- *   POST op=img_adicionar         -> upload de várias imagens (otimizadas)
- *   POST op=img_salvar_ordem      -> atualiza a ordem de uma imagem
- *   POST op=img_capa              -> define a capa (products.imagem)
- *   POST op=img_remover           -> remove uma imagem (arquivo + registro)
+ * Admin: gerenciamento de produtos. Rotas:
+ *   /admin/produtos               -> listar (por categoria)
+ *   /admin/produtos/novo          -> formulário (mesmo do editar; view admin-produto-form)
+ *   /admin/produtos/editar/{id}   -> formulário
+ *   /admin/produtos/tabelas       -> tabelas nutricionais em JSON (recarregar a lista no formulário)
+ *   POST op=foto_enviar           -> envia uma foto na hora (fica temporária até salvar; JSON)
+ *   POST op=salvar                -> cria/atualiza tudo numa transação (fetch: JSON; sem JS: redirect)
+ *   POST op=nome_existe           -> há outro produto com este nome? (JSON)
+ *   POST op=excluir               -> exclui produto (+ fotos, ligações e arquivos sem uso)
  *   Listagem (fetch, JSON; exigem CSRF):
  *   POST op=lista_preco           -> altera o preço (reais -> centavos)
  *   POST op=lista_ativo           -> mostra/oculta na loja
@@ -137,75 +136,72 @@ function _produto_linha_html(array $p, array $ctx): string
     return ob_get_clean();
 }
 
-/** Busca uma imagem garantindo que pertence ao produto. */
-function _produto_imagem(int $imagem_id, int $produto_id): ?array
+/** Marca a "última alteração" do produto (sem a coluna — migração não rodada —, ignora). */
+function _produto_tocar(int $id): void
 {
-    $stmt = db()->prepare(
-        'SELECT id, product_id, arquivo FROM product_images WHERE id = ? AND product_id = ? LIMIT 1'
-    );
-    $stmt->execute([$imagem_id, $produto_id]);
-    $img = $stmt->fetch();
-    return $img ?: null;
+    try {
+        db()->prepare('UPDATE products SET atualizado_em = NOW() WHERE id = ?')->execute([$id]);
+    } catch (PDOException $e) {
+        if ($e->getCode() !== '42S22') { throw $e; }
+    }
 }
 
-/**
- * Processa os arquivos enviados em $_FILES['imagens'] para um produto: otimiza
- * (GD), grava em product_images (na ordem seguinte à existente) e define a capa
- * (products.imagem) se ainda não houver. Usado tanto na criação quanto na galeria.
- * Retorna ['adicionadas' => int, 'erros' => string[]].
- */
-function _produto_processar_imagens(int $pid): array
+/** "agora mesmo", "há 5 min", "há 3 h", "ontem", "há 4 dias" ou "em 02/09/2026". */
+function _produto_quando(int $segundos, string $data): string
 {
-    $enviados = $_FILES['imagens'] ?? null;
-    if (!is_array($enviados) || !isset($enviados['name']) || !is_array($enviados['name'])) {
-        return ['adicionadas' => 0, 'erros' => []];
+    if ($segundos < 60) { return 'agora mesmo'; }
+    if ($segundos < 3600) { return 'há ' . intdiv($segundos, 60) . ' min'; }
+    if ($segundos < 86400) { return 'há ' . intdiv($segundos, 3600) . ' h'; }
+    if ($segundos < 2 * 86400) { return 'ontem'; }
+    if ($segundos < 30 * 86400) { return 'há ' . intdiv($segundos, 86400) . ' dias'; }
+    return 'em ' . date('d/m/Y', strtotime($data));
+}
+
+/** Novo token de rascunho do formulário (fotos enviadas antes de salvar), guardado na sessão. */
+function _produto_rascunho_novo(): string
+{
+    $agora = time();
+    $lista = array_filter((array) ($_SESSION['prod_rascunhos'] ?? []), fn ($t) => $t > $agora - 86400);
+    $token = bin2hex(random_bytes(16));
+    $lista[$token] = $agora;
+    $_SESSION['prod_rascunhos'] = array_slice($lista, -30, null, true);
+    return $token;
+}
+
+function _produto_rascunho_valido(string $token): bool
+{
+    return preg_match('/^[a-f0-9]{32}$/', $token) === 1 && isset($_SESSION['prod_rascunhos'][$token]);
+}
+
+/** Apaga as fotos temporárias abandonadas há mais de 24 h (registros e arquivos). */
+function _produto_limpar_temporarias(): void
+{
+    try {
+        $velhas = db()->query('SELECT id, arquivo FROM product_upload_temp WHERE criado_em < NOW() - INTERVAL 24 HOUR')->fetchAll();
+    } catch (PDOException $e) {
+        return;
     }
-
-    $stmt = db()->prepare('SELECT COALESCE(MAX(ordem), 0) FROM product_images WHERE product_id = ?');
-    $stmt->execute([$pid]);
-    $ordem = (int) $stmt->fetchColumn();
-
-    $adicionadas = 0;
-    $erros = [];
-    $primeira_nova = null;
-
-    $total = count($enviados['name']);
-    for ($i = 0; $i < $total; $i++) {
-        if (($enviados['error'][$i] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-            continue; // campo vazio
-        }
-        $arquivo = [
-            'name' => $enviados['name'][$i],
-            'type' => $enviados['type'][$i] ?? '',
-            'tmp_name' => $enviados['tmp_name'][$i] ?? '',
-            'error' => $enviados['error'][$i] ?? UPLOAD_ERR_NO_FILE,
-            'size' => $enviados['size'][$i] ?? 0,
-        ];
-        $res = processar_upload_imagem($arquivo);
-        if (!empty($res['ok'])) {
-            $ordem++;
-            db()->prepare('INSERT INTO product_images (product_id, arquivo, ordem) VALUES (?, ?, ?)')
-                ->execute([$pid, $res['arquivo'], $ordem]);
-            $adicionadas++;
-            if ($primeira_nova === null) {
-                $primeira_nova = $res['arquivo'];
-            }
-        } else {
-            $erros[] = $res['erro'] ?? 'Falha em uma imagem.';
-        }
-    }
-
-    // Define a capa com a primeira imagem enviada, se ainda não houver.
-    if ($primeira_nova !== null) {
-        $st = db()->prepare('SELECT imagem FROM products WHERE id = ?');
-        $st->execute([$pid]);
-        if (!$st->fetchColumn()) {
-            db()->prepare('UPDATE products SET imagem = ? WHERE id = ?')
-                ->execute([$primeira_nova, $pid]);
+    $del = db()->prepare('DELETE FROM product_upload_temp WHERE id = ?');
+    foreach ($velhas as $t) {
+        $del->execute([(int) $t['id']]);
+        if (!_produto_arquivo_em_uso($t['arquivo'])) {
+            imagem_apagar($t['arquivo']);
         }
     }
+}
 
-    return ['adicionadas' => $adicionadas, 'erros' => $erros];
+/** URL da miniatura de um arquivo de upload. */
+function _produto_thumb_url(string $arquivo): string
+{
+    return url('assets/uploads/' . imagem_miniatura($arquivo));
+}
+
+/** Fotos do produto para o formulário: [{chave: "e:ID", url}] na ordem (capa primeiro). */
+function _produto_fotos_form(int $pid): array
+{
+    $st = db()->prepare('SELECT id, arquivo FROM product_images WHERE product_id = ? ORDER BY ordem ASC, id ASC');
+    $st->execute([$pid]);
+    return array_map(fn ($i) => ['chave' => 'e:' . (int) $i['id'], 'url' => _produto_thumb_url($i['arquivo'])], $st->fetchAll());
 }
 
 /**
@@ -266,6 +262,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 return;
             }
             db()->prepare('UPDATE products SET preco_centavos = ? WHERE id = ?')->execute([$centavos, $id]);
+            _produto_tocar($id);
             $responder(200, ['ok' => true, 'centavos' => $centavos, 'valor' => centavos_para_input($centavos), 'texto' => money($centavos)]);
             return;
         }
@@ -277,6 +274,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 return;
             }
             db()->prepare('UPDATE products SET ativo = ? WHERE id = ?')->execute([$ativo, $id]);
+            _produto_tocar($id);
             $responder(200, ['ok' => true, 'ativo' => $ativo]);
             return;
         }
@@ -315,7 +313,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // lista_duplicar: cópia oculta logo abaixo, com tabelas nutricionais e fotos (arquivos copiados).
         $nome = mb_substr($prod['nome'] . ' (cópia)', 0, 150);
         $slug = slug_unico('products', gerar_slug($nome));
-        $fixas = ['id', 'slug', 'nome', 'ativo', 'ordem', 'imagem', 'criado_em'];
+        $fixas = ['id', 'slug', 'nome', 'ativo', 'ordem', 'imagem', 'criado_em', 'atualizado_em'];
         $colunas = array_values(array_diff(
             db()->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS
                           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND EXTRA NOT LIKE '%GENERATED%'
@@ -388,51 +386,261 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         return;
     }
 
-    // ------------------------------------------- REORDENAR IMAGENS (AJAX/JSON)
-    // Renumera a ordem de TODAS as imagens do produto (1..N) e define a capa
-    // (products.imagem) como o arquivo da PRIMEIRA. Tudo numa transação.
-    if ($op === 'img_reordenar') {
+    // ------------------------------------------- FOTO NOVA (fetch/JSON, envio na hora)
+    // Fica em product_upload_temp, presa ao token de rascunho do formulário, até salvar.
+    if ($op === 'foto_enviar') {
         header('Content-Type: application/json; charset=utf-8');
+        $falha = function (int $http, string $msg): void {
+            http_response_code($http);
+            echo json_encode(['ok' => false, 'mensagem' => $msg], JSON_UNESCAPED_UNICODE);
+        };
         if (!csrf_validar()) {
-            echo json_encode(['ok' => false, 'erro' => 'csrf']);
+            $falha(403, 'Sua sessão expirou. Recarregue a página.');
             return;
         }
-        $pid = (int) ($_POST['produto_id'] ?? 0);
-        $ids = $_POST['ids'] ?? [];
-        if (!is_array($ids)) {
-            $ids = [];
+        $token = (string) ($_POST['rascunho'] ?? '');
+        if (!_produto_rascunho_valido($token)) {
+            $falha(422, 'Formulário expirado. Recarregue a página.');
+            return;
         }
-        $ids = array_values(array_filter(array_map('intval', $ids), static function ($v) {
-            return $v > 0;
-        }));
-
-        if ($pid > 0 && !empty($ids)) {
-            $pdo = db();
-            $pdo->beginTransaction();
-            try {
-                $up = $pdo->prepare('UPDATE product_images SET ordem = ? WHERE id = ? AND product_id = ?');
-                $sel = $pdo->prepare('SELECT arquivo FROM product_images WHERE id = ? AND product_id = ? LIMIT 1');
-                $pos = 1;
-                $capa = null;
-                foreach ($ids as $iid) {
-                    $up->execute([$pos, $iid, $pid]);
-                    if ($pos === 1) {
-                        $sel->execute([$iid, $pid]);
-                        $capa = $sel->fetchColumn();
-                    }
-                    $pos++;
-                }
-                if ($capa !== null && $capa !== false) {
-                    $pdo->prepare('UPDATE products SET imagem = ? WHERE id = ?')->execute([$capa, $pid]);
-                }
-                $pdo->commit();
-            } catch (Throwable $e) {
-                $pdo->rollBack();
-                echo json_encode(['ok' => false, 'erro' => 'db']);
+        _produto_limpar_temporarias();
+        $arq = $_FILES['foto'] ?? null;
+        if (!is_array($arq) || is_array($arq['error'] ?? null)) {
+            $falha(422, 'Envio de arquivo inválido.');
+            return;
+        }
+        // Tipo real pelo conteúdo (assinatura), não pela extensão nem pelo tipo informado.
+        if (($arq['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK && is_uploaded_file($arq['tmp_name'])) {
+            $mime = function_exists('finfo_open') ? (string) finfo_file(finfo_open(FILEINFO_MIME_TYPE), $arq['tmp_name']) : '';
+            if ($mime !== '' && !in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+                $falha(422, 'Formato não suportado. Use JPG, PNG ou WebP.');
                 return;
             }
         }
-        echo json_encode(['ok' => true]);
+        try {
+            $st = db()->prepare('SELECT COUNT(*) FROM product_upload_temp WHERE token = ?');
+            $st->execute([$token]);
+            if ((int) $st->fetchColumn() >= 20) {   // folga para trocas; o limite de 8 vale ao salvar
+                $falha(422, 'Muitas fotos enviadas neste formulário. Salve ou recarregue a página.');
+                return;
+            }
+        } catch (PDOException $e) {
+            $falha(500, 'Falta rodar a migração do editor de produto (migracao_produto_editor.sql).');
+            return;
+        }
+        $res = processar_upload_imagem($arq);   // otimiza (GD) e gera o nome no servidor
+        if (empty($res['ok'])) {
+            $falha(422, $res['erro'] ?? 'Não foi possível enviar a foto.');
+            return;
+        }
+        db()->prepare('INSERT INTO product_upload_temp (token, arquivo) VALUES (?, ?)')->execute([$token, $res['arquivo']]);
+        echo json_encode(['ok' => true, 'chave' => 't:' . (int) db()->lastInsertId(), 'url' => _produto_thumb_url($res['arquivo'])]);
+        return;
+    }
+
+    // ------------------------------------------------------------------ SALVAR
+    // Tudo de uma vez, numa transação: campos, chaves, fotos (ordem, novas e
+    // removidas) e tabelas nutricionais. Com fetch responde JSON; sem JS, redireciona.
+    if ($op === 'salvar') {
+        $ajax = ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== '';
+        $id = (int) ($_POST['id'] ?? 0);
+        $voltar_form = $id > 0 ? 'admin/produtos/editar/' . $id : 'admin/produtos/novo';
+        $responder = function (int $http, array $dados) use ($ajax, $voltar_form): void {
+            if (!$ajax) {
+                if (empty($dados['ok'])) {
+                    flash('erro', $dados['mensagem'] ?? implode(' ', (array) ($dados['erros'] ?? [])));
+                    redirect($voltar_form);
+                }
+                flash('sucesso', $dados['mensagem'] ?? 'Produto salvo.');
+                redirect($dados['ir'] ?? $voltar_form);
+            }
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code($http);
+            echo json_encode($dados, JSON_UNESCAPED_UNICODE);
+        };
+        if (!csrf_validar()) {
+            $responder(403, ['ok' => false, 'mensagem' => 'Sua sessão expirou. Recarregue a página e tente de novo.']);
+            return;
+        }
+        $antes = null;
+        if ($id > 0) {
+            $st = db()->prepare('SELECT * FROM products WHERE id = ?');
+            $st->execute([$id]);
+            $antes = $st->fetch();
+            if (!$antes) {
+                $responder(404, ['ok' => false, 'mensagem' => 'Produto não encontrado.']);
+                return;
+            }
+        }
+        $token = (string) ($_POST['rascunho'] ?? '');
+        $token_ok = _produto_rascunho_valido($token);
+
+        $nome     = trim((string) ($_POST['nome'] ?? ''));
+        $slug_txt = trim((string) ($_POST['slug'] ?? ''));
+        $cat_txt  = (string) ($_POST['category_id'] ?? '');
+        $preco_tx = trim((string) ($_POST['preco'] ?? ''));
+        $dias_tx  = trim((string) ($_POST['dias_producao'] ?? ''));
+        $descricao = str_replace("\r\n", "\n", trim((string) ($_POST['descricao'] ?? '')));
+        $regras    = str_replace("\r\n", "\n", trim((string) ($_POST['regras_produto'] ?? '')));
+        $ativo     = ($_POST['ativo'] ?? '') === '1' ? 1 : 0;
+        $destaque  = ($_POST['destaque'] ?? '') === '1' ? 1 : 0;
+        $pers      = ($_POST['permite_personalizacao'] ?? '') === '1' ? 1 : 0;
+
+        $erros = [];
+        if (mb_strlen($nome) < 2) {
+            $erros['nome'] = 'Informe o nome do produto.';
+        } elseif (mb_strlen($nome) > 150) {
+            $erros['nome'] = 'Use no máximo 150 caracteres.';
+        }
+        $category_id = ctype_digit($cat_txt) ? (int) $cat_txt : 0;
+        if ($category_id > 0) {
+            $st = db()->prepare('SELECT 1 FROM categories WHERE id = ?');
+            $st->execute([$category_id]);
+            if (!$st->fetchColumn()) { $category_id = 0; }
+        }
+        if ($category_id <= 0) {
+            $erros['category_id'] = 'Escolha a categoria.';
+        }
+        $preco = 0;
+        if ($preco_tx === '') {
+            if (!$pers) { $erros['preco'] = 'Informe o preço (ou ligue “Aceita personalização”).'; }
+        } else {
+            $valido = preg_match('/^(\d{1,3}(\.\d{3})+|\d+)(,\d{1,2})?$|^\d+\.\d{1,2}$/', $preco_tx) === 1;
+            $preco = $valido ? reais_para_centavos($preco_tx) : 0;
+            if ($preco <= 0 || $preco > 99999999) {
+                $erros['preco'] = 'Preço inválido. Use, por exemplo, 35,90.';
+            }
+        }
+        if ($dias_tx !== '' && !preg_match('/^\d{1,4}$/', $dias_tx)) {
+            $erros['dias_producao'] = 'Use um número inteiro de dias (0 ou mais).';
+        }
+        $dias = (int) $dias_tx;
+        if (mb_strlen($descricao) > 1200) { $erros['descricao'] = 'Use no máximo 1200 caracteres.'; }
+        if (mb_strlen($regras) > 600) { $erros['regras_produto'] = 'Use no máximo 600 caracteres.'; }
+
+        // Fotos na ordem da grade: "e:ID" (já do produto) ou "t:ID" (temporária deste rascunho).
+        $fotos_in = array_values(array_unique(array_filter((array) ($_POST['fotos'] ?? []), fn ($c) => is_string($c) && preg_match('/^[et]:\d+$/', $c))));
+        if (count($fotos_in) > 8) { $erros['fotos'] = 'Use no máximo 8 fotos.'; }
+        $tabelas_in = array_values(array_unique(array_filter(array_map('intval', (array) ($_POST['tabelas'] ?? [])), fn ($v) => $v > 0)));
+
+        if ($erros) {
+            $responder(422, ['ok' => false, 'erros' => $erros, 'mensagem' => 'Confira os campos destacados.']);
+            return;
+        }
+
+        // Endereço: normaliza e, se já existir em outro produto, usa -2, -3…
+        $base = mb_substr(gerar_slug($slug_txt !== '' ? $slug_txt : $nome), 0, 140) ?: 'produto';
+        $slug = slug_unico('products', rtrim($base, '-'), $id > 0 ? $id : null);
+        $aviso_slug = $slug !== $base ? 'O endereço “' . $base . '” já era de outro produto; este ficou em “' . $slug . '”.' : null;
+
+        $pdo = db();
+        $removidos = [];
+        $pdo->beginTransaction();
+        try {
+            if ($antes) {
+                $cat_antes = $antes['category_id'] === null ? null : (int) $antes['category_id'];
+                if ($cat_antes !== $category_id) {
+                    $pdo->prepare('UPDATE products SET ordem = ? WHERE id = ?')->execute([_produto_proxima_ordem($category_id), $id]);
+                }
+                $pdo->prepare(
+                    'UPDATE products
+                        SET nome = ?, slug = ?, descricao = ?, regras_produto = ?, preco_centavos = ?, category_id = ?,
+                            dias_producao = ?, destaque = ?, permite_personalizacao = ?, ativo = ?
+                      WHERE id = ?'
+                )->execute([$nome, $slug, $descricao !== '' ? $descricao : null, $regras !== '' ? $regras : null,
+                    $preco, $category_id, $dias, $destaque, $pers, $ativo, $id]);
+            } else {
+                $pdo->prepare(
+                    'INSERT INTO products (slug, nome, descricao, regras_produto, preco_centavos, category_id, ordem,
+                                           dias_producao, destaque, permite_personalizacao, ativo)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                )->execute([$slug, $nome, $descricao !== '' ? $descricao : null, $regras !== '' ? $regras : null,
+                    $preco, $category_id, _produto_proxima_ordem($category_id), $dias, $destaque, $pers, $ativo]);
+                $id = (int) $pdo->lastInsertId();
+            }
+            _produto_tocar($id);
+
+            try {
+                _produto_salvar_tabelas($id, $tabelas_in);
+            } catch (PDOException $e) {
+                if ($e->getCode() !== '42S02') { throw $e; }
+            }
+
+            // Fotos: mantém/reordena as do produto, liga as temporárias, apaga as que saíram.
+            $st = $pdo->prepare('SELECT id, arquivo FROM product_images WHERE product_id = ? FOR UPDATE');
+            $st->execute([$id]);
+            $atuais = $st->fetchAll(PDO::FETCH_KEY_PAIR);   // id => arquivo
+            $up_ordem = $pdo->prepare('UPDATE product_images SET ordem = ? WHERE id = ? AND product_id = ?');
+            $ins_img = $pdo->prepare('INSERT INTO product_images (product_id, arquivo, ordem) VALUES (?, ?, ?)');
+            $pega_tmp = $pdo->prepare('SELECT arquivo FROM product_upload_temp WHERE id = ? AND token = ? FOR UPDATE');
+            $del_tmp = $pdo->prepare('DELETE FROM product_upload_temp WHERE id = ?');
+            $mantidos = [];
+            $capa = null;
+            $pos = 1;
+            foreach ($fotos_in as $chave) {
+                [$tipo, $fid] = explode(':', $chave);
+                $fid = (int) $fid;
+                if ($tipo === 'e' && isset($atuais[$fid])) {
+                    $up_ordem->execute([$pos, $fid, $id]);
+                    $mantidos[$fid] = true;
+                    $arq = $atuais[$fid];
+                } elseif ($tipo === 't' && $token_ok) {
+                    $pega_tmp->execute([$fid, $token]);
+                    $arq = $pega_tmp->fetchColumn();
+                    if ($arq === false) { continue; }
+                    $ins_img->execute([$id, $arq, $pos]);
+                    $del_tmp->execute([$fid]);
+                } else {
+                    continue;
+                }
+                $capa = $capa ?? $arq;
+                $pos++;
+            }
+            $del_img = $pdo->prepare('DELETE FROM product_images WHERE id = ? AND product_id = ?');
+            foreach ($atuais as $iid => $arq) {
+                if (!isset($mantidos[$iid])) {
+                    $del_img->execute([$iid, $id]);
+                    $removidos[] = $arq;
+                }
+            }
+            $pdo->prepare('UPDATE products SET imagem = ? WHERE id = ?')->execute([$capa, $id]);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            error_log('produto salvar: ' . $e->getMessage());
+            $responder(500, ['ok' => false, 'mensagem' => 'Não foi possível salvar. Tente de novo.']);
+            return;
+        }
+
+        // Depois do banco: arquivos das fotos removidas e temporárias que sobraram deste rascunho.
+        if ($token_ok) {
+            try {
+                $st = db()->prepare('SELECT id, arquivo FROM product_upload_temp WHERE token = ?');
+                $st->execute([$token]);
+                foreach ($st->fetchAll() as $t) {
+                    db()->prepare('DELETE FROM product_upload_temp WHERE id = ?')->execute([(int) $t['id']]);
+                    $removidos[] = $t['arquivo'];
+                }
+            } catch (PDOException $e) {
+                // sem a tabela temporária: nada a limpar
+            }
+        }
+        foreach (array_unique($removidos) as $arq) {
+            if (!_produto_arquivo_em_uso($arq)) {
+                imagem_apagar($arq);
+            }
+        }
+
+        if (!$antes) {
+            if ($ajax) { flash('sucesso', 'Produto criado.' . ($aviso_slug ? ' ' . $aviso_slug : '')); }
+            $responder(200, ['ok' => true, 'mensagem' => 'Produto criado.', 'ir' => 'admin/produtos/editar/' . $id,
+                'redirecionar' => url('admin/produtos/editar/' . $id)]);
+            return;
+        }
+        $responder(200, [
+            'ok' => true, 'mensagem' => 'Produto salvo.', 'aviso_slug' => $aviso_slug, 'slug' => $slug,
+            'url_loja' => url('produto/' . $slug), 'quando' => 'agora mesmo', 'fotos' => _produto_fotos_form($id),
+        ]);
         return;
     }
 
@@ -503,194 +711,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect($destino);
     }
 
-    // ------------------------------------------------------------------ SALVAR
-    if ($op === 'salvar') {
-        $id = (int) ($_POST['id'] ?? 0);
-        $nome = trim($_POST['nome'] ?? '');
-        $slug = trim($_POST['slug'] ?? '');
-        $descricao = trim($_POST['descricao'] ?? '');
-        $regras = trim($_POST['regras_produto'] ?? '');
-        $dias = (int) ($_POST['dias_producao'] ?? 0);
-        $destaque = isset($_POST['destaque']) ? 1 : 0;
-        $permite_pers = isset($_POST['permite_personalizacao']) ? 1 : 0;
-        $ativo = isset($_POST['ativo']) ? 1 : 0;
-        $preco_centavos = reais_para_centavos($_POST['preco'] ?? '');
-
-        $category_id = (int) ($_POST['category_id'] ?? 0);
-        $category_id = $category_id > 0 ? $category_id : null;
-
-        $tabelas_sel = (isset($_POST['tabelas']) && is_array($_POST['tabelas'])) ? $_POST['tabelas'] : [];
-
-        $destino_erro = $id > 0 ? 'admin/produtos/editar/' . $id : 'admin/produtos/novo';
-
-        if (mb_strlen($nome) < 2) {
-            flash('erro', 'Informe o nome do produto.');
-            redirect($destino_erro);
-        }
-        // Preço obrigatório quando NÃO for personalizável.
-        if (!$permite_pers && $preco_centavos <= 0) {
-            flash('erro', 'Informe um preço válido (ou marque "Permitir personalização").');
-            redirect($destino_erro);
-        }
-
-        $base = gerar_slug($slug !== '' ? $slug : $nome);
-        $slug = slug_unico('products', $base, $id > 0 ? $id : null);
-
-        if ($id > 0) {
-            // Trocou de categoria: vai para o fim da nova.
-            $st = db()->prepare('SELECT category_id FROM products WHERE id = ?');
-            $st->execute([$id]);
-            $cat_antes = $st->fetchColumn();
-            if ($cat_antes !== false && ($cat_antes === null ? null : (int) $cat_antes) !== $category_id) {
-                db()->prepare('UPDATE products SET ordem = ? WHERE id = ?')
-                    ->execute([_produto_proxima_ordem($category_id), $id]);
-            }
-
-            $stmt = db()->prepare(
-                'UPDATE products
-                    SET nome = ?, slug = ?, descricao = ?, regras_produto = ?,
-                        preco_centavos = ?, category_id = ?, dias_producao = ?,
-                        destaque = ?, permite_personalizacao = ?, ativo = ?
-                  WHERE id = ?'
-            );
-            $stmt->execute([
-                $nome,
-                $slug,
-                ($descricao !== '' ? $descricao : null),
-                ($regras !== '' ? $regras : null),
-                $preco_centavos,
-                $category_id,
-                $dias,
-                $destaque,
-                $permite_pers,
-                $ativo,
-                $id,
-            ]);
-            _produto_salvar_tabelas($id, $tabelas_sel);
-            $r = _produto_processar_imagens($id);
-            $msg = 'Produto atualizado.';
-            if ($r['adicionadas'] > 0) {
-                $msg .= ' ' . $r['adicionadas'] . ' imagem(ns) adicionada(s).';
-            }
-            flash('sucesso', $msg);
-            if (!empty($r['erros'])) {
-                flash('erro', implode(' ', $r['erros']));
-            }
-            redirect('admin/produtos/editar/' . $id);
-        }
-
-        // Produto novo entra no fim da categoria.
-        $stmt = db()->prepare(
-            'INSERT INTO products
-                (slug, nome, descricao, regras_produto, preco_centavos, category_id, ordem,
-                 dias_producao, destaque, permite_personalizacao, ativo)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        );
-        $stmt->execute([
-            $slug,
-            $nome,
-            ($descricao !== '' ? $descricao : null),
-            ($regras !== '' ? $regras : null),
-            $preco_centavos,
-            $category_id,
-            _produto_proxima_ordem($category_id),
-            $dias,
-            $destaque,
-            $permite_pers,
-            $ativo,
-        ]);
-        $novo_id = (int) db()->lastInsertId();
-
-        _produto_salvar_tabelas($novo_id, $tabelas_sel);
-
-        // Processa as fotos escolhidas no cadastro (se houver): otimiza, grava
-        // em product_images e define a capa. Nada é criado antes de salvar.
-        $r = _produto_processar_imagens($novo_id);
-        $msg = 'Produto criado.';
-        if ($r['adicionadas'] > 0) {
-            $msg .= ' ' . $r['adicionadas'] . ' imagem(ns) adicionada(s).';
-        }
-        flash('sucesso', $msg);
-        if (!empty($r['erros'])) {
-            flash('erro', implode(' ', $r['erros']));
-        }
-        redirect('admin/produtos/editar/' . $novo_id);
-    }
-
-    // -------------------------------------------------- AÇÕES DE IMAGEM (galeria)
-    $pid = (int) ($_POST['produto_id'] ?? 0);
-    if ($pid <= 0) {
-        redirect('admin/produtos');
-    }
-
-    if ($op === 'img_adicionar') {
-        $r = _produto_processar_imagens($pid);
-        if ($r['adicionadas'] > 0) {
-            flash('sucesso', $r['adicionadas'] . ' imagem(ns) adicionada(s).');
-        }
-        if (!empty($r['erros'])) {
-            flash('erro', implode(' ', $r['erros']));
-        }
-        redirect('admin/produtos/editar/' . $pid);
-    }
-
-    if ($op === 'img_remover') {
-        // Chamada via fetch (AJAX) responde JSON; sem JS, mantém o redirect.
-        $ajax = ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== '';
-        $imagem_id = (int) ($_POST['imagem_id'] ?? 0);
-        $img = _produto_imagem($imagem_id, $pid);
-
-        if (!$img) {
-            if ($ajax) {
-                header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['ok' => false, 'erro' => 'nao_encontrada']);
-                return;
-            }
-            redirect('admin/produtos/editar/' . $pid);
-        }
-
-        imagem_apagar($img['arquivo']);
-        db()->prepare('DELETE FROM product_images WHERE id = ? AND product_id = ?')
-            ->execute([$imagem_id, $pid]);
-
-        // Renumera o restante (1..N) e define a capa = primeira (ou limpa).
-        $rest = db()->prepare(
-            'SELECT id, arquivo FROM product_images WHERE product_id = ? ORDER BY ordem ASC, id ASC'
-        );
-        $rest->execute([$pid]);
-        $rows = $rest->fetchAll();
-        $capa = $rows[0]['arquivo'] ?? null;
-        $pdo = db();
-        $pdo->beginTransaction();
-        try {
-            $up = $pdo->prepare('UPDATE product_images SET ordem = ? WHERE id = ?');
-            $pos = 1;
-            foreach ($rows as $im) {
-                $up->execute([$pos, $im['id']]);
-                $pos++;
-            }
-            $pdo->prepare('UPDATE products SET imagem = ? WHERE id = ?')->execute([$capa, $pid]);
-            $pdo->commit();
-        } catch (Throwable $e) {
-            $pdo->rollBack();
-            if ($ajax) {
-                header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['ok' => false, 'erro' => 'db']);
-                return;
-            }
-            flash('erro', 'Não foi possível remover a imagem.');
-            redirect('admin/produtos/editar/' . $pid);
-        }
-
-        if ($ajax) {
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['ok' => true, 'capa' => $capa]);
-            return;
-        }
-        flash('sucesso', 'Imagem removida.');
-        redirect('admin/produtos/editar/' . $pid);
-    }
-
     redirect('admin/produtos');
 }
 
@@ -699,391 +719,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // =============================================================================
 $acao = $params[0] ?? 'listar';
 
-// Categorias para o select (usado nos forms).
-$categorias = db()->query('SELECT id, nome FROM categories ORDER BY nome ASC')->fetchAll();
+// Tabelas nutricionais em JSON (o formulário recarrega a lista ao voltar para a aba).
+if ($acao === 'tabelas') {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    try {
+        $tabs = db()->query('SELECT id, nome FROM tabelas_nutricionais ORDER BY nome ASC')->fetchAll();
+    } catch (PDOException $e) {
+        $tabs = [];
+    }
+    echo json_encode(['ok' => true, 'tabelas' => array_map(fn ($t) => ['id' => (int) $t['id'], 'nome' => $t['nome']], $tabs)], JSON_UNESCAPED_UNICODE);
+    return;
+}
 
+// ------------------------------------------------------- NOVO / EDITAR (mesmo formulário)
 if ($acao === 'novo' || $acao === 'editar') {
+    $novo = $acao === 'novo';
     $produto = [
-        'id' => 0,
-        'nome' => '',
-        'slug' => '',
-        'descricao' => '',
-        'regras_produto' => '',
-        'preco_centavos' => 0,
-        'category_id' => null,
-        'dias_producao' => 0,
-        'destaque' => 0,
-        'permite_personalizacao' => 0,
-        'ativo' => 1,
-        'imagem' => null,
+        'id' => 0, 'nome' => '', 'slug' => '', 'descricao' => '', 'regras_produto' => '', 'preco_centavos' => 0,
+        'category_id' => null, 'dias_producao' => 0, 'destaque' => 0, 'permite_personalizacao' => 0, 'ativo' => 1,
     ];
-    $imagens = [];
-
-    if ($acao === 'editar') {
+    $fotos = [];
+    $ligadas = [];
+    $quando = '';
+    if (!$novo) {
         $id = (int) ($params[1] ?? 0);
-        $stmt = db()->prepare(
-            'SELECT id, nome, slug, descricao, regras_produto, preco_centavos, category_id,
-                    dias_producao, destaque, permite_personalizacao, ativo, imagem
-               FROM products WHERE id = ? LIMIT 1'
-        );
-        $stmt->execute([$id]);
-        $p = $stmt->fetch();
+        $st = db()->prepare('SELECT * FROM products WHERE id = ? LIMIT 1');
+        $st->execute([$id]);
+        $p = $st->fetch();
         if (!$p) {
             flash('erro', 'Produto não encontrado.');
             redirect('admin/produtos');
         }
         $produto = $p;
-
-        $stmt = db()->prepare(
-            'SELECT id, arquivo, ordem FROM product_images WHERE product_id = ? ORDER BY ordem ASC, id ASC'
-        );
-        $stmt->execute([$id]);
-        $imagens = $stmt->fetchAll();
+        // Capa antiga fora da galeria (cadastros de antes da galeria): entra como 1ª foto.
+        if (!empty($p['imagem'])) {
+            $st = db()->prepare('SELECT 1 FROM product_images WHERE product_id = ? AND arquivo = ?');
+            $st->execute([$id, $p['imagem']]);
+            if (!$st->fetchColumn()) {
+                db()->prepare('INSERT INTO product_images (product_id, arquivo, ordem) VALUES (?, ?, 0)')->execute([$id, $p['imagem']]);
+            }
+        }
+        $fotos = _produto_fotos_form($id);
+        try {
+            $st = db()->prepare('SELECT tabela_nutricional_id FROM produto_tabelas_nutricionais WHERE produto_id = ? ORDER BY ordem ASC');
+            $st->execute([$id]);
+            $ligadas = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+        } catch (PDOException $e) {
+            $ligadas = [];
+        }
+        $st = db()->prepare('SELECT TIMESTAMPDIFF(SECOND, ?, NOW())');
+        $ref = !empty($p['atualizado_em']) ? $p['atualizado_em'] : $p['criado_em'];
+        $st->execute([$ref]);
+        $quando = _produto_quando((int) $st->fetchColumn(), (string) $ref);
     }
-
-    // Tabelas nutricionais: todas (para os checkboxes) e as já associadas.
-    $tabelas_nutri = db()->query('SELECT id, nome FROM tabelas_nutricionais ORDER BY nome ASC')->fetchAll();
-    $tabelas_sel = [];
-    if ($produto['id'] > 0) {
-        $stmt = db()->prepare(
-            'SELECT tabela_nutricional_id FROM produto_tabelas_nutricionais WHERE produto_id = ?'
-        );
-        $stmt->execute([(int) $produto['id']]);
-        $tabelas_sel = array_map('intval', array_column($stmt->fetchAll(), 'tabela_nutricional_id'));
+    try {
+        $tabelas = db()->query('SELECT id, nome FROM tabelas_nutricionais ORDER BY nome ASC')->fetchAll();
+    } catch (PDOException $e) {
+        $tabelas = [];
     }
-
-    $titulo = $produto['id'] > 0 ? 'Editar produto' : 'Novo produto';
+    $categorias = db()->query('SELECT id, nome FROM categories ORDER BY ordem ASC, id ASC')->fetchAll();
+    $voltar = (string) ($_GET['voltar'] ?? '');
+    $voltar = preg_match('/^[\w%=&+.\-]*$/', $voltar) ? $voltar : '';
+    $host = parse_url(url(), PHP_URL_HOST) ?: 'dolivier.com.br';
 
     ob_start();
-    ?>
-    <p><a href="<?= e(url('admin/produtos')) ?>">&larr; Voltar para produtos</a></p>
-
-    <form id="form-produto" method="post" action="<?= e(url('admin/produtos')) ?>" enctype="multipart/form-data" novalidate>
-        <?= csrf_input() ?>
-        <input type="hidden" name="op" value="salvar">
-        <input type="hidden" name="id" value="<?= (int) $produto['id'] ?>">
-
-        <!-- Bloco 1: Informações do produto -->
-        <div class="card-bloco">
-            <h2>Informações do produto</h2>
-            <div class="produto-form-grid">
-                <div class="produto-col">
-                    <div class="campo">
-                        <label for="nome">Nome</label>
-                        <input type="text" id="nome" name="nome" value="<?= e($produto['nome']) ?>" required minlength="2"
-                            data-slug-source>
-                    </div>
-                    <div class="campo">
-                        <label for="slug">Slug (endereço)</label>
-                        <input type="text" id="slug" name="slug" value="<?= e($produto['slug']) ?>"
-                            placeholder="Gerado a partir do nome" data-slug-target>
-                        <small>Gerado automaticamente do nome. Edite só se souber o que está fazendo.</small>
-                    </div>
-                    <div class="campo">
-                        <label for="category_id">Categoria</label>
-                        <select id="category_id" name="category_id">
-                            <option value="">— sem categoria —</option>
-                            <?php foreach ($categorias as $c): ?>
-                                <option value="<?= (int) $c['id'] ?>" <?= ((int) $produto['category_id'] === (int) $c['id']) ? 'selected' : '' ?>>
-                                    <?= e($c['nome']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="produto-col">
-                    <div class="campo">
-                        <label for="preco">Preço (R$)</label>
-                        <input type="text" id="preco" name="preco" inputmode="decimal"
-                            value="<?= e(centavos_para_input((int) $produto['preco_centavos'])) ?>"
-                            placeholder="Ex.: 35,90">
-                        <small>Para produtos personalizáveis, o preço é opcional.</small>
-                    </div>
-                    <div class="campo">
-                        <label for="dias_producao">Dias de produção</label>
-                        <input type="number" id="dias_producao" name="dias_producao" min="0"
-                            value="<?= (int) $produto['dias_producao'] ?>">
-                    </div>
-                    <div class="campo campo-inline">
-                        <input type="checkbox" id="destaque" name="destaque" value="1" <?= $produto['destaque'] ? 'checked' : '' ?>>
-                        <label for="destaque">Destaque (aparece na home)</label>
-                    </div>
-                    <div class="campo campo-inline">
-                        <input type="checkbox" id="permite_personalizacao" name="permite_personalizacao" value="1"
-                            <?= $produto['permite_personalizacao'] ? 'checked' : '' ?>>
-                        <label for="permite_personalizacao">Permitir personalização (mostra botão que leva ao
-                            WhatsApp)</label>
-                    </div>
-                    <div class="campo campo-inline">
-                        <input type="checkbox" id="ativo" name="ativo" value="1" <?= $produto['ativo'] ? 'checked' : '' ?>>
-                        <label for="ativo">Ativo (aparece na loja)</label>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bloco 2: Descrição e informações nutricionais -->
-        <div class="card-bloco">
-            <h2>Descrição e informações nutricionais</h2>
-            <div class="produto-form-grid">
-                <div class="produto-col">
-                    <div class="campo">
-                        <label for="descricao">Descrição</label>
-                        <textarea id="descricao" name="descricao" rows="10"><?= e($produto['descricao']) ?></textarea>
-                    </div>
-                    <div class="campo">
-                        <label for="regras_produto">Regras/observações deste produto</label>
-                        <textarea id="regras_produto" name="regras_produto"
-                            rows="10"><?= e($produto['regras_produto']) ?></textarea>
-                    </div>
-                </div>
-
-                <div class="produto-col">
-                    <div class="campo">
-                        <label>Tabelas nutricionais</label>
-                        <?php if (empty($tabelas_nutri)): ?>
-                            <small>Nenhuma tabela nutricional cadastrada.</small>
-                        <?php else: ?>
-                            <div class="tn-lista">
-                                <?php foreach ($tabelas_nutri as $tn): ?>
-                                    <?php $tnid = (int) $tn['id']; ?>
-                                    <input class="tn-input" type="checkbox" id="tn-<?= $tnid ?>" name="tabelas[]"
-                                        value="<?= $tnid ?>" <?= in_array($tnid, $tabelas_sel, true) ? 'checked' : '' ?>>
-                                    <label class="tn-item" for="tn-<?= $tnid ?>">
-                                        <span><?= e($tn['nome']) ?></span>
-                                        <svg class="tn-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
-                                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                            <polyline points="20 6 9 17 4 12" />
-                                        </svg>
-                                    </label>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </form>
-
-    <!-- Bloco 3: Fotos do produto (input + galeria juntos; fora do form para não aninhar) -->
-    <div class="card-bloco">
-        <h2>Fotos do produto</h2>
-        <div class="campo">
-            <input class="input-arquivo" type="file" id="imagens" name="imagens[]" form="form-produto"
-                accept="image/jpeg,image/png,image/webp" multiple data-arquivo-input>
-            <div class="arquivo-linha">
-                <label for="imagens" class="btn btn-arquivo">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round" aria-hidden="true">
-                        <path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14l4-4h6" />
-                        <line x1="18" y1="14" x2="18" y2="20" />
-                        <line x1="15" y1="17" x2="21" y2="17" />
-                    </svg>
-                    Escolher fotos
-                </label>
-                <span class="arquivo-info" data-arquivo-info>As fotos são enviadas ao salvar. A 1ª vira a capa.</span>
-            </div>
-        </div>
-
-        <!-- Prévia: fotos escolhidas no navegador, ainda NÃO enviadas -->
-        <div class="fotos-preview-wrap" data-preview-wrap hidden>
-            <h3 class="mt-1">A enviar ao salvar</h3>
-            <div class="grade-fotos" data-fotos-preview></div>
-        </div>
-
-        <?php if ($produto['id'] > 0 && !empty($imagens)): ?>
-            <h3 class="mt-1">Fotos já salvas</h3>
-            <p><small>Arraste as fotos para reordenar. A primeira é sempre a capa.</small></p>
-            <div class="grade-fotos" id="fotos-galeria">
-                <?php foreach ($imagens as $img): ?>
-                    <div class="foto-card" data-img-id="<?= (int) $img['id'] ?>">
-                        <span class="foto-handle" title="Arraste para reordenar" aria-hidden="true">&#9776;</span>
-                        <span class="foto-capa etiqueta">Capa</span>
-                        <img class="card-img" src="<?= e(url('assets/uploads/' . imagem_miniatura($img['arquivo']))) ?>" alt="">
-                        <form method="post" action="<?= e(url('admin/produtos')) ?>" data-img-remover-form>
-                            <?= csrf_input() ?>
-                            <input type="hidden" name="produto_id" value="<?= (int) $produto['id'] ?>">
-                            <input type="hidden" name="imagem_id" value="<?= (int) $img['id'] ?>">
-                            <input type="hidden" name="op" value="img_remover">
-                            <button class="btn sec" type="submit">Remover</button>
-                        </form>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-            <div id="fotos-feedback" class="reorder-feedback" hidden></div>
-
-            <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-            <script>
-                (function () {
-                    var cont = document.getElementById('fotos-galeria');
-                    if (!cont) { return; }
-                    var endpoint = <?= json_encode(url('admin/produtos')) ?>;
-                    var csrf = <?= json_encode(csrf_token()) ?>;
-                    var pid = <?= (int) $produto['id'] ?>;
-                    var feedback = document.getElementById('fotos-feedback');
-
-                    function ids() {
-                        return Array.prototype.map.call(
-                            cont.querySelectorAll('[data-img-id]'),
-                            function (el) { return el.getAttribute('data-img-id'); }
-                        );
-                    }
-                    function fb(ok, msg) {
-                        if (!feedback) { return; }
-                        feedback.textContent = msg || (ok ? 'Ordem salva ✓' : 'Erro ao salvar');
-                        feedback.classList.toggle('erro', !ok);
-                        feedback.hidden = false;
-                        clearTimeout(feedback._t);
-                        feedback._t = setTimeout(function () { feedback.hidden = true; }, 1800);
-                    }
-
-                    // Remover foto via AJAX: some da galeria sem recarregar a página.
-                    cont.querySelectorAll('[data-img-remover-form]').forEach(function (form) {
-                        form.addEventListener('submit', function (ev) {
-                            ev.preventDefault();
-                            confirmar('Remover esta imagem?', function () {
-                                var card = form.closest('[data-img-id]');
-                                var idInput = form.querySelector('[name="imagem_id"]');
-                                var btn = form.querySelector('button');
-                                if (btn) { btn.disabled = true; }
-
-                                var body = new URLSearchParams();
-                                body.append('op', 'img_remover');
-                                body.append('_csrf', csrf);
-                                body.append('produto_id', pid);
-                                body.append('imagem_id', idInput ? idInput.value : '');
-
-                                fetch(endpoint, {
-                                    method: 'POST',
-                                    headers: { 'X-Requested-With': 'fetch' },
-                                    credentials: 'same-origin',
-                                    body: body
-                                })
-                                    .then(function (r) { return r.json(); })
-                                    .then(function (d) {
-                                        if (d && d.ok) {
-                                            // A etiqueta "Capa" segue o :first-child no CSS,
-                                            // então a nova capa aparece sozinha ao remover o card.
-                                            if (card) { card.remove(); }
-                                            notificar('sucesso', 'Foto removida.');
-                                        } else {
-                                            if (btn) { btn.disabled = false; }
-                                            notificar('erro', 'Erro ao remover a foto.');
-                                        }
-                                    })
-                                    .catch(function () {
-                                        if (btn) { btn.disabled = false; }
-                                        notificar('erro', 'Erro ao remover a foto.');
-                                    });
-                            }, { ok: 'Remover', titulo: 'Remover foto' });
-                        });
-                    });
-                    function salvar() {
-                        var body = new URLSearchParams();
-                        body.append('op', 'img_reordenar');
-                        body.append('_csrf', csrf);
-                        body.append('produto_id', pid);
-                        ids().forEach(function (id) { body.append('ids[]', id); });
-                        fetch(endpoint, {
-                            method: 'POST',
-                            headers: { 'X-Requested-With': 'fetch' },
-                            credentials: 'same-origin',
-                            body: body
-                        })
-                            .then(function (r) { return r.json(); })
-                            .then(function (d) { fb(!!(d && d.ok)); })
-                            .catch(function () { fb(false); });
-                    }
-                    if (window.Sortable) {
-                        Sortable.create(cont, { handle: '.foto-handle', animation: 150, onEnd: salvar });
-                    }
-                })();
-            </script>
-        <?php elseif ($produto['id'] > 0): ?>
-            <p class="mt-1"><small>Nenhuma imagem ainda. A primeira enviada vira a capa.</small></p>
-        <?php endif; ?>
-    </div>
-
-    <!-- Rodapé: salvar (submete o formulário principal) -->
-    <div class="form-rodape">
-        <button class="btn" type="submit" form="form-produto">Salvar produto</button>
-    </div>
-
-    <script>
-    (function () {
-        var form = document.getElementById('form-produto');
-        if (!form) { return; }
-        var nomeInput = document.getElementById('nome');
-        var idInput = form.querySelector('input[name="id"]');
-        var endpoint = <?= json_encode(url('admin/produtos')) ?>;
-        var csrf = <?= json_encode(csrf_token()) ?>;
-        var liberado = false;
-
-        // Preço é obrigatório quando o produto NÃO é personalizável (igual ao servidor).
-        var preco = document.getElementById('preco');
-        var personalizavel = document.getElementById('permite_personalizacao');
-        if (preco && personalizavel) {
-            var aplicarPreco = function () { preco.required = !personalizavel.checked; };
-            personalizavel.addEventListener('change', aplicarPreco);
-            aplicarPreco();
-        }
-
-        function enviar() {
-            liberado = true;
-            if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
-        }
-
-        // Antes de salvar: valida obrigatórios (padrão da marca) e checa se o
-        // nome já existe em OUTRO produto.
-        form.addEventListener('submit', function (ev) {
-            if (liberado) { liberado = false; return; }     // já validado: segue
-            // Validação estilizada dos campos obrigatórios (sem balão nativo).
-            if (window.Notificacoes && !Notificacoes.validar(form)) {
-                ev.preventDefault();
-                notificar('erro', 'Confira os campos destacados.');
-                return;
-            }
-            var nome = (nomeInput && nomeInput.value ? nomeInput.value : '').trim();
-            if (nome === '') { return; }
-            ev.preventDefault();
-
-            var body = new URLSearchParams();
-            body.append('op', 'nome_existe');
-            body.append('_csrf', csrf);
-            body.append('nome', nome);
-            body.append('id', idInput ? idInput.value : '0');
-
-            fetch(endpoint, {
-                method: 'POST',
-                headers: { 'X-Requested-With': 'fetch' },
-                credentials: 'same-origin',
-                body: body
-            })
-                .then(function (r) { return r.json(); })
-                .then(function (d) {
-                    if (d && d.existe) {
-                        confirmar(
-                            'Já existe um produto com esse nome. Deseja criar assim mesmo?',
-                            enviar,
-                            {
-                                ok: 'Criar assim mesmo',
-                                titulo: 'Nome repetido',
-                                aoCancelar: function () {
-                                    if (nomeInput) { nomeInput.focus(); nomeInput.select(); }
-                                }
-                            }
-                        );
-                    } else {
-                        enviar();
-                    }
-                })
-                .catch(function () { enviar(); });          // falha na checagem: não trava o salvar
-        });
-    })();
-    </script>
-    <?php
-    view('admin_layout', ['titulo' => $titulo, 'conteudo' => ob_get_clean()]);
+    view('admin-produto-form', [
+        'produto'    => $produto,
+        'novo'       => $novo,
+        'categorias' => $categorias,
+        'tabelas'    => $tabelas,
+        'ligadas'    => $ligadas,
+        'fotos'      => $fotos,
+        'rascunho'   => _produto_rascunho_novo(),
+        'quando'     => $quando,
+        'voltar_url' => url('admin/produtos') . ($voltar !== '' ? '?' . $voltar : ''),
+        'prefixo'    => preg_replace('/^www\./', '', $host) . '/produto/',
+    ]);
+    view('admin_layout', [
+        'titulo'       => $novo ? 'Novo produto' : 'Editar produto',
+        'sem_titulo'   => true,
+        'conteudo'     => ob_get_clean(),
+        'layout_largo' => true,
+    ]);
     return;
 }
 

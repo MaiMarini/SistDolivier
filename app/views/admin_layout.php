@@ -3,7 +3,8 @@
  * Layout reutilizável do painel administrativo (com menu lateral).
  * Espera $titulo e $conteudo. Reaproveita o theme.css e as cores das settings.
  * Opcionais: $titulo_h1 (texto do h1, se diferente do <title>), $subtitulo,
- * $titulo_acoes (controles ao lado do título) e $layout_largo.
+ * $titulo_acoes (controles ao lado do título), $layout_largo e $sem_titulo (a página
+ * desenha o próprio topo; $titulo continua sendo o <title>).
  *
  * Itens "Pedidos" e "E-mails" aparecem como "em breve" (fases futuras).
  * O destaque do item ativo usa o helper admin_menu_ativo().
@@ -80,7 +81,9 @@ $menu = [
         $flash_sucesso = flash_consumir('sucesso');
         $flash_erro    = flash_consumir('erro');
         ?>
-        <?php if (!empty($titulo_acoes)): ?>
+        <?php if (!empty($sem_titulo)): ?>
+            <!-- A página desenha o próprio topo (ex.: formulário de produto) -->
+        <?php elseif (!empty($titulo_acoes)): ?>
             <!-- Título com controles à direita (ex.: Lista | Quadro em Pedidos) -->
             <div class="admin-titulo-linha">
                 <h1><?= e($titulo) ?></h1>
