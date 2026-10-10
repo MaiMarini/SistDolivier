@@ -6626,3 +6626,132 @@ body.menu-aberto {
 }
 
 .tn-editor .pe-link { align-self: flex-start; }
+
+/* =============================================================================
+   Admin › Categorias (editar na linha) — prefixo ct-
+   Reaproveita a chave da lista de produtos (.pr-sw) e os campos/avisos do
+   formulário de produto (.pe-campo, .pe-affix, .pe-tg, .pe-aviso, .pe-toast).
+   ============================================================================= */
+.ct { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; min-width: 0; }
+.ct [hidden] { display: none !important; }
+.ct :focus-visible { outline: 2px solid var(--cor-pop); outline-offset: 2px; }
+.ct-vazias, .ct-ajuda { margin: 0; }
+
+.ct-lista {
+    overflow: hidden;
+    border: 1px solid #eadfcd;
+    border-radius: 14px;
+    background: var(--cor-superficie);
+}
+
+.ct-row {
+    display: grid;
+    grid-template-columns: 34px 76px minmax(0, 1fr) 150px 130px 96px;
+    align-items: center;
+    gap: 12px;
+    min-height: 64px;
+    padding: 10px 16px;
+    border-top: 1px solid #eadfcd;
+    background: var(--cor-superficie);
+}
+
+.ct-head {
+    min-height: 0;
+    border-top: 0;
+    background: #fbf4ea;
+    color: #6e5848;
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+}
+
+[data-ct-linhas] > .ct-row:first-child { border-top: 1px solid #eadfcd; }
+.ct-row.is-aberta { background: #fffaf3; }
+.ct-row.is-arrastando { opacity: .4; }
+
+.ct-alca { color: #7a6555; font-size: 1.25rem; text-align: center; cursor: grab; user-select: none; }
+.ct-setas { display: flex; gap: 4px; }
+
+.ct-setas button {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #d9cbb5;
+    border-radius: 8px;
+    background: var(--cor-superficie);
+    color: var(--cor-texto);
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.ct-setas button:hover:not(:disabled) { background: #fbf4ea; }
+.ct-setas button:disabled { opacity: .35; cursor: default; }
+.ct-nome { min-width: 0; font-weight: 800; overflow-wrap: anywhere; }
+.ct-row.is-oculta .ct-nome { color: #9b8a7c; }
+
+.ct-tag {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #fbead9;
+    color: #8a4310;
+    font-size: .72rem;
+    font-weight: 800;
+    vertical-align: 2px;
+    white-space: nowrap;
+}
+
+.ct-prod { color: #6e5848; font-size: .88rem; }
+.ct-prod a { color: var(--cor-texto); font-weight: 700; }
+.ct-chave .pr-sw { min-width: 0; }
+.ct-acao { text-align: right; }
+.ct-acao .ap-btn { min-height: 38px; padding: 0 14px; font-size: .9rem; }
+
+/* Formulário (abaixo da linha ou no topo para "Nova categoria") */
+.ct-inline { grid-column: 1 / -1; padding: 14px 0 6px; border-top: 1px dashed #d9cbb5; }
+.ct-nova { padding: 16px; border-top: 1px solid #eadfcd; background: #fffaf3; }
+.ct-nova h2 { margin: 0 0 12px; font-family: var(--fonte-titulo); font-size: 1.2rem; color: var(--cor-primaria); }
+.ct-form { display: flex; flex-direction: column; gap: 14px; max-width: 600px; }
+.ct-form .legenda-obrigatorio { margin: 0; }
+.ct-form-tg { padding: 4px 0; border-top: 0; }
+.ct-botoes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ct-perigo { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid #eadfcd; }
+.ct-excluir { align-self: flex-start; color: #9a3324; }
+.ct-confirmar { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 10px; background: #fbefec; }
+.ct-confirmar .ap-btn:disabled { opacity: .45; cursor: default; filter: none; }
+.ct-form .pe-campo select {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid #d9cbb5;
+    border-radius: 10px;
+    background: var(--cor-superficie);
+    color: var(--cor-texto);
+    font: inherit;
+}
+
+.ct-sem { margin: 0; padding: 24px 16px; color: #6e5848; text-align: center; }
+.ct-form .pe-link { align-self: flex-start; }
+.ct .ct-chave .pr-sw { display: inline-flex; }   /* a lista de produtos esconde a chave no celular; aqui ela fica */
+
+/* Celular: setas à esquerda, nome/produtos/chave no meio, Editar à direita. */
+@media (max-width: 760px) {
+    .ct-head { display: none; }
+
+    .ct-row {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: "ar nm ed" "ar ct ed" "ar sw ed" "fm fm fm";
+        gap: 4px 12px;
+        padding: 12px 14px;
+    }
+
+    .ct-alca { display: none; }
+    .ct-setas { grid-area: ar; flex-direction: column; }
+    .ct-nome { grid-area: nm; }
+    .ct-prod { grid-area: ct; }
+    .ct-chave { grid-area: sw; }
+    .ct-acao { grid-area: ed; }
+    .ct-inline { grid-area: fm; }
+}

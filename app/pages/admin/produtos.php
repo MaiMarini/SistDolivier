@@ -493,10 +493,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $erros['nome'] = 'Use no máximo 150 caracteres.';
         }
         $category_id = ctype_digit($cat_txt) ? (int) $cat_txt : 0;
-        if ($category_id > 0) {
-            $st = db()->prepare('SELECT 1 FROM categories WHERE id = ?');
-            $st->execute([$category_id]);
-            if (!$st->fetchColumn()) { $category_id = 0; }
+        if ($category_id > 0 && !categoria_valida($category_id)) {
+            $category_id = 0;   // inexistente ou excluída
         }
         if ($category_id <= 0) {
             $erros['category_id'] = 'Escolha a categoria.';
@@ -778,7 +776,7 @@ if ($acao === 'novo' || $acao === 'editar') {
     } catch (PDOException $e) {
         $tabelas = [];
     }
-    $categorias = db()->query('SELECT id, nome FROM categories ORDER BY ordem ASC, id ASC')->fetchAll();
+    $categorias = categorias_admin();
     $voltar = (string) ($_GET['voltar'] ?? '');
     $voltar = preg_match('/^[\w%=&+.\-]*$/', $voltar) ? $voltar : '';
     $host = parse_url(url(), PHP_URL_HOST) ?: 'dolivier.com.br';
@@ -814,7 +812,7 @@ $f = [
     'q'   => mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 80),
 ];
 
-$cats = db()->query('SELECT id, nome FROM categories ORDER BY ordem ASC, id ASC')->fetchAll();
+$cats = categorias_admin();
 $produtos = db()->query(
     'SELECT p.id, p.nome, p.imagem, p.preco_centavos, p.ativo, p.category_id, c.nome AS categoria
        FROM products p
