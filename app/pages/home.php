@@ -4,14 +4,39 @@
  * Tudo alimentado pelo que é cadastrado no admin.
  */
 
-// Banners ativos (todos, na ordem) -> carrossel.
+// Banners -> carrossel: ligados, com imagem e dentro do período (inicio/fim
+// opcionais; "fim" é o último dia no ar; "hoje" no fuso de Porto Velho). O link
+// por categoria usa o slug atual (só se a categoria estiver ativa).
 $banners = [];
+$hoje = (new DateTime('now', new DateTimeZone('America/Porto_Velho')))->format('Y-m-d');
 try {
-    $banners = db()->query(
-        'SELECT imagem, titulo, link FROM banners WHERE ativo = 1 ORDER BY ordem ASC, id ASC'
-    )->fetchAll();
+    $st = db()->prepare(
+        "SELECT b.imagem, b.titulo,
+                CASE WHEN b.link_categoria_id IS NOT NULL THEN c.slug END AS cat_slug,
+                CASE WHEN b.link_categoria_id IS NULL THEN b.link END AS link
+           FROM banners b
+           LEFT JOIN categories c ON c.id = b.link_categoria_id AND c.ativo = 1
+          WHERE b.ativo = 1 AND b.imagem <> ''
+            AND (b.inicio IS NULL OR b.inicio <= ?) AND (b.fim IS NULL OR b.fim >= ?)
+          ORDER BY b.ordem ASC, b.id ASC"
+    );
+    $st->execute([$hoje, $hoje]);
+    $banners = $st->fetchAll();
+    foreach ($banners as &$b) {
+        if (!empty($b['cat_slug'])) {
+            $b['link'] = url('categoria/' . $b['cat_slug']);
+        }
+    }
+    unset($b);
 } catch (PDOException $e) {
-    $banners = [];
+    // Migração migracao_home_editor.sql ainda não rodou: regra antiga.
+    try {
+        $banners = db()->query(
+            'SELECT imagem, titulo, link FROM banners WHERE ativo = 1 ORDER BY ordem ASC, id ASC'
+        )->fetchAll();
+    } catch (PDOException $e2) {
+        $banners = [];
+    }
 }
 
 // Destaques.

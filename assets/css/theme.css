@@ -6895,3 +6895,242 @@ body.menu-aberto {
     .cf-span2 { grid-column: auto; }
     .cf-aba { padding: 0 8px; font-size: .88rem; gap: 4px; }
 }
+
+/* =============================================================================
+   Admin › Home (mapa da home) — prefixo hm-
+   Reaproveita cartões, campos, chave (pr-sw), barra e toast (pe-/cf-/ap-).
+   ============================================================================= */
+.hm { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; min-width: 0; padding-bottom: 96px; }
+.hm [hidden] { display: none !important; }
+.hm :focus-visible { outline: 2px solid var(--cor-pop); outline-offset: 2px; }
+.hm-lay { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 18px; align-items: start; }
+.hm-edicao { min-width: 0; max-width: 900px; }
+.hm-marca { display: inline-flex; align-items: center; }
+
+/* Mapa */
+.hm-mapa {
+    position: sticky;
+    top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid #eadfcd;
+    border-radius: 14px;
+    background: var(--cor-superficie);
+}
+
+.hm-mapa-tit { padding: 2px 4px 6px; color: #6e5848; font-size: .75rem; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+
+.hm-blk {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border: 2px solid #eadfcd;
+    border-radius: 10px;
+    background: #fbf4ea;
+    color: var(--cor-texto);
+    font: inherit;
+    font-weight: 800;
+    text-align: left;
+    cursor: pointer;
+}
+
+.hm-blk small { color: #6e5848; font-size: .75rem; font-weight: 600; }
+.hm-blk[aria-current="true"] { border-color: var(--cor-pop); background: #fff4ee; }
+.hm-blk .cf-bolinha { position: absolute; top: 8px; right: 8px; }
+.hm-blk.is-banners { min-height: 78px; }
+.hm-blk.is-frases { min-height: 34px; background: var(--cor-destaque); color: var(--cor-primaria); }
+.hm-blk.is-frases small { color: var(--cor-primaria); }
+.hm-blk.is-frases[aria-current="true"] { background: var(--cor-destaque); }
+.hm-blk.is-ed { min-height: 70px; }
+.hm-blk.is-col { min-height: 92px; }
+.hm-blk.is-fixo { min-height: 34px; border-style: dashed; background: none; color: #7a6555; font-weight: 700; cursor: default; }
+
+/* Comuns */
+.hm-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.hm-btn-p { min-height: 38px; padding: 0 14px; font-size: .9rem; }
+.hm-vazio { margin: 0; padding: 14px; color: #6e5848; }
+.hm-setas { display: flex; gap: 4px; }
+
+.hm-setas button {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #d9cbb5;
+    border-radius: 8px;
+    background: var(--cor-superficie);
+    color: var(--cor-texto);
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.hm-setas button:disabled { opacity: .35; cursor: default; }
+
+/* Mídia (miniatura + botão) */
+.hm-midia { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px; }
+.hm-midia-lado { display: flex; flex: 1 1 200px; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+
+.hm-prev {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 240px;
+    max-width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #fbf4ea;
+    color: #6e5848;
+    font-weight: 700;
+}
+
+.hm-prev.is-alta { width: 170px; aspect-ratio: 3 / 4; }
+.hm-prev img, .hm-prev video { width: 100%; height: 100%; object-fit: cover; }
+.hm-enviando { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(255, 255, 255, .8); color: var(--cor-texto); font-weight: 800; }
+
+/* Banners */
+.hm-blist { border: 1px solid #eadfcd; border-radius: 12px; overflow: hidden; }
+
+.hm-brow {
+    display: grid;
+    grid-template-columns: 76px 112px minmax(0, 1fr) 128px 96px;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border-top: 1px solid #eadfcd;
+}
+
+.hm-brow:first-child { border-top: 0; }
+.hm-brow.is-aberto { background: #fffaf3; }
+.hm-brow.is-off .hm-bt, .hm-brow.is-off .hm-thumb { opacity: .55; }
+
+.hm-thumb {
+    display: grid;
+    place-items: center;
+    width: 112px;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #fbf4ea;
+    color: #6e5848;
+    font-size: .75rem;
+}
+
+.hm-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.hm-bt { min-width: 0; overflow-wrap: anywhere; }
+.hm-bt b { display: block; font-weight: 800; }
+.hm-bt b.is-vazio { color: #7a6555; font-style: italic; font-weight: 600; }
+.hm-bt small { color: #6e5848; font-size: .8rem; }
+.hm .hm-bsw .pr-sw { display: inline-flex; min-width: 0; }   /* a lista de produtos esconde a chave no celular; aqui ela fica */
+.hm-bed { text-align: right; }
+
+.hm-bform {
+    display: flex;
+    grid-column: 1 / -1;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 640px;
+    padding: 14px 0 4px;
+    border-top: 1px dashed #d9cbb5;
+}
+
+.hm-periodo { margin-top: -8px; }
+.hm-perigo { padding-top: 12px; border-top: 1px solid #eadfcd; }
+
+.hm-excluir {
+    min-height: 38px;
+    padding: 0 4px;
+    border: 0;
+    background: none;
+    color: #9a3324;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.hm-confirma { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 10px; background: #fbefec; }
+
+/* Frases */
+.hm-frases { display: flex; flex-direction: column; gap: 8px; }
+.hm-frase { display: grid; grid-template-columns: 76px minmax(0, 1fr) 40px; gap: 4px 8px; align-items: center; }
+.hm-frase .pe-erro { grid-column: 2 / -1; }
+
+.hm-frase input {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid #d9cbb5;
+    border-radius: 10px;
+    background: var(--cor-superficie);
+    color: var(--cor-texto);
+    font: inherit;
+}
+
+.hm-frase input[aria-invalid="true"] { border-color: #9a3324; }
+
+.hm-x {
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: #6e5848;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.hm-x:hover { background: #fbf4ea; color: #9a3324; }
+.hm-previa { display: flex; flex-direction: column; gap: 6px; }
+.hm .hm-tarja { width: auto; margin: 0; border-radius: 10px; }
+
+/* Bloco editorial: Foto | Vídeo ou GIF */
+.hm-seg { display: inline-flex; align-self: flex-start; overflow: hidden; border: 1px solid #d9cbb5; border-radius: 999px; }
+
+.hm-seg button {
+    min-height: 40px;
+    padding: 0 18px;
+    border: 0;
+    background: none;
+    color: #6e5848;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.hm-seg button[aria-pressed="true"] { background: #8f9a5c; color: #fff; }
+
+.hm-ver { text-decoration: none; }
+
+@media (max-width: 900px) {
+    .hm-lay { grid-template-columns: minmax(0, 1fr); }
+    .hm-mapa { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hm-mapa-tit { grid-column: 1 / -1; }
+    .hm-blk { min-height: 0 !important; }
+    .hm-blk.is-fixo { display: none; }
+}
+
+@media (max-width: 760px) {
+    .hm-brow {
+        grid-template-columns: auto 96px minmax(0, 1fr);
+        grid-template-areas: "ar th ed" "ar tx tx" "ar sw sw";
+        gap: 6px 10px;
+        align-items: start;
+    }
+
+    .hm-brow .hm-setas { grid-area: ar; flex-direction: column; }
+    .hm-brow .hm-thumb { grid-area: th; width: 96px; }
+    .hm-brow .hm-bt { grid-area: tx; }
+    .hm-brow .hm-bsw { grid-area: sw; }
+    .hm-brow .hm-bed { grid-area: ed; align-self: center; }
+    .hm-bform { grid-column: 1 / -1; }
+}
+
+@media (max-width: 600px) {
+    .hm .pe-grid2 { grid-template-columns: minmax(0, 1fr); }
+    .hm .pe-barra .hm-ver { display: none; }
+    .hm-frase { grid-template-columns: auto minmax(0, 1fr) 40px; }
+}

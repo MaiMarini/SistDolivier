@@ -13,6 +13,14 @@ $titulo      = (string) cfg('bloco_editorial_titulo', '');
 $subtitulo   = (string) cfg('bloco_editorial_subtitulo', '');
 $botao_texto = (string) cfg('bloco_editorial_botao_texto', '');
 $botao_link  = (string) cfg('bloco_editorial_botao_link', '');
+// Link por categoria (id): usa o slug atual; categoria desativada -> sem botão.
+$botao_cat   = (int) cfg('bloco_editorial_botao_categoria_id', 0);
+if ($botao_cat > 0) {
+    $st = db()->prepare('SELECT slug FROM categories WHERE id = ? AND ativo = 1');
+    $st->execute([$botao_cat]);
+    $slug = $st->fetchColumn();
+    $botao_link = $slug ? url('categoria/' . $slug) : '';
+}
 $tipo_midia  = cfg('bloco_editorial_tipo_midia', 'foto') === 'video' ? 'video' : 'foto';
 $imagem      = (string) cfg('bloco_editorial_imagem', '');
 $video       = (string) cfg('bloco_editorial_video', '');
