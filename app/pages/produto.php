@@ -66,100 +66,8 @@ if ($capa !== '') {
 }
 $imagens = array_values(array_unique(array_filter($imagens, 'strlen')));
 
-// Tabelas nutricionais associadas (na ordem). Tolerante se as tabelas não existirem.
-$tabelas_nutri = [];
-try {
-    $stmt = db()->prepare(
-        'SELECT t.* FROM produto_tabelas_nutricionais pt
-           JOIN tabelas_nutricionais t ON t.id = pt.tabela_nutricional_id
-          WHERE pt.produto_id = ?
-          ORDER BY pt.ordem ASC, t.nome ASC'
-    );
-    $stmt->execute([(int) $produto['id']]);
-    $tabelas_nutri = $stmt->fetchAll();
-} catch (PDOException $e) {
-    $tabelas_nutri = [];
-}
-
-/** Número no padrão brasileiro (vírgula; sem zeros à direita desnecessários). */
-if (!function_exists('_num_br')) {
-    function _num_br($v): string
-    {
-        $s = number_format((float) $v, 2, ',', '.');
-        if (strpos($s, ',') !== false) {
-            $s = rtrim(rtrim($s, '0'), ',');
-        }
-        return $s;
-    }
-}
-
-/** HTML de uma tabela nutricional: só os campos preenchidos (não NULL). */
-if (!function_exists('_tabela_nutri_html')) {
-    function _tabela_nutri_html(array $t): string
-    {
-        $campos = [
-            'nutri_valor_energetico' => ['Valor energético', 'kcal'],
-            'nutri_carboidratos'     => ['Carboidratos', 'g'],
-            'nutri_acucares_totais'  => ['Açúcares totais', 'g'],
-            'nutri_acucares_add'     => ['Açúcares adicionados', 'g'],
-            'nutri_proteinas'        => ['Proteínas', 'g'],
-            'nutri_gorduras_totais'  => ['Gorduras totais', 'g'],
-            'nutri_gorduras_sat'     => ['Gorduras saturadas', 'g'],
-            'nutri_gorduras_trans'   => ['Gorduras trans', 'g'],
-            'nutri_fibra'            => ['Fibra alimentar', 'g'],
-            'nutri_sodio'            => ['Sódio', 'mg'],
-        ];
-        // Porção individual (em gramas). A porção padrão dos valores é 100 g.
-        $porcao_g = (isset($t['porcao_individual_g']) && $t['porcao_individual_g'] !== null
-            && $t['porcao_individual_g'] !== '') ? (float) $t['porcao_individual_g'] : null;
-        $tem_porcao = $porcao_g !== null && $porcao_g > 0;
-
-        ob_start();
-        ?>
-        <?php if (!empty($t['alergenicos'])): ?>
-            <div class="nutri-alerta">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <div><strong>Alérgenos:</strong> <?= nl2br(e($t['alergenicos'])) ?></div>
-            </div>
-        <?php endif; ?>
-        <?php
-        $linhas = '';
-        foreach ($campos as $k => $info) {
-            $v = $t[$k] ?? null;
-            if ($v === null || $v === '') {
-                continue;
-            }
-            $unidade = $info[1];
-            $celulas = '<td>' . e($info[0]) . '</td>'
-                     . '<td>' . e(_num_br($v) . ' ' . $unidade) . '</td>';
-            if ($tem_porcao) {
-                // Regra de três: valor por porção = valor_100g × (gramas ÷ 100).
-                $casas = ($unidade === 'kcal') ? 0 : 1;
-                $ind = round(((float) $v) * ($porcao_g / 100), $casas);
-                $celulas .= '<td>' . e(_num_br($ind) . ' ' . $unidade) . '</td>';
-            }
-            $linhas .= '<tr>' . $celulas . '</tr>';
-        }
-        ?>
-        <?php if ($linhas !== ''): ?>
-            <table class="nutri-tabela">
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>por 100 g</th>
-                        <?php if ($tem_porcao): ?>
-                            <th>por porção (<?= e(_num_br($porcao_g)) ?> g)</th>
-                        <?php endif; ?>
-                    </tr>
-                </thead>
-                <tbody><?= $linhas ?></tbody>
-            </table>
-        <?php endif; ?>
-        <?php
-        return ob_get_clean();
-    }
-}
+// Tabelas nutricionais ligadas (na ordem; sem as excluídas). Rótulo em app/lib/nutricao.php.
+$tabelas_nutri = nutri_tabelas_do_produto((int) $produto['id']);
 
 ob_start();
 ?>
@@ -320,21 +228,12 @@ ob_start();
         </button>
         <div class="acordeon-corpo" data-acordeon-corpo>
             <div class="acordeon-conteudo">
-                <?php if (count($tabelas_nutri) === 1): ?>
-                    <?= _tabela_nutri_html($tabelas_nutri[0]) ?>
-                <?php else: ?>
-                    <div class="nutri-abas" role="tablist">
-                        <?php foreach ($tabelas_nutri as $i => $t): ?>
-                            <button type="button" class="nutri-aba<?= $i === 0 ? ' ativa' : '' ?>"
-                                    data-nutri-aba="<?= (int) $i ?>"><?= e($t['nome']) ?></button>
-                        <?php endforeach; ?>
+                <?php foreach ($tabelas_nutri as $t): ?>
+                    <div class="nutri-bloco">
+                        <?php if (count($tabelas_nutri) > 1): ?><h3 class="nutri-bloco-nome"><?= e($t['nome']) ?></h3><?php endif; ?>
+                        <?= nutri_rotulo_html($t) ?>
                     </div>
-                    <?php foreach ($tabelas_nutri as $i => $t): ?>
-                        <div class="nutri-painel<?= $i === 0 ? ' ativo' : '' ?>" data-nutri-painel="<?= (int) $i ?>">
-                            <?= _tabela_nutri_html($t) ?>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>

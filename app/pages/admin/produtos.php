@@ -724,7 +724,7 @@ if ($acao === 'tabelas') {
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
     try {
-        $tabs = db()->query('SELECT id, nome FROM tabelas_nutricionais ORDER BY nome ASC')->fetchAll();
+        $tabs = nutri_tabelas_ativas();   // sem as excluídas
     } catch (PDOException $e) {
         $tabs = [];
     }
@@ -774,7 +774,7 @@ if ($acao === 'novo' || $acao === 'editar') {
         $quando = _produto_quando((int) $st->fetchColumn(), (string) $ref);
     }
     try {
-        $tabelas = db()->query('SELECT id, nome FROM tabelas_nutricionais ORDER BY nome ASC')->fetchAll();
+        $tabelas = nutri_tabelas_ativas();   // sem as excluídas
     } catch (PDOException $e) {
         $tabelas = [];
     }
