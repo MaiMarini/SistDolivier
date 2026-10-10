@@ -198,13 +198,13 @@
     // --- Bloco editorial -----------------------------------------------------------------------------
     var cartaoEd = function () {
         var e = S.ed, video = e.tipo === 'video', m = video ? e.video : e.foto;
-        var conteudo = !m.url ? '' : (video && !m.gif ? '<video src="' + esc(m.url) + '" muted autoplay loop playsinline></video>' : '<img src="' + esc(m.url) + '" alt="">');
+        var conteudo = !m.url ? '' : (video && !m.gif ? '<video src="' + esc(m.url) + '" muted autoplay loop playsinline disablepictureinpicture disableremoteplayback></video>' : '<img src="' + esc(m.url) + '" alt="">');
         return '<section class="pe-card hm-card" aria-labelledby="hm-h"><h2 id="hm-h">Bloco editorial ' + marca('ed') + '</h2>'
             + '<p class="cf-onde">A faixa com foto ou vídeo e um texto sobre a marca, no meio da home.</p>'
             + '<div class="hm-seg" role="group" aria-label="Tipo de mídia">'
             + '<button type="button" id="hm-tipo-foto" data-hm-acao="ed-tipo" data-tipo="foto" aria-pressed="' + (!video) + '">Foto</button>'
             + '<button type="button" id="hm-tipo-video" data-hm-acao="ed-tipo" data-tipo="video" aria-pressed="' + video + '">Vídeo ou GIF</button></div>'
-            + '<div class="hm-midia">' + previa('ed', conteudo, video ? 'Sem vídeo' : 'Sem foto')
+            + '<div class="hm-midia">' + previa('ed', conteudo, video ? 'Sem vídeo' : 'Sem foto', conteudo ? 'is-livre' : '')
             + '<div class="hm-midia-lado"><button type="button" class="ap-btn ap-btn-linha hm-btn-p" id="' + idDe('ed:midia') + '" data-hm-acao="up" data-alvo="ed"' + inv('ed:midia') + (ui.enviando.ed ? ' disabled' : '') + '>'
             + (m.url ? 'Trocar ' : 'Escolher ') + (video ? 'vídeo' : 'foto') + '</button>'
             + '<span class="pe-ajuda">' + (video ? 'Vídeo curto (5 a 10 s) ou GIF, sem som. Toca sozinho em loop. Até 15 MB.' : 'Foto horizontal. JPG ou PNG.') + '</span>' + erro('ed:midia') + '</div></div>'
