@@ -27,12 +27,12 @@ if (!$categoria) {
     return;
 }
 
-// Produtos ativos da categoria.
+// Produtos ativos da categoria, na ordem definida em Admin › Produtos.
 $stmt = db()->prepare(
     'SELECT slug, nome, preco_centavos, imagem, permite_personalizacao
        FROM products
       WHERE category_id = ? AND ativo = 1
-      ORDER BY id ASC'
+      ORDER BY ordem ASC, id ASC'
 );
 $stmt->execute([$categoria['id']]);
 $produtos = $stmt->fetchAll();
