@@ -4305,226 +4305,151 @@ body.menu-aberto {
 }
 
 /* --- Rodapé -------------------------------------------------------------- */
-.rodape {
-    position: relative;
-    background: var(--cor-primaria);
-    color: #fff;
-    padding: 2rem 0;
-    margin-top: 3rem;
-    /* espaço para a faixa de arcos no topo */
-}
+/* Faixa de chamada (WhatsApp), logo antes do rodapé */
+.rodape-chamada { box-sizing: border-box; width: 100%; max-width: 1120px; margin: 3rem auto 1.6rem; padding: 0 16px; }
 
-.rodape h3 {
-    color: #fff;
-}
-
-.rodape a {
-    color: var(--cor-destaque);
-}
-
-.rodape .copyright {
-    margin-top: 1rem;
-    font-size: .85rem;
-    opacity: .8;
-}
-
-/* Borda superior em arcos (SVG que estica em qualquer largura) */
-.rodape-curva {
-    position: absolute;
-    left: 0;
-    bottom: 100%;
-    width: 100%;
-    height: 42px;
-    display: block;
-    margin-bottom: -1px;
-    /* evita fresta entre a curva e o rodapé */
-}
-
-.rodape-curva-fio {
-    fill: none;
-    stroke: var(--cor-destaque);
-    /* fio de mel (dourado) */
-    stroke-width: 3;
-}
-
-.rodape-curva-corpo {
-    fill: var(--cor-primaria);
-    /* corpo do footer (marrom) */
-}
-
-/* Links de redes sociais como chips */
-.rodape-redes {
+.rodape-chamada-caixa {
     display: flex;
     flex-wrap: wrap;
-    gap: .5rem;
-}
-
-.rodape-redes a {
-    display: inline-block;
-    padding: .35rem .9rem;
-    border: 1px solid var(--cor-destaque);
-    border-radius: 999px;
-    color: var(--cor-destaque);
-    font-size: .9rem;
-    font-weight: 700;
-}
-
-.rodape-redes a:hover {
-    background: var(--cor-destaque);
-    color: var(--cor-primaria);
-    text-decoration: none;
-}
-
-/* Rodapé em três colunas */
-.rodape-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    /* celular: empilha */
-    gap: 1.5rem 2rem;
-    align-items: start;
-}
-
-@media (min-width: 768px) {
-    .rodape-grid {
-        grid-template-columns: 1.6fr 1fr 1fr;
-        align-items: center;
-    }
-}
-
-/* Coluna 1: marca */
-.rodape-marca-bloco {
-    display: flex;
     align-items: center;
-    gap: .8rem;
+    gap: 14px 24px;
+    padding: 22px 24px;
+    border: 1px solid #eadfcd;
+    border-radius: 20px;
+    background: var(--cor-superficie);
+    box-shadow: 0 10px 30px rgba(107, 74, 44, .08);
 }
 
-.rodape-logo-img {
-    height: 46px;
-    width: auto;
+.rodape-chamada-texto { flex: 1 1 300px; margin: 0; }
+
+.rodape-chamada-texto strong {
     display: block;
-}
-
-.rodape-marca-texto {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.15;
-}
-
-.rodape-marca {
     font-family: var(--fonte-titulo);
-    font-size: 1.4rem;
-    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--cor-primaria);
 }
 
-.rodape-slogan {
-    font-size: .9rem;
-    opacity: .85;
-}
+.rodape-chamada-texto span { display: block; margin-top: 4px; color: #6e5848; font-weight: 600; }
 
-/* Colunas 2 e 3: itens um por linha */
-.rodape-col {
-    display: flex;
-    flex-direction: column;
-    gap: .55rem;
-}
-
-.rodape-nav a {
-    color: #fff;
-}
-
-.rodape-nav a:hover {
-    color: var(--cor-destaque);
-}
-
-.rodape-social {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.rodape-social a {
+.rodape-chamada-btn {
     display: inline-flex;
     align-items: center;
-    gap: .55rem;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 22px;
+    border-radius: 999px;
+    background: var(--cor-acento);
+    color: #fff;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.rodape-chamada-btn:hover { background: #7d8850; color: #fff; text-decoration: none; }
+.rodape-chamada-btn svg { width: 20px; height: 20px; flex: none; }
+
+/* Rodapé: onda com linha dourada + corpo marrom */
+.rodape { margin-top: 3rem; overflow: hidden; color: #fbf1e3; }
+.rodape-chamada + .rodape { margin-top: 0; }
+.rodape :focus-visible { outline: 2px solid #e3b766; outline-offset: 3px; }
+.rodape-onda { display: block; width: 100%; height: 90px; margin-bottom: -2px; }
+.rodape-onda-fio { fill: none; stroke: var(--cor-destaque); stroke-width: 2; }
+.rodape-onda-corpo { fill: var(--cor-primaria); }
+.rodape-corpo { padding: 12px 16px 0; background: var(--cor-primaria); }
+.rodape-inner { max-width: 1120px; margin: 0 auto; }
+.rodape-cols { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1.1fr; gap: 28px; padding-top: 10px; }
+
+/* Marca */
+.rodape-marca { display: flex; align-items: center; gap: 12px; }
+.rodape-trigo { flex: none; width: auto; height: 52px; }   /* a arte do trigo é deitada (≈1,28:1) */
+
+.rodape-marca-nome {
+    font-family: var(--fonte-titulo);
+    font-size: 2.1rem;
+    font-weight: 700;
+    line-height: 1.1;
     color: #fff;
 }
 
-.rodape-social a:hover {
-    color: var(--cor-destaque);
-    text-decoration: none;
+.rodape-marca-nome small {
+    display: block;
+    margin-top: 6px;
+    color: #e3b766;
+    font-family: var(--fonte-texto);
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
 }
 
-.rodape-social-ico {
+.rodape-desc { max-width: 34ch; margin: 12px 0 0; color: #e6d3bb; }
+.rodape-redes { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 0; padding: 0; list-style: none; }
+
+.rodape .rodape-rede {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border: 1.5px solid rgba(251, 241, 227, .45);
+    border-radius: 50%;
+    color: #fff;
 }
 
-.rodape-social-ico svg {
-    width: 20px;
-    height: 20px;
+.rodape .rodape-rede:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.rodape .rodape-rede.is-wa { background: var(--cor-acento); border-color: var(--cor-acento); }
+.rodape .rodape-rede.is-wa:hover { background: #7d8850; }
+.rodape-rede svg { width: 20px; height: 20px; }
+
+/* Colunas */
+.rodape-h { margin: 0 0 10px; color: #fff; font-family: var(--fonte-titulo); font-size: 1.15rem; }
+.rodape-links { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.rodape a { color: #e6d3bb; }
+.rodape a:hover { color: #fff; text-decoration: underline; text-underline-offset: 4px; }
+.rodape-links a { display: inline-flex; align-items: center; min-height: 36px; font-weight: 600; text-decoration: none; }
+.rodape-info { display: flex; flex-direction: column; gap: 8px; margin: 0; font-size: .92rem; }
+.rodape-info dt { color: #fff; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+.rodape-info dd { margin: 0; color: #e6d3bb; }
+.rodape-info a { display: inline-flex; align-items: center; min-height: 36px; }
+
+/* Faixa final */
+.rodape-legal {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 18px;
+    margin-top: 34px;
+    padding: 16px 0 22px;
+    border-top: 1px solid rgba(251, 241, 227, .18);
+    color: #e6d3bb;
+    font-size: .82rem;
 }
 
-/* Footer no celular: compacto, em duas linhas */
-@media (max-width: 767px) {
+.rodape-legal p { margin: 0; }
+.rodape-legal p span { white-space: nowrap; }   /* quebra só entre os itens */
+.rodape-legal-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.rodape-legal-links a { display: inline-flex; align-items: center; min-height: 36px; }
 
-    /* Linha 1: marca (esquerda) + navegação (direita) */
-    .rodape-grid {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: .5rem 1rem;
-    }
-
-    /* 1) Marca: logo + textos lado a lado, menores */
-    .rodape-marca-bloco {
-        gap: .5rem;
-    }
-
-    .rodape-logo-img {
-        height: 36px;
-    }
-
-    .rodape-marca {
-        font-size: 1.15rem;
-    }
-
-    .rodape-slogan {
-        font-size: .78rem;
-    }
-
-    /* 2) Navegação: links à direita, um por linha */
-    .rodape-nav {
-        align-items: flex-end;
-        text-align: right;
-        gap: .3rem;
-    }
-
-    /* 3) Redes: quebram para a 2ª linha, ícones centralizados, com divisória acima */
-    .rodape-social {
-        flex-basis: 100%;
-        flex-direction: row;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 1.2rem;
-        margin-top: .8rem;
-        padding-top: .9rem;
-        border-top: 1px solid rgba(255, 255, 255, .15);
-    }
-
-    .rodape-social-nome {
-        display: none;
-    }
-
-    .rodape-social-ico svg {
-        width: 24px;
-        height: 24px;
-    }
-
-    .rodape .copyright {
-        text-align: center;
-    }
+@media (max-width: 900px) {
+    .rodape-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .rodape-col-marca { grid-column: 1 / -1; }
 }
 
+@media (max-width: 560px) {
+    .rodape-chamada-caixa { justify-content: center; text-align: center; }
+    .rodape-onda { height: 56px; }
+    .rodape-cols { gap: 24px 12px; text-align: center; }
+    .rodape-cols > :last-child:not(:nth-child(2)) { grid-column: 1 / -1; }   /* Atendimento na linha inteira */
+    .rodape-marca { justify-content: center; text-align: left; }
+    .rodape-marca-nome { font-size: 1.9rem; }
+    .rodape-desc { margin-right: auto; margin-left: auto; }
+    .rodape-redes, .rodape-legal-links { justify-content: center; }
+    .rodape-links, .rodape-info { align-items: center; }
+    .rodape-legal { flex-direction: column; justify-content: center; text-align: center; }
+}
 /* --- Utilitários --------------------------------------------------------- */
 .texto-centro {
     text-align: center;

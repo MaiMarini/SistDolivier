@@ -1,10 +1,12 @@
 <?php
 /**
- * Rodapé do site, em TRÊS colunas:
- *   1) Marca (logo + nome + slogan) — fixos
- *   2) Navegação (links fixos)
- *   3) Redes sociais (de settings; link montado aqui; só as preenchidas)
- * Textos da marca/links são fixos; valores de settings são escapados com e().
+ * Rodapé do site: faixa de chamada (WhatsApp) + borda ondulada com linha dourada
+ * + quatro colunas (Marca, Loja, Ajuda, Atendimento) + faixa final (CNPJ, cidade,
+ * privacidade e cookies). Tudo vem de settings e das categorias ativas; o que
+ * estiver vazio some. Valores escapados com e().
+ *
+ * A chamada não aparece onde a pessoa já está comprando (carrinho, checkout,
+ * pagamento e a página do pedido, que leva ao pagamento).
  */
 
 // Ícones (SVG inline, monocromáticos via currentColor).
@@ -16,81 +18,161 @@ $icones = [
     'Pinterest' => '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.688 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 01.083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12.017 24c6.624 0 11.99-5.367 11.99-11.987C24.007 5.367 18.641.001 12.017.001z"/></svg>',
 ];
 
-// Redes sociais: monta o link a partir das chaves de settings (só as preenchidas).
-$redes = [];
-
+// --- Dados (Configurações) --------------------------------------------------------------------
 $wpp = preg_replace('/\D+/', '', (string) cfg('whatsapp_numero', ''));
+$wpp_link = '';
+$wpp_texto = '';
 if ($wpp !== '') {
     // Mensagem geral de contato (Configurações › Textos), enviada exatamente como está escrita.
     $msg = trim((string) cfg('whatsapp_msg', ''));
     $msg = $msg !== '' ? $msg : "Olá! Vim pelo site da D'Olivier e gostaria de falar com vocês.";
-    $redes['WhatsApp'] = 'https://wa.me/' . $wpp . '?text=' . rawurlencode($msg);
+    $wpp_link = 'https://wa.me/' . $wpp . '?text=' . rawurlencode($msg);
+    // (69) 98118-2299 / (69) 3322-1100; sem o 55 do país.
+    $nac = (strlen($wpp) >= 12 && strpos($wpp, '55') === 0) ? substr($wpp, 2) : $wpp;
+    $wpp_texto = strlen($nac) === 11 ? sprintf('(%s) %s-%s', substr($nac, 0, 2), substr($nac, 2, 5), substr($nac, 7))
+        : (strlen($nac) === 10 ? sprintf('(%s) %s-%s', substr($nac, 0, 2), substr($nac, 2, 4), substr($nac, 6)) : (string) cfg('whatsapp_numero'));
 }
-$ig = trim((string) cfg('instagram_usuario', ''));
+$ig = ltrim(trim((string) cfg('instagram_usuario', '')), '@');
+$redes = [];   // botões redondos: só os preenchidos
+if ($wpp_link !== '') {
+    $redes['WhatsApp'] = $wpp_link;
+}
 if ($ig !== '') {
-    $redes['Instagram'] = 'https://instagram.com/' . ltrim($ig, '@');
+    $redes['Instagram'] = 'https://instagram.com/' . $ig;
 }
-$tt = trim((string) cfg('tiktok_usuario', ''));
-if ($tt !== '') {
-    $redes['TikTok'] = 'https://tiktok.com/@' . ltrim($tt, '@');
-}
-$fb = trim((string) cfg('facebook_url', ''));
-if ($fb !== '') {
+if (($fb = trim((string) cfg('facebook_url', ''))) !== '') {
     $redes['Facebook'] = $fb;
 }
-$pin = trim((string) cfg('pinterest_url', ''));
-if ($pin !== '') {
+if (($tt = ltrim(trim((string) cfg('tiktok_usuario', '')), '@')) !== '') {
+    $redes['TikTok'] = 'https://tiktok.com/@' . $tt;
+}
+if (($pin = trim((string) cfg('pinterest_url', ''))) !== '') {
     $redes['Pinterest'] = $pin;
 }
+
+$descricao = trim((string) cfg('site_descricao', ''));
+$cnpj = trim((string) cfg('cnpj', ''));
+$cidade_uf = trim((string) cfg('endereco_cidade', ''));
+if ($cidade_uf !== '' && trim((string) cfg('endereco_uf', '')) !== '') {
+    $cidade_uf .= '/' . strtoupper(trim((string) cfg('endereco_uf')));
+}
+// Decreto 7.962/2013 pede o endereço físico. Pronto para ligar quando confirmado:
+// troque para true e o rodapé mostra o endereço completo das Configurações.
+$mostrar_endereco_completo = false;
+$endereco_legal = $mostrar_endereco_completo && trim((string) cfg('endereco', '')) !== ''
+    ? trim((string) cfg('endereco')) : $cidade_uf;
+
+// Categorias ativas na ordem do menu (o cabeçalho já carregou; senão, busca).
+if (!isset($categorias) || !is_array($categorias)) {
+    try {
+        $categorias = db()->query('SELECT slug, nome FROM categories WHERE ativo = 1 ORDER BY ordem ASC, id ASC')->fetchAll();
+    } catch (PDOException $e) {
+        $categorias = [];
+    }
+}
+
+// Chamada: some no carrinho, checkout, pagamento e pedido.
+$secao = $GLOBALS['segmentos'][0] ?? '';
+$mostrar_chamada = $wpp_link !== '' && !in_array($secao, ['carrinho', 'checkout', 'pagamento', 'pedido'], true);
+
+$legal = array_filter(['© ' . date('Y') . " D'Olivier", $cnpj !== '' ? 'CNPJ ' . $cnpj : '', $endereco_legal]);
 ?>
+<?php if ($mostrar_chamada): ?>
+    <aside class="rodape-chamada" aria-label="Encomendas personalizadas">
+        <div class="rodape-chamada-caixa">
+            <p class="rodape-chamada-texto">
+                <strong>Quer algo personalizado?</strong>
+                <span>Conte a ocasião e a gente monta junto com você.</span>
+            </p>
+            <a class="rodape-chamada-btn" href="<?= e($wpp_link) ?>" target="_blank" rel="noopener">
+                <?= $icones['WhatsApp'] ?> Chamar no WhatsApp
+            </a>
+        </div>
+    </aside>
+<?php endif; ?>
+
 <footer class="rodape">
-    <!-- Borda superior em arcos largos com fio dourado (estica em qualquer largura) -->
-    <svg class="rodape-curva" viewBox="0 0 1200 80" preserveAspectRatio="none" aria-hidden="true">
-        <path class="rodape-curva-fio"
-              d="M0,38 Q150,8 300,38 T600,38 T900,38 T1200,38"/>
-        <path class="rodape-curva-corpo"
-              d="M0,52 Q150,22 300,52 T600,52 T900,52 T1200,52 L1200,80 L0,80 Z"/>
+    <!-- Borda ondulada com linha dourada (decorativa; estica em qualquer largura) -->
+    <svg class="rodape-onda" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        <path class="rodape-onda-fio" vector-effect="non-scaling-stroke"
+              d="M0,52 C180,98 360,8 540,36 C720,64 900,106 1080,74 C1260,42 1350,18 1440,32"/>
+        <path class="rodape-onda-corpo"
+              d="M0,64 C180,110 360,20 540,48 C720,76 900,118 1080,86 C1260,54 1350,30 1440,44 L1440,120 L0,120 Z"/>
     </svg>
 
-    <div class="container">
-        <div class="rodape-grid">
-            <!-- Coluna 1: marca -->
-            <div class="rodape-marca-bloco">
-                <img class="rodape-logo-img" src="<?= e(asset('Logo/trigo.png')) ?>"
-                     height="46" alt="D'Olivier Confeitaria Artesanal">
-                <span class="rodape-marca-texto">
-                    <span class="rodape-marca">D'Olivier</span>
-                    <span class="rodape-slogan">Confeitaria Artesanal</span>
-                </span>
+    <div class="rodape-corpo">
+        <div class="rodape-inner">
+            <div class="rodape-cols">
+                <!-- 1) Marca -->
+                <div class="rodape-col-marca">
+                    <div class="rodape-marca">
+                        <img class="rodape-trigo" src="<?= e(asset('Logo/trigo.png')) ?>" width="66" height="52" alt="">
+                        <span class="rodape-marca-nome">D'Olivier<small>Confeitaria artesanal</small></span>
+                    </div>
+                    <?php if ($descricao !== ''): ?>
+                        <p class="rodape-desc"><?= e($descricao) ?></p>
+                    <?php endif; ?>
+                    <?php if ($redes): ?>
+                        <ul class="rodape-redes">
+                            <?php foreach ($redes as $nome => $link): ?>
+                                <li>
+                                    <a class="rodape-rede<?= $nome === 'WhatsApp' ? ' is-wa' : '' ?>" href="<?= e($link) ?>"
+                                       target="_blank" rel="noopener" aria-label="<?= e($nome) ?>"><?= $icones[$nome] /* SVG fixo */ ?></a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                </div>
+
+                <!-- 2) Loja: categorias ativas -->
+                <?php if ($categorias): ?>
+                    <nav class="rodape-col" aria-labelledby="rodape-h-loja">
+                        <h2 class="rodape-h" id="rodape-h-loja">Loja</h2>
+                        <ul class="rodape-links">
+                            <?php foreach ($categorias as $c): ?>
+                                <li><a href="<?= e(url('categoria/' . $c['slug'])) ?>"><?= e($c['nome']) ?></a></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </nav>
+                <?php endif; ?>
+
+                <!-- 3) Ajuda -->
+                <nav class="rodape-col" aria-labelledby="rodape-h-ajuda">
+                    <h2 class="rodape-h" id="rodape-h-ajuda">Ajuda</h2>
+                    <ul class="rodape-links">
+                        <li><a href="<?= e(url('sobre')) ?>">Sobre nós</a></li>
+                        <li><a href="<?= e(url('regras')) ?>">Regras e prazos</a></li>
+                        <li><a href="<?= e(url('meus-pedidos')) ?>">Meus pedidos</a></li>
+                        <li><a href="<?= e(url('meu-perfil')) ?>">Meu perfil</a></li>
+                    </ul>
+                </nav>
+
+                <!-- 4) Atendimento -->
+                <?php if ($wpp_link !== '' || $cidade_uf !== '' || $ig !== ''): ?>
+                    <div class="rodape-col">
+                        <h2 class="rodape-h">Atendimento</h2>
+                        <dl class="rodape-info">
+                            <?php if ($wpp_link !== ''): ?>
+                                <div><dt>WhatsApp</dt><dd><a href="<?= e($wpp_link) ?>" target="_blank" rel="noopener"><?= e($wpp_texto) ?></a></dd></div>
+                            <?php endif; ?>
+                            <?php if ($cidade_uf !== ''): ?>
+                                <div><dt>Retirada</dt><dd><?= e($cidade_uf) ?></dd></div>
+                            <?php endif; ?>
+                            <?php if ($ig !== ''): ?>
+                                <div><dt>Instagram</dt><dd><a href="<?= e($redes['Instagram']) ?>" target="_blank" rel="noopener">@<?= e($ig) ?></a></dd></div>
+                            <?php endif; ?>
+                        </dl>
+                    </div>
+                <?php endif; ?>
             </div>
 
-            <!-- Coluna 2: navegação (fixa) -->
-            <nav class="rodape-col rodape-nav">
-                <a href="<?= e(url('sobre')) ?>">Sobre nós</a>
-                <a href="<?= e(url('meu-perfil')) ?>">Meu perfil</a>
-                <a href="<?= e(url('meus-pedidos')) ?>">Meus pedidos</a>
-                <a href="<?= e(url('regras')) ?>">Regras e prazos</a>
-                <a href="<?= e(url('politica-de-privacidade')) ?>">Política de privacidade</a>
-                <a href="#" data-cookie-preferencias>Preferências de cookies</a>
-            </nav>
-
-            <!-- Coluna 3: redes sociais (de settings) -->
-            <?php if (!empty($redes)): ?>
-                <ul class="rodape-col rodape-social">
-                    <?php foreach ($redes as $nome => $link): ?>
-                        <li>
-                            <a href="<?= e($link) ?>" target="_blank" rel="noopener">
-                                <span class="rodape-social-ico"><?= $icones[$nome] /* SVG fixo */ ?></span>
-                                <span class="rodape-social-nome"><?= e($nome) ?></span>
-                            </a>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php endif; ?>
+            <div class="rodape-legal">
+                <p><span><?= implode('</span> · <span>', array_map('e', $legal)) ?></span></p>
+                <p class="rodape-legal-links">
+                    <a href="<?= e(url('politica-de-privacidade')) ?>">Política de privacidade</a>
+                    <a href="#" data-cookie-preferencias>Preferências de cookies</a>
+                </p>
+            </div>
         </div>
-
-        <p class="copyright">
-            &copy; <?= e(date('Y')) ?> D'Olivier. Todos os direitos reservados.
-        </p>
     </div>
 </footer>
