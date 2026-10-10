@@ -350,22 +350,15 @@ function destino_pos_login(bool $is_admin): ?string
 // =============================================================================
 
 /**
- * Monta um link de WhatsApp (wa.me) com mensagem pré-preenchida.
- * O número vem das configurações (settings.whatsapp). Se um produto for
- * informado (array com 'nome'), a mensagem cita o produto.
+ * Link de WhatsApp (wa.me) com a mensagem geral de contato (settings.whatsapp_msg),
+ * enviada exatamente como está escrita (sem trocar {produto}/{link}).
+ * A mensagem com produto é a do botão "Personalizar" (personalizar_msg_template).
  */
-function whatsapp_link(?array $produto = null): string
+function whatsapp_link(): string
 {
     $numero = preg_replace('/\D+/', '', (string) cfg('whatsapp_numero', ''));
-
-    if ($produto !== null && !empty($produto['nome'])) {
-        // Usa o modelo das configurações, trocando o marcador {produto}.
-        $modelo = (string) cfg('whatsapp_msg', 'Olá! Tenho interesse no produto: {produto}');
-        $texto  = str_replace('{produto}', $produto['nome'], $modelo);
-    } else {
-        $texto = 'Olá! Gostaria de mais informações.';
-    }
-
+    $texto = trim((string) cfg('whatsapp_msg', ''));
+    $texto = $texto !== '' ? $texto : "Olá! Vim pelo site da D'Olivier e gostaria de falar com vocês.";
     return 'https://wa.me/' . $numero . '?text=' . rawurlencode($texto);
 }
 

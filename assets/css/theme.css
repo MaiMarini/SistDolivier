@@ -6755,3 +6755,143 @@ body.menu-aberto {
     .ct-acao { grid-area: ed; }
     .ct-inline { grid-area: fm; }
 }
+
+/* =============================================================================
+   Admin › Configurações (abas) — prefixo cf-
+   Reaproveita cartões, campos, chave, avisos, barra e toast do formulário de produto (pe-).
+   ============================================================================= */
+.cf { display: flex; flex-direction: column; gap: 16px; max-width: 860px; margin-top: 16px; min-width: 0; padding-bottom: 96px; }
+.cf [hidden] { display: none !important; }
+.cf :focus-visible { outline: 2px solid var(--cor-pop); outline-offset: 2px; }
+
+.cf-abas { display: flex; flex-wrap: nowrap; min-width: 0; border-bottom: 1px solid #d9cbb5; }
+
+.cf-aba {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    margin-bottom: -1px;
+    padding: 0 14px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: none;
+    color: #6e5848;
+    font: inherit;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.cf-aba[aria-selected="true"] { border-bottom-color: var(--cor-pop); color: var(--cor-texto); }
+.cf-bolinha { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #c46a2a; }
+
+.cf-onde { margin: -8px 0 0; color: #6e5848; font-size: .85rem; }
+.cf-sub { margin: -8px 0 0; }
+.pe-card h3 { margin: 4px 0 0; font-size: .95rem; font-weight: 800; color: var(--cor-primaria); }
+.cf-grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 16px; }
+.cf-span2 { grid-column: span 2; }
+.cf-uf input { text-transform: uppercase; }
+.cf-cep { display: flex; gap: 8px; min-width: 0; }
+.cf-cep input { flex: 1; min-width: 0; }
+.cf-cep .ap-btn { min-height: 44px; padding: 0 14px; }
+.pe-ajuda.is-aviso { color: #8a4310; font-weight: 700; }
+.cf-testar { align-self: flex-start; font-size: .85rem; text-decoration: none; }
+.cf-cnpj { font-size: .82rem; font-weight: 800; }
+.cf-cnpj.is-ok { color: #2f6338; }
+.cf-cnpj.is-ruim { color: #8a4310; }
+.cf-avisos { display: flex; flex-direction: column; gap: 6px; }
+.cf-avisos:empty { display: none; }
+.cf-avancado { display: flex; flex-direction: column; gap: 12px; padding-top: 10px; }
+.cf-avancado .pe-link { align-self: flex-start; text-decoration: none; }
+
+.cf-status {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #eef3e4;
+    color: #4f5a24;
+    font-size: .9rem;
+    font-weight: 700;
+}
+
+.cf-status::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; background: #2f6338; }
+.cf-status.is-alerta { background: #fbead9; color: #8a4310; }
+.cf-status.is-alerta::before { background: #c46a2a; }
+.cf-resumo { margin: 0; padding: 10px 12px; border-radius: 10px; background: #fbf4ea; font-size: .9rem; }
+.cf .pe-tg { border-top: 0; }
+
+/* Simuladores */
+.cf-sim {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid #eadfcd;
+    border-radius: 12px;
+    background: #fbf4ea;
+}
+
+.cf-sim-linha { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
+.cf-sim-grande { font-family: var(--fonte-titulo); font-size: 1.45rem; font-weight: 700; color: var(--cor-primaria); }
+.cf-sim-grande.is-retirada { color: #9a3324; }
+.cf-sim input[type="range"] { width: 100%; accent-color: var(--cor-pop); }
+.cf-sim-ex { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+
+.cf-sim-ex div {
+    padding: 6px 8px;
+    border: 1px solid #eadfcd;
+    border-radius: 8px;
+    background: var(--cor-superficie);
+    color: #6e5848;
+    font-size: .78rem;
+}
+
+.cf-sim-ex b { display: block; color: var(--cor-texto); font-size: .88rem; }
+.cf-sim-ex .is-retirada b { color: #9a3324; }
+
+/* WhatsApp: texto + prévia em balão */
+.cf-msg { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 14px; align-items: start; }
+.cf-tokens { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: #6e5848; font-size: .82rem; }
+
+.cf-token {
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px dashed #8f9a5c;
+    border-radius: 999px;
+    background: #f2f5e8;
+    color: #4f5a24;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: .8rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.cf-wa { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding: 12px; border-radius: 12px; background: #e9e1d4; }
+
+.cf-wa-balao {
+    max-width: 92%;
+    padding: 8px 10px;
+    border-radius: 10px 2px 10px 10px;
+    background: #d9fdd3;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, .08);
+    color: #111;
+    font-size: .9rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.cf-wa-balao:empty::before { content: "(sem mensagem)"; color: #6b6b6b; }
+.cf-wa-balao u { color: #027eb5; text-decoration: none; }
+.cf-wa small { color: #6b6b6b; font-size: .72rem; }
+
+@media (max-width: 760px) {
+    .cf-msg { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 600px) {
+    .cf-grid3 { grid-template-columns: minmax(0, 1fr); }
+    .cf-span2 { grid-column: auto; }
+    .cf-aba { padding: 0 8px; font-size: .88rem; gap: 4px; }
+}

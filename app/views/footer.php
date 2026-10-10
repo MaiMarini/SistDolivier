@@ -21,7 +21,10 @@ $redes = [];
 
 $wpp = preg_replace('/\D+/', '', (string) cfg('whatsapp_numero', ''));
 if ($wpp !== '') {
-    $redes['WhatsApp'] = 'https://wa.me/' . $wpp;
+    // Mensagem geral de contato (Configurações › Textos), enviada exatamente como está escrita.
+    $msg = trim((string) cfg('whatsapp_msg', ''));
+    $msg = $msg !== '' ? $msg : "Olá! Vim pelo site da D'Olivier e gostaria de falar com vocês.";
+    $redes['WhatsApp'] = 'https://wa.me/' . $wpp . '?text=' . rawurlencode($msg);
 }
 $ig = trim((string) cfg('instagram_usuario', ''));
 if ($ig !== '') {
