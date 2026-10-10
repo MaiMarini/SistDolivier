@@ -142,6 +142,23 @@ function pedido_estorno_pendente(array $p): bool
         && !in_array((string) ($p['estorno_status'] ?? ''), ['aprovado', 'approved', 'in_process'], true);
 }
 
+/** Ids dos cancelados com pagamento aprovado e sem estorno (alerta do admin), mais recentes primeiro. */
+function pedidos_estorno_pendente_ids(): array
+{
+    return array_map('intval', db()->query(
+        "SELECT id FROM orders WHERE status = 'cancelado' AND pagamento_status = 'aprovado'
+            AND (estorno_status IS NULL OR estorno_status IN ('pendente','falhou')) ORDER BY id DESC"
+    )->fetchAll(PDO::FETCH_COLUMN));
+}
+
+/** Texto do alerta de estorno pendente (Painel e Pedidos). */
+function pedidos_estorno_alerta_texto(array $ids): string
+{
+    return count($ids) === 1
+        ? 'O pedido #' . (int) $ids[0] . ' foi cancelado, mas o pagamento está aprovado. A cliente ainda não recebeu o dinheiro de volta.'
+        : count($ids) . ' pedidos cancelados estão com pagamento aprovado e sem estorno (#' . implode(', #', array_map('intval', $ids)) . ').';
+}
+
 /** Texto do cancelamento (cliente e admin): quem, motivo, observação. */
 function pedido_cancelamento_texto(array $p): string
 {

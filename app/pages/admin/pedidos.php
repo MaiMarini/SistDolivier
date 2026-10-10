@@ -164,16 +164,28 @@ $ABAS = [
     'cancelado'  => ['Cancelados', "o.status = 'cancelado'"],
     'todos'      => ['Todos', '1 = 1'],
 ];
+// Filtros usados pelos atalhos do Painel: só viram aba quando estão ativos.
+$ABAS_PAINEL = [
+    'em_producao' => ['Em produção + embalagem', "o.status IN ('producao','embalagem')"],
+    'entregas'    => ['Prontos + em rota', "o.status IN ('pronto','em_rota')"],
+];
 $PAG = [
     'aprovado'  => ['Aprovado', "o.pagamento_status = 'aprovado'"],
     'pendente'  => ['Pendente', "(o.pagamento_status IS NULL OR o.pagamento_status IN ('pendente','em_analise','expirado'))"],
     'recusado'  => ['Recusado', "o.pagamento_status IN ('recusado','cancelado')"],
     'estornado' => ['Estornado', "o.pagamento_status = 'estornado'"],
 ];
-$PERIODOS = ['hoje' => 'Hoje', '7d' => 'Últimos 7 dias', '30d' => 'Últimos 30 dias', 'custom' => 'Personalizado…'];
+$PERIODOS = ['hoje' => 'Hoje', '7d' => 'Últimos 7 dias', '30d' => 'Últimos 30 dias', 'tudo' => 'Todo o período', 'custom' => 'Personalizado…'];
+
+$aba_get = (string) ($_GET['aba'] ?? '');
+if (isset($ABAS_PAINEL[$aba_get])) {
+    $ABAS[$aba_get] = $ABAS_PAINEL[$aba_get];
+}
+// ?modo=lista|quadro (links do Painel) vence o modo salvo no navegador.
+$modo_url = in_array($_GET['modo'] ?? '', ['lista', 'quadro'], true) ? $_GET['modo'] : '';
 
 $f = [
-    'aba' => isset($ABAS[$_GET['aba'] ?? '']) ? $_GET['aba'] : 'ativos',
+    'aba' => isset($ABAS[$aba_get]) ? $aba_get : 'ativos',
     'q'   => mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 80),
     'pag' => isset($PAG[$_GET['pag'] ?? '']) ? $_GET['pag'] : '',
     'ent' => in_array($_GET['ent'] ?? '', ['motoboy', 'retirada'], true) ? $_GET['ent'] : '',
@@ -211,7 +223,7 @@ if ($f['per'] === 'hoje') {
     $base[] = 'o.criado_em >= NOW() - INTERVAL 7 DAY';
 } elseif ($f['per'] === '30d') {
     $base[] = 'o.criado_em >= NOW() - INTERVAL 30 DAY';
-} else {
+} elseif ($f['per'] === 'custom') {
     if ($f['de'] !== '') { $base[] = 'o.criado_em >= ?'; $args[] = $f['de'] . ' 00:00:00'; }
     if ($f['ate'] !== '') { $base[] = 'o.criado_em <= ?'; $args[] = $f['ate'] . ' 23:59:59'; }
 }
@@ -244,10 +256,7 @@ $quadro = $st->fetchAll();
 $comp = pedidos_complementos(array_merge(array_column($lista, 'id'), array_column($quadro, 'id')));
 
 // Alerta: cancelados com pagamento aprovado e sem estorno (independe dos filtros).
-$alerta = db()->query(
-    "SELECT id FROM orders WHERE status = 'cancelado' AND pagamento_status = 'aprovado'
-        AND (estorno_status IS NULL OR estorno_status IN ('pendente','falhou')) ORDER BY id DESC"
-)->fetchAll(PDO::FETCH_COLUMN);
+$alerta = pedidos_estorno_pendente_ids();
 
 /** Querystring da lista com os filtros atuais (+ mudanças). */
 $qs = function (array $mudar = []) use ($f): string {
@@ -297,18 +306,20 @@ $titulo_acoes = '<div class="ap-modo" role="group" aria-label="Modo de visualiza
 
 ob_start();
 ?>
-<div class="ap" data-ap data-modo="lista" data-abrir="<?= $abrir ?>"
+<div class="ap" data-ap data-modo="<?= e($modo_url ?: 'lista') ?>" data-abrir="<?= $abrir ?>"
      data-url-painel="<?= e(url('admin/pedidos')) ?>" data-voltar="<?= e($voltar_qs) ?>" data-csrf="<?= e(csrf_token()) ?>">
     <script>
-        // Aplica o modo salvo antes de desenhar (evita piscar a lista).
-        try { if (localStorage.getItem('ap-modo') === 'quadro') { document.currentScript.parentNode.setAttribute('data-modo', 'quadro'); } } catch (e) {}
+        // Aplica o modo salvo antes de desenhar (evita piscar a lista). Com ?modo= na URL, ele vale e fica salvo.
+        try {
+            <?php if ($modo_url !== ''): ?>localStorage.setItem('ap-modo', <?= json_encode($modo_url) ?>);
+            <?php else: ?>if (localStorage.getItem('ap-modo') === 'quadro') { document.currentScript.parentNode.setAttribute('data-modo', 'quadro'); }
+            <?php endif; ?>
+        } catch (e) {}
     </script>
 
     <?php if ($alerta): ?>
         <div class="ap-alerta" role="status">
-            <span><?= count($alerta) === 1
-                ? 'O pedido #' . (int) $alerta[0] . ' foi cancelado, mas o pagamento está aprovado. A cliente ainda não recebeu o dinheiro de volta.'
-                : count($alerta) . ' pedidos cancelados estão com pagamento aprovado e sem estorno (#' . implode(', #', array_map('intval', $alerta)) . ').' ?></span>
+            <span><?= e(pedidos_estorno_alerta_texto($alerta)) ?></span>
             <a class="ap-btn ap-btn-perigo" href="<?= e(url('admin/pedidos/' . (int) $alerta[0])) ?>" data-ap-abrir="<?= (int) $alerta[0] ?>">Revisar</a>
         </div>
     <?php endif; ?>
