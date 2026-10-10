@@ -1,7 +1,9 @@
 /* =============================================================================
-   Admin › Tabelas nutricionais: busca e filtros da lista (sem recarregar),
-   editor com porção/%VD/avisos/Prévia ao vivo, alérgenos guiados, salvar por
-   fetch, excluir (lógico) com "Desfazer" e "Sair sem salvar?".
+   Admin › Tabelas nutricionais
+   Lista em cards: busca e filtros sem recarregar, card clicável (mouse e
+   teclado), limpeza em lote no filtro "Sem produto" com "Desfazer".
+   Editor (página própria): porção/%VD/avisos/Prévia ao vivo, alérgenos guiados,
+   salvar por fetch, excluir (lógico) com "Desfazer" e "Sair sem salvar?".
    O cálculo do rótulo é o mesmo de app/lib/nutricao.php (loja).
    ============================================================================= */
 (function () {
@@ -34,76 +36,53 @@
         toastT = setTimeout(function () { toast.hidden = true; }, 5000);
     };
     var postar = function (dados) {
-        var corpo = dados instanceof FormData ? dados : new URLSearchParams(dados);
+        var corpo;
+        if (dados instanceof FormData) {
+            corpo = dados;
+        } else {
+            corpo = new URLSearchParams();
+            Object.keys(dados).forEach(function (k) {
+                [].concat(dados[k]).forEach(function (v) { corpo.append(Array.isArray(dados[k]) ? k + '[]' : k, v); });
+            });
+        }
         return fetch(URLS.post, { method: 'POST', credentials: 'same-origin', body: corpo, headers: { 'X-Requested-With': 'fetch' } })
             .then(function (r) { return r.json().catch(function () { return { ok: false }; }).then(function (d) { d.http = r.status; return d; }); });
     };
+    var guardarAviso = function (o) { try { sessionStorage.setItem('tn-aviso', JSON.stringify(o)); } catch (e) {} };
 
-    // Aviso deixado antes de recarregar (salvou, excluiu…).
+    // Aviso deixado antes de recarregar (salvou, excluiu…), com "Desfazer" quando cabe.
     try {
         var guardado = JSON.parse(sessionStorage.getItem('tn-aviso') || 'null');
         sessionStorage.removeItem('tn-aviso');
         if (guardado && guardado.msg) {
-            avisar(guardado.msg, guardado.restaurar ? function () {
-                postar({ op: 'restaurar', _csrf: URLS.csrf, id: guardado.restaurar }).then(function (d) {
-                    if (d.ok) { location.href = d.url; } else { avisar(d.mensagem || 'Não foi possível desfazer.', null, true); }
-                });
-            } : null);
+            var desfazer = null;
+            if (guardado.restaurar) {
+                desfazer = function () {
+                    postar({ op: 'restaurar', _csrf: URLS.csrf, id: guardado.restaurar }).then(function (d) {
+                        if (d.ok) { location.href = d.url; } else { avisar(d.mensagem || 'Não foi possível desfazer.', null, true); }
+                    });
+                };
+            } else if (guardado.restaurarLote) {
+                desfazer = function () {
+                    postar({ op: 'restaurar_lote', _csrf: URLS.csrf, ids: guardado.restaurarLote }).then(function (d) {
+                        if (d.ok) { guardarAviso({ msg: d.mensagem }); location.reload(); } else { avisar(d.mensagem || 'Não foi possível desfazer.', null, true); }
+                    });
+                };
+            }
+            avisar(guardado.msg, desfazer);
         }
     } catch (e) {}
-    var guardarAviso = function (o) { try { sessionStorage.setItem('tn-aviso', JSON.stringify(o)); } catch (e) {} };
 
-    // --- Lista: busca e filtros --------------------------------------------------------------
-    var busca = $('[data-tn-q]');
-    var marcado = $('.tn-filtros [aria-pressed="true"]');
-    var filtro = marcado ? marcado.getAttribute('data-tn-filtro') : 'todas';
-    var comFiltros = function (href) {
-        var u = new URL(href, location.href);
-        if (filtro !== 'todas') { u.searchParams.set('f', filtro); } else { u.searchParams.delete('f'); }
-        if (busca.value.trim()) { u.searchParams.set('q', busca.value.trim()); } else { u.searchParams.delete('q'); }
-        return u.pathname + u.search;
-    };
-    var filtrar = function () {
-        var q = busca.value.trim().toLocaleLowerCase('pt-BR');
-        var algum = false;
-        $$('[data-tn-item]').forEach(function (li) {
-            var uso = li.getAttribute('data-uso') === '1';
-            var ok = (filtro === 'todas' || (filtro === 'uso' ? uso : !uso)) && (!q || li.getAttribute('data-nome').indexOf(q) !== -1);
-            li.hidden = !ok;
-            if (ok) { algum = true; }
-        });
-        $('[data-tn-vazio]').hidden = algum;
-        $$('[data-tn-filtro]').forEach(function (b) {
-            if (b.closest('.tn-filtros')) { b.setAttribute('aria-pressed', b.getAttribute('data-tn-filtro') === filtro ? 'true' : 'false'); }
-        });
-        var faixa = $('[data-tn-faixa]');
-        if (faixa) { faixa.hidden = filtro === 'sem'; }
-        // Os links (abrir tabela, nova, voltar) levam os filtros junto.
-        $$('a[data-tn-nav]').forEach(function (a) {
-            if (a.href.indexOf('/admin/tabelas-nutricionais') !== -1) { a.setAttribute('href', comFiltros(a.getAttribute('href'))); }
-        });
-        try { history.replaceState(null, '', comFiltros(location.href)); } catch (e) {}
-    };
-    busca.addEventListener('input', filtrar);
-    $$('[data-tn-filtro]').forEach(function (b) {
-        b.addEventListener('click', function () { filtro = b.getAttribute('data-tn-filtro'); filtrar(); });
-    });
-    filtrar();
-
-    // --- Editor ---------------------------------------------------------------------------------
-    var form = $('[data-tn-form]');
+    // --- "Sair sem salvar?" (qualquer link da página, inclusive o menu do admin) ---------
     var sujo = false;
-    var salvando = false;
-
-    // "Sair sem salvar?" para links da página (lista, nova, voltar, duplicar, produtos).
     var modal = $('[data-tn-modal]');
     var destino = null;
-    raiz.addEventListener('click', function (ev) {
-        var a = ev.target.closest('a[data-tn-nav]');
-        if (!a || !sujo) { return; }
+    document.addEventListener('click', function (ev) {
+        var a = ev.target.closest && ev.target.closest('a[href]');
+        if (!a || !sujo || a.target === '_blank' || ev.defaultPrevented || ev.ctrlKey || ev.metaKey || ev.shiftKey) { return; }
         ev.preventDefault();
         destino = a.href;
-        var nome = form ? ($('#tn-nome').value.trim() || 'Nova tabela') : '';
+        var nome = $('#tn-nome') ? ($('#tn-nome').value.trim() || 'Nova tabela') : '';
         $('[data-tn-modal-texto]').textContent = 'As alterações em “' + nome + '” vão ser perdidas.';
         modal.hidden = false;
         $('[data-tn-ficar]').focus();
@@ -113,9 +92,96 @@
     document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && !modal.hidden) { modal.hidden = true; destino = null; } });
     window.addEventListener('beforeunload', function (ev) { if (sujo) { ev.preventDefault(); ev.returnValue = ''; } });
 
+    // ==========================================================================================
+    // LISTA EM CARDS
+    // ==========================================================================================
+    var grade = $('[data-tn-cards]');
+    if (grade) {
+        var busca = $('[data-tn-q]');
+        var filtro = raiz.getAttribute('data-filtro') || 'todas';
+        var comFiltros = function (href) {
+            var u = new URL(href, location.href);
+            if (filtro !== 'todas') { u.searchParams.set('f', filtro); } else { u.searchParams.delete('f'); }
+            if (busca.value.trim()) { u.searchParams.set('q', busca.value.trim()); } else { u.searchParams.delete('q'); }
+            return u.pathname + u.search;
+        };
+        var cards = $$('[data-tn-card]');
+        var visiveis = function () { return cards.filter(function (c) { return !c.hidden; }); };
+        var botaoLote = $('[data-tn-excluir-lote]');
+        var todas = $('[data-tn-sel-todas]');
+        var atualizarLote = function () {
+            var marcadas = visiveis().filter(function (c) { var ck = $('[data-tn-sel]', c); return ck && ck.checked; });
+            var selecionaveis = visiveis().filter(function (c) { return $('[data-tn-sel]', c); });
+            botaoLote.disabled = marcadas.length === 0;
+            botaoLote.textContent = 'Excluir selecionadas' + (marcadas.length ? ' (' + marcadas.length + ')' : '');
+            todas.checked = selecionaveis.length > 0 && marcadas.length === selecionaveis.length;
+            todas.indeterminate = marcadas.length > 0 && marcadas.length < selecionaveis.length;
+        };
+        var filtrar = function () {
+            var q = busca.value.trim().toLocaleLowerCase('pt-BR');
+            cards.forEach(function (c) {
+                var uso = c.getAttribute('data-uso') === '1';
+                c.hidden = !((filtro === 'todas' || (filtro === 'uso' ? uso : !uso)) && (!q || c.getAttribute('data-nome').indexOf(q) !== -1));
+                if (c.hidden) { var ck = $('[data-tn-sel]', c); if (ck) { ck.checked = false; } }
+                c.setAttribute('data-href', comFiltros(c.getAttribute('data-href')));
+            });
+            $('[data-tn-vazio]').hidden = visiveis().length > 0;
+            raiz.setAttribute('data-filtro', filtro);
+            $$('.tn-filtros [data-tn-filtro]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-tn-filtro') === filtro ? 'true' : 'false'); });
+            var faixa = $('[data-tn-faixa]');
+            if (faixa) { faixa.hidden = filtro === 'sem'; }
+            $('[data-tn-lote]').hidden = filtro !== 'sem';
+            var nova = document.querySelector('.admin-titulo-linha a');
+            if (nova) { nova.setAttribute('href', comFiltros(nova.getAttribute('href'))); }
+            atualizarLote();
+            try { history.replaceState(null, '', comFiltros(location.href)); } catch (e) {}
+        };
+        busca.addEventListener('input', filtrar);
+        $$('[data-tn-filtro]').forEach(function (b) {
+            b.addEventListener('click', function () { filtro = b.getAttribute('data-tn-filtro'); filtrar(); });
+        });
+
+        // Card inteiro abre o editor (a caixa de seleção não).
+        grade.addEventListener('click', function (ev) {
+            if (ev.target.closest('[data-tn-sel]')) { return; }
+            var c = ev.target.closest('[data-tn-card]');
+            if (c) { location.href = c.getAttribute('data-href'); }
+        });
+        grade.addEventListener('keydown', function (ev) {
+            var c = ev.target.closest('[data-tn-card]');
+            if (c && ev.target === c && (ev.key === 'Enter' || ev.key === ' ')) {
+                ev.preventDefault();
+                location.href = c.getAttribute('data-href');
+            }
+        });
+        grade.addEventListener('change', function (ev) { if (ev.target.matches('[data-tn-sel]')) { atualizarLote(); } });
+        todas.addEventListener('change', function () {
+            visiveis().forEach(function (c) { var ck = $('[data-tn-sel]', c); if (ck) { ck.checked = todas.checked; } });
+            atualizarLote();
+        });
+        botaoLote.addEventListener('click', function () {
+            var ids = visiveis().map(function (c) { return $('[data-tn-sel]', c); }).filter(function (ck) { return ck && ck.checked; })
+                .map(function (ck) { return ck.value; });
+            if (!ids.length) { return; }
+            botaoLote.disabled = true;
+            postar({ op: 'excluir_lote', _csrf: URLS.csrf, ids: ids }).then(function (d) {
+                if (!d.ok) { avisar(d.mensagem || 'Não foi possível excluir.', null, true); atualizarLote(); return; }
+                guardarAviso({ msg: d.mensagem, restaurarLote: d.ids });
+                location.reload();
+            }).catch(function () { avisar('Não foi possível excluir. Tente de novo.', null, true); atualizarLote(); });
+        });
+        filtrar();
+        return;
+    }
+
+    // ==========================================================================================
+    // EDITOR
+    // ==========================================================================================
+    var form = $('[data-tn-form]');
     if (!form) { return; }
     var D = JSON.parse(document.getElementById('tn-dados').textContent);
     var CAMPOS = D.campos;          // coluna => {rotulo, un, casas, vd, nivel}
+    var salvando = false;
     var campo = function (col) { return document.getElementById('tn-' + col); };
 
     // Número digitado: '' -> null; "12,5" -> 12.5; negativo/texto -> NaN.
@@ -312,7 +378,11 @@
             }
             sujo = false;
             guardarAviso({ msg: d.mensagem });
-            location.replace(comFiltros(d.url));
+            // Mantém a busca e o filtro da lista no endereço (para o "← Tabelas nutricionais").
+            var u = new URL(d.url, location.href);
+            var atual = new URL(location.href);
+            ['f', 'q'].forEach(function (k) { if (atual.searchParams.get(k)) { u.searchParams.set(k, atual.searchParams.get(k)); } });
+            location.replace(u.pathname + u.search);
         }).catch(function () {
             salvando = false;
             atualizarBarra();
@@ -331,7 +401,7 @@
                 if (!d.ok) { avisar(d.mensagem || 'Não foi possível excluir.', null, true); return; }
                 sujo = false;
                 guardarAviso({ msg: d.mensagem, restaurar: d.id });
-                location.href = comFiltros(d.url);
+                location.href = D.urlLista;
             }).catch(function () { avisar('Não foi possível excluir. Tente de novo.', null, true); });
         });
     }
@@ -342,5 +412,4 @@
         avisar('Cópia criada. Ajuste o nome e os valores e clique em Criar tabela.');
     }
     atualizarBarra();
-    if (window.matchMedia('(max-width: 900px)').matches) { window.scrollTo(0, 0); }
 })();
