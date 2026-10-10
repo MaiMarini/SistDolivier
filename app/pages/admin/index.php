@@ -230,4 +230,5 @@ view('admin_layout', [
     'titulo_h1' => $saudacao . ($primeiro_nome !== '' ? ', ' . $primeiro_nome : ''),
     'subtitulo' => $data_extenso,
     'conteudo'  => ob_get_clean(),
+    'layout_largo' => true,   // mesma largura de Pedidos
 ]);
