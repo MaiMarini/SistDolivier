@@ -895,6 +895,12 @@ main {
 /* =============================================================================
    Admin › Pedidos (lista, quadro de produção e painel lateral) — prefixo ap-
    ============================================================================= */
+/* Admin: reserva sempre o espaço da barra de rolagem, para página curta e longa
+   ficarem com o conteúdo no mesmo lugar (sem "pular" ao trocar de menu). */
+html.admin-html {
+    scrollbar-gutter: stable;
+}
+
 /* Páginas de trabalho largas (ex.: Pedidos): mais espaço para a tabela e o quadro. */
 body.admin-largo .admin-corpo,
 body.admin-largo .admin-topo-inner {
