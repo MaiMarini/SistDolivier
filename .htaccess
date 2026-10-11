@@ -7,6 +7,9 @@
     # Se preciso, ajuste a base quando o site rodar em subpasta (ex.: RewriteBase /loja/).
     # RewriteBase /
 
+    # Pastas internas do Git e do GitHub nunca são servidas (403).
+    RewriteRule (^|/)\.(git|github)(/|$) - [F,L]
+
     # Não reescreve arquivos existentes (CSS, JS, imagens, uploads...).
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
@@ -22,9 +25,10 @@ ErrorDocument 404 /index.php
 # Bloqueia listagem de diretórios.
 Options -Indexes
 
-# Nega acesso web a arquivos sensíveis (.env, .env.example, .git*, etc.).
+# Nega acesso web a arquivos sensíveis: todo arquivo que começa com ponto (.env,
+# .env.example, .gitignore, .htaccess...) e scripts SQL, logs e backups.
 # São arquivos reais, então a regra de reescrita os serviria — este bloco impede.
-<FilesMatch "^\.(env|git)">
+<FilesMatch "(^\.|\.(sql|log|ini|bak|sh)$|^error_log$)">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>
@@ -33,3 +37,12 @@ Options -Indexes
         Deny from all
     </IfModule>
 </FilesMatch>
+
+# Cabeçalhos de segurança (também enviados pelo PHP nas páginas). "set" substitui o
+# do PHP, sem duplicar. Sem Content-Security-Policy por enquanto: ela pode quebrar
+# o checkout do Mercado Pago e as fontes.
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

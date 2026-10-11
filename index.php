@@ -34,6 +34,9 @@ if ($base_path !== '' && strpos($uri, $base_path) === 0) {
 $caminho   = trim($uri, '/');
 $segmentos = $caminho === '' ? [] : explode('/', $caminho);
 
+// Sessão logada parada há tempo demais (admin 2 h, cliente 30 dias): sai da conta.
+sessao_verificar_expiracao();
+
 // --- 2. Tabela de rotas ------------------------------------------------------
 // rota (1º segmento) => arquivo em app/pages/
 $rotas = [

@@ -1,11 +1,8 @@
 <?php
 /**
  * Logout: /sair
- * Encerra a sessão do usuário (mantém o carrinho) e volta para a home.
+ * Apaga a sessão e o cookie (o carrinho passa para a sessão nova) e volta para a home.
  */
 
-unset($_SESSION['usuario']);
-session_regenerate_id(true); // renova o id após mudar o estado de login
-
-flash('sucesso', 'Você saiu da sua conta.');
+sessao_encerrar('Você saiu da sua conta.');
 redirect('');

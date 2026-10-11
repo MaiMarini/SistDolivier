@@ -10,3 +10,6 @@ assets/uploads/*
 
 # Logs
 *.log
+
+# Sessões guardadas dentro do projeto (quando não dá para usar a pasta fora do public_html)
+app/sessoes/

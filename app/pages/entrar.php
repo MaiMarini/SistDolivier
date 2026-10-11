@@ -145,6 +145,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // -------------------------------------------------------------------- LOGIN
     $email = trim($_POST['email'] ?? '');
     $senha = $_POST['senha'] ?? '';
+    $ip    = ip_cliente();
+
+    // 5 falhas do e-mail ou 20 do IP em 15 min: recusa por 15 min. A mensagem é a
+    // mesma exista ou não a conta.
+    if (login_bloqueado($email, $ip)) {
+        _entrar_falha('Muitas tentativas. Tente de novo em alguns minutos.', 'login');
+    }
 
     $stmt = db()->prepare(
         'SELECT id, nome, email, senha_hash, papel FROM users WHERE email = ? LIMIT 1'
@@ -153,7 +160,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $usuario = $stmt->fetch();
 
     if (!$usuario || !password_verify($senha, $usuario['senha_hash'])) {
+        login_falha($email, $ip);
         _entrar_falha('E-mail ou senha incorretos.', 'login');
+    }
+    login_sucesso($email);
+
+    // Hash antigo (algoritmo ou custo mudou): regrava com o padrão atual.
+    if (password_needs_rehash($usuario['senha_hash'], PASSWORD_DEFAULT)) {
+        db()->prepare('UPDATE users SET senha_hash = ? WHERE id = ?')
+            ->execute([password_hash($senha, PASSWORD_DEFAULT), (int) $usuario['id']]);
     }
 
     $is_admin = ($usuario['papel'] === 'admin');
