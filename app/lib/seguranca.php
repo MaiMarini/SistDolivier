@@ -130,17 +130,41 @@ function sessao_iniciar(): void
     session_set_cookie_params($parametros);
     session_start();
 
-    // Renova a validade do cookie uma vez por dia de uso (expira por inatividade, não por data fixa).
-    if (($_SESSION['_cookie_renovado'] ?? 0) < time() - 86400) {
+    // Renova a validade do cookie uma vez por dia de uso (expira por inatividade, não
+    // por data fixa). Só quando o cookie veio na requisição com esta mesma sessão: na
+    // primeira visita, e quando a sessão é trocada (login, expiração) ou encerrada
+    // (sair), o próprio PHP envia o cookie. A decisão fica para o último momento antes
+    // dos cabeçalhos saírem, para nunca sair um Set-Cookie em dobro.
+    $veio = $_COOKIE[session_name()] ?? null;
+    if ($veio === null || $veio !== session_id()) {
+        $_SESSION['_cookie_renovado'] = time();   // sessão nova: o PHP já envia o cookie
+        return;
+    }
+    if (($_SESSION['_cookie_renovado'] ?? 0) >= time() - 86400) {
+        return;
+    }
+    header_register_callback(function () use ($veio, $parametros): void {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return;   // encerrada nesta requisição
+        }
+        if (session_id() !== $veio) {
+            $_SESSION['_cookie_renovado'] = time();   // trocada (login, expiração): o PHP já mandou o cookie novo
+            return;
+        }
+        foreach (headers_list() as $h) {
+            if (stripos($h, 'Set-Cookie: ' . session_name() . '=') === 0) {
+                return;
+            }
+        }
         $_SESSION['_cookie_renovado'] = time();
-        setcookie(session_name(), session_id(), [
+        setcookie(session_name(), $veio, [
             'expires'  => time() + SESSAO_CLIENTE_SEG,
             'path'     => '/',
             'secure'   => $parametros['secure'],
             'httponly' => true,
             'samesite' => 'Lax',
         ]);
-    }
+    });
 }
 
 /**
@@ -172,21 +196,20 @@ function sessao_verificar_expiracao(): void
     flash('abrir_login', '1');
 }
 
-/** Logout: apaga a sessão e o cookie; abre uma sessão nova só para o aviso e o carrinho. */
+/**
+ * Logout: apaga os dados e o arquivo da sessão; abre uma sessão nova (outro id) só
+ * para o aviso e o carrinho. O cookie novo, de mesmo nome e caminho, substitui o
+ * antigo na mesma resposta (um único Set-Cookie); o id antigo deixa de existir.
+ */
 function sessao_encerrar(string $aviso): void
 {
     $carrinho = $_SESSION['carrinho'] ?? null;
     $_SESSION = [];
-    $p = session_get_cookie_params();
-    setcookie(session_name(), '', [
-        'expires' => time() - 3600, 'path' => $p['path'], 'domain' => $p['domain'],
-        'secure' => $p['secure'], 'httponly' => true, 'samesite' => 'Lax',
-    ]);
     session_destroy();
 
-    // Sessão nova (outro id): o carrinho de quem estava comprando continua.
     session_id(session_create_id());
     session_start();
+    $_SESSION['_cookie_renovado'] = time();
     if ($carrinho) {
         $_SESSION['carrinho'] = $carrinho;
     }

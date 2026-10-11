@@ -78,14 +78,11 @@ try {
 }
 $GLOBALS['pdo'] = $pdo;
 
-// --- 4. Sessão e cabeçalhos de segurança --------------------------------------
+// --- 4. Sessão ---------------------------------------------------------------
 // Cookie Secure/HttpOnly/SameSite=Lax, modo estrito e pasta própria (app/lib/seguranca.php).
+// Os cabeçalhos de segurança saem só pelo .htaccess (Header always set).
 require APP_PATH . '/lib/seguranca.php';
 sessao_iniciar();
-// Também no .htaccess (vale para arquivos estáticos); aqui garante as páginas PHP.
-header('X-Content-Type-Options: nosniff');
-header('X-Frame-Options: SAMEORIGIN');
-header('Referrer-Policy: strict-origin-when-cross-origin');
 
 // --- 5. Helpers --------------------------------------------------------------
 require APP_PATH . '/helpers.php';

@@ -38,11 +38,11 @@ Options -Indexes
     </IfModule>
 </FilesMatch>
 
-# Cabeçalhos de segurança (também enviados pelo PHP nas páginas). "set" substitui o
-# do PHP, sem duplicar. Sem Content-Security-Policy por enquanto: ela pode quebrar
-# o checkout do Mercado Pago e as fontes.
+# Cabeçalhos de segurança, só aqui (o PHP não envia). "always" cobre também as
+# respostas de erro e os redirecionamentos. Sem Content-Security-Policy por enquanto:
+# ela pode quebrar o checkout do Mercado Pago e as fontes.
 <IfModule mod_headers.c>
-    Header set X-Content-Type-Options "nosniff"
-    Header set X-Frame-Options "SAMEORIGIN"
-    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
