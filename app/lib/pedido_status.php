@@ -187,23 +187,24 @@ function pedido_reembolso_texto(array $p): string
     return 'Reembolso de ' . money($valor) . ' enviado' . $quando . '.';
 }
 
-/** Explica em português um erro de estorno do Mercado Pago (mantém o original entre parênteses). */
+/** Motivo curto, em português, de um erro de estorno do Mercado Pago (o original vai para o histórico). */
 function pedido_estorno_erro_texto(string $erro): string
 {
+    // Só o motivo, em linguagem simples. O texto técnico do Mercado Pago fica no
+    // histórico e em "Detalhes técnicos" no painel do pedido.
     $conhecidos = [
-        'live credentials'  => 'As credenciais do Mercado Pago no servidor não podem estornar este pagamento '
-                             . '(credenciais de produção não ativadas na aplicação, ou pagamento de teste com credenciais da conta real).',
-        'insufficient'      => 'Saldo insuficiente na conta do Mercado Pago para devolver o valor.',
-        'not found'         => 'O Mercado Pago não encontrou este pagamento com as credenciais do servidor.',
-        'already refunded'  => 'Este pagamento já foi estornado no Mercado Pago.',
-        'invalid status'    => 'O pagamento não está num estado que permite estorno.',
+        'live credentials'  => 'o pagamento foi feito em modo de teste ou com outra conta.',
+        'insufficient'      => 'falta saldo na conta do Mercado Pago.',
+        'not found'         => 'o pagamento não foi encontrado nesta conta.',
+        'already refunded'  => 'ele já estava estornado.',
+        'invalid status'    => 'o pagamento não permite estorno agora.',
     ];
     foreach ($conhecidos as $chave => $texto) {
         if (stripos($erro, $chave) !== false) {
-            return $texto . ' (' . $erro . ')';
+            return $texto;
         }
     }
-    return $erro;
+    return 'motivo não informado.';
 }
 
 /** Último erro de estorno gravado no histórico do pedido, ou ''. */
@@ -237,8 +238,8 @@ function pedido_estornar(int $id, ?int $usuario): array
     $falhou = function (string $erro) use ($id, $p, $usuario): array {
         db()->prepare('UPDATE orders SET estorno_status = "falhou" WHERE id = ?')->execute([$id]);
         pedido_historico_gravar($id, $p['status'], $p['status'], 'admin', $usuario, 'Estorno falhou: ' . $erro);
-        return ['ok' => false, 'mensagem' => 'O Mercado Pago não fez o estorno: ' . pedido_estorno_erro_texto($erro)
-            . ' Estorne pelo painel do Mercado Pago em Atividade → venda → Devolver dinheiro.'];
+        return ['ok' => false, 'mensagem' => 'O Mercado Pago recusou o estorno: ' . pedido_estorno_erro_texto($erro)
+            . ' Faça pelo painel do Mercado Pago.'];
     };
 
     // Antes de estornar: o pagamento é desta conta e ainda está aprovado?

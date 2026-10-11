@@ -40,6 +40,13 @@ function _cfg_endereco_texto(array $s, string $prefixo, bool $com_complemento): 
         . (strlen($cep) === 8 ? ' - CEP ' . substr($cep, 0, 5) . '-' . substr($cep, 5) : '');
 }
 
+/** Ajuda do arredondamento com o "valor fixo até" atual (o JS repete a mesma frase ao digitar). */
+function _cfg_ajuda_arredonda(int $base_km): string
+{
+    return 'Arredondado para cima: com valor fixo até ' . $base_km . ' km, '
+        . str_replace('.', ',', (string) ($base_km + 1.2)) . ' km conta como 2 km a mais.';
+}
+
 /** CNPJ válido pelos dígitos verificadores. */
 function _cfg_cnpj_valido(string $cnpj): bool
 {
@@ -320,7 +327,7 @@ ob_start();
             <?= $campo('frete_base_km', (string) (int) cfg('frete_base_km', '5'), ['rotulo' => 'Valor fixo até', 'prefixo' => 'km', 'im' => 'numeric']) ?>
             <?= $campo('frete_base_centavos', $reais('frete_base_centavos', '900'), ['rotulo' => 'Valor fixo', 'prefixo' => 'R$', 'im' => 'decimal']) ?>
             <?= $campo('frete_por_km_centavos', $reais('frete_por_km_centavos', '100'), ['rotulo' => 'Cada km a mais', 'prefixo' => 'R$', 'im' => 'decimal',
-                'ajuda' => 'Arredondado para cima: com valor fixo até 5 km, 6,2 km conta como 2 km a mais.']) ?>
+                'ajuda' => _cfg_ajuda_arredonda((int) cfg('frete_base_km', '5'))]) ?>
             <?= $campo('entrega_raio_max_km', (string) (int) cfg('entrega_raio_max_km', '15'), ['rotulo' => 'Entrega até', 'prefixo' => 'km', 'im' => 'numeric',
                 'ajuda' => 'Mais longe que isso, só retirada. 0 = sem limite.']) ?>
         </div>

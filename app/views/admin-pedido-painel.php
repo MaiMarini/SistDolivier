@@ -50,13 +50,16 @@ $form = function (string $op, array $campos, string $rotulo, string $classe) use
 
     <?php if ($pendente): ?>
         <div class="ap-alerta">
-            <span>Cancelado por: <?= e($por) ?>. Motivo: <?= e($p['cancelamento_motivo'] ?: '—') ?>.
+            <div class="ap-alerta-txt">Cancelado por: <?= e($por) ?>. Motivo: <?= e($p['cancelamento_motivo'] ?: '—') ?>.
                 O pagamento de <?= e($total) ?> continua aprovado.
                 <?php if (($p['estorno_status'] ?? '') === 'falhou'): ?>
                     <?php $erro_estorno = pedido_ultimo_erro_estorno($pid); ?>
-                    <br>O estorno automático falhou<?= $erro_estorno !== '' ? ': ' . e(pedido_estorno_erro_texto($erro_estorno)) : '.' ?>
-                    <br>Se tentar de novo e falhar, estorne pelo painel do Mercado Pago em Atividade → venda → Devolver dinheiro.
-                <?php endif; ?></span>
+                    <br>O Mercado Pago recusou o estorno<?= $erro_estorno !== '' ? ': ' . e(pedido_estorno_erro_texto($erro_estorno)) : '.' ?>
+                    Se falhar de novo, faça pelo painel do Mercado Pago (Atividade → venda → Devolver dinheiro).
+                    <?php if ($erro_estorno !== ''): ?>
+                        <details class="ap-detalhes"><summary>Detalhes técnicos</summary><code><?= e($erro_estorno) ?></code></details>
+                    <?php endif; ?>
+                <?php endif; ?></div>
             <?= $form('estornar', [], 'Estornar ' . $total, 'ap-btn-perigo-cheio') ?>
         </div>
     <?php elseif ($p['status'] === 'cancelado'): ?>

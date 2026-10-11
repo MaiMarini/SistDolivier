@@ -992,9 +992,15 @@ body.admin-largo .admin-topo-inner {
     font-weight: 700;
 }
 
-.ap-alerta > span {
+.ap-alerta > span,
+.ap-alerta > .ap-alerta-txt {
     flex: 1 1 300px;
+    min-width: 0;
 }
+
+.ap-detalhes { margin-top: 6px; font-weight: 600; }
+.ap-detalhes summary { cursor: pointer; text-decoration: underline; }
+.ap-detalhes code { display: block; margin-top: 4px; font-size: .8rem; overflow-wrap: anywhere; }
 
 .ap-alerta form {
     margin: 0;

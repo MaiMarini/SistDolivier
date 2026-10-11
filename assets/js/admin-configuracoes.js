@@ -177,6 +177,9 @@
         st.textContent = prov !== 'google' ? 'Cálculo de distância desligado: o frete por motoboy não é oferecido, só retirada.'
             : (D.temChave ? 'Distância calculada pelo Google Maps · chave configurada'
                 : 'Chave do Google não configurada: o frete por motoboy não é calculado, só retirada.');
+        var bk = Math.max(0, inteiro(valor('frete_base_km')));
+        $('#cf-ajuda-frete_por_km_centavos').textContent = 'Arredondado para cima: com valor fixo até ' + bk + ' km, '
+            + (bk + 1.2).toLocaleString('pt-BR') + ' km conta como 2 km a mais.';
         $$('[data-cf-contar]').forEach(function (t) { $('[data-cf-contador="' + t.name + '"]').textContent = t.value.length + ' / ' + t.maxLength; });
         previaWa();
         simular();

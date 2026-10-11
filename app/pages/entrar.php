@@ -1,12 +1,11 @@
 <?php
 /**
- * Acesso do cliente em uma única página /entrar, com duas abas:
+ * /entrar recebe o login e o cadastro (painel lateral do header.php), com duas ações:
  *   - "Entrar"      (acao=login)    -> e-mail + senha
  *   - "Criar conta" (acao=cadastro) -> nome, CPF, e-mail, endereço, senha
  *
- * A troca de abas é só visual (app.js). O campo escondido "acao" diz ao PHP qual
- * formulário foi enviado. Em erro, usa-se um flash "aba" para reabrir na aba que
- * falhou. Sem nenhum código de verificação.
+ * O campo escondido "acao" diz ao PHP qual formulário foi enviado. Abrir /entrar
+ * direto (GET) leva para a home com o painel lateral aberto: a página antiga saiu.
  *
  * O painel lateral (header.php) envia para cá por AJAX: aí a resposta é JSON
  * ({ok, mensagem} no erro; {ok, redirect} no sucesso) e o cliente não sai da
@@ -175,94 +174,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     _entrar_ok('Login efetuado. Olá, ' . $usuario['nome'] . '!', $destino ?? ($ajax ? null : ''));
 }
 
-// --- Exibição (GET) ----------------------------------------------------------
-// Aba ativa: a que falhou (flash) ou "login" por padrão.
+// --- GET: a página antiga não é mais usada --------------------------------------
+// Vai para a home com o painel lateral de login aberto (na aba "Criar conta" se o
+// cadastro falhou num envio sem JavaScript; a mensagem de erro já está no flash).
 $aba = flash_consumir('aba');
-$aba = ($aba === 'cadastro') ? 'cadastro' : 'login';
-
-ob_start();
-?>
-<div class="formulario">
-    <div class="abas">
-        <button type="button" class="aba<?= $aba === 'login' ? ' ativa' : '' ?>"
-                data-aba="login">Entrar</button>
-        <button type="button" class="aba<?= $aba === 'cadastro' ? ' ativa' : '' ?>"
-                data-aba="cadastro">Criar conta</button>
-    </div>
-
-    <!-- Aba: Entrar -->
-    <form method="post" action="<?= e(url('entrar')) ?>"
-          class="painel<?= $aba === 'login' ? ' ativo' : '' ?>" data-painel="login">
-        <?= csrf_input() ?>
-        <input type="hidden" name="acao" value="login">
-        <div class="campo">
-            <label for="login-email">E-mail</label>
-            <input type="email" id="login-email" name="email" required>
-        </div>
-        <div class="campo">
-            <label for="login-senha">Senha</label>
-            <input type="password" id="login-senha" name="senha" required>
-        </div>
-        <button class="btn" type="submit">Entrar</button>
-    </form>
-
-    <!-- Aba: Criar conta -->
-    <form method="post" action="<?= e(url('entrar')) ?>"
-          class="painel<?= $aba === 'cadastro' ? ' ativo' : '' ?>" data-painel="cadastro">
-        <?= csrf_input() ?>
-        <input type="hidden" name="acao" value="cadastro">
-        <div class="campo">
-            <label for="cad-nome">Nome completo</label>
-            <input type="text" id="cad-nome" name="nome" required minlength="3">
-        </div>
-        <div class="campo">
-            <label for="cad-cpf">CPF</label>
-            <input type="text" id="cad-cpf" name="cpf" inputmode="numeric"
-                   placeholder="Somente números" required>
-        </div>
-        <div class="campo">
-            <label for="cad-email">E-mail</label>
-            <input type="email" id="cad-email" name="email" required>
-        </div>
-
-        <div class="campo">
-            <label for="cad-cep">CEP</label>
-            <input type="text" id="cad-cep" name="cep" inputmode="numeric"
-                   placeholder="Somente números" data-cep>
-            <small>Preencha o CEP para completar o endereço automaticamente.</small>
-        </div>
-        <div class="campo">
-            <label for="cad-rua">Rua</label>
-            <input type="text" id="cad-rua" name="rua" data-cep-rua>
-        </div>
-        <div class="campo">
-            <label for="cad-numero">Número</label>
-            <input type="text" id="cad-numero" name="numero">
-        </div>
-        <div class="campo">
-            <label for="cad-complemento">Complemento (opcional)</label>
-            <input type="text" id="cad-complemento" name="complemento">
-        </div>
-        <div class="campo">
-            <label for="cad-bairro">Bairro</label>
-            <input type="text" id="cad-bairro" name="bairro" data-cep-bairro>
-        </div>
-        <div class="campo">
-            <label for="cad-cidade">Cidade</label>
-            <input type="text" id="cad-cidade" name="cidade" data-cep-cidade>
-        </div>
-        <div class="campo">
-            <label for="cad-estado">Estado (UF)</label>
-            <input type="text" id="cad-estado" name="estado" maxlength="2"
-                   placeholder="Ex.: SP" data-cep-uf>
-        </div>
-
-        <div class="campo">
-            <label for="cad-senha">Senha</label>
-            <input type="password" id="cad-senha" name="senha" minlength="6" required>
-        </div>
-        <button class="btn" type="submit">Criar conta</button>
-    </form>
-</div>
-<?php
-view('layout', ['titulo' => 'Entrar', 'conteudo' => ob_get_clean()]);
+flash('abrir_login', $aba === 'cadastro' ? 'cadastro' : '1');
+redirect('');

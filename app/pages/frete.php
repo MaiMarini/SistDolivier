@@ -92,7 +92,11 @@ if ($destino === '') {
 }
 
 // --- Cache da sessão + limite de destinos novos -----------------------------
-$id_sessao = $chave ?? mb_strtolower($destino);
+// A regra de preço entra na chave: mudou em Configurações, a estimativa é refeita
+// (a distância continua vindo do frete_cache, sem nova consulta ao Google).
+$regra = implode('|', [cfg('frete_provedor', 'off'), cfg('frete_base_km', 5), cfg('frete_base_centavos', 900),
+                       cfg('frete_por_km_centavos', 100), cfg('entrega_raio_max_km', 0)]);
+$id_sessao = substr(md5($regra), 0, 8) . ':' . ($chave ?? mb_strtolower($destino));
 if (isset($_SESSION['_frete_estimativas'][$id_sessao])) {
     _frete_json(['resumo' => $resumo] + $_SESSION['_frete_estimativas'][$id_sessao]);
 }

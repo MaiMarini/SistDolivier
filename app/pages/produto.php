@@ -138,8 +138,9 @@ ob_start();
         <?php endif; ?>
 
         <?php if ((int) $produto['dias_producao'] > 0): ?>
-            <p>Tempo de produção: <strong><?= (int) $produto['dias_producao'] ?></strong>
-               dia(s) úteis.</p>
+            <?php $dias = (int) $produto['dias_producao']; ?>
+            <p>Tempo de produção: <strong><?= $dias ?></strong>
+               <?= $dias === 1 ? 'dia útil' : 'dias úteis' ?>.</p>
         <?php endif; ?>
 
         <?php if (!empty($produto['descricao'])): ?>
