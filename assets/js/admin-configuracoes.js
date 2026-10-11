@@ -272,6 +272,41 @@
         });
     });
 
+    // --- E-mail de teste (não faz parte do salvar) -----------------------------------------------------
+    var emailBtn = $('[data-cf-email-teste]');
+    if (emailBtn) {
+        var emailCampo = $('#cf-email-teste'), emailMsg = $('[data-cf-email-msg]');
+        emailCampo.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter') { ev.preventDefault(); emailBtn.click(); }
+        });
+        emailBtn.addEventListener('click', function () {
+            if (!emailCampo.checkValidity() || !emailCampo.value.trim()) {
+                emailMsg.textContent = 'Digite um e-mail válido.';
+                emailMsg.classList.add('is-aviso');
+                emailCampo.focus();
+                return;
+            }
+            var fd = new FormData();
+            fd.append('_csrf', D.csrf);
+            fd.append('op', 'email_teste');
+            fd.append('para', emailCampo.value.trim());
+            emailBtn.disabled = true;
+            emailMsg.classList.remove('is-aviso');
+            emailMsg.textContent = 'Enviando… (pode levar até 15 segundos)';
+            fetch(D.url, { method: 'POST', credentials: 'same-origin', body: fd, headers: { 'X-Requested-With': 'fetch' } })
+                .then(function (r) { return r.json().catch(function () { return { ok: false, mensagem: 'Resposta inesperada do servidor.' }; }); })
+                .then(function (d) {
+                    emailMsg.textContent = d.mensagem || (d.ok ? 'Enviado.' : 'Não foi enviado.');
+                    emailMsg.classList.toggle('is-aviso', !d.ok);
+                })
+                .catch(function () {
+                    emailMsg.textContent = 'Sem resposta do servidor. Confira a conexão e tente de novo.';
+                    emailMsg.classList.add('is-aviso');
+                })
+                .then(function () { emailBtn.disabled = false; });
+        });
+    }
+
     // --- Salvar / descartar ----------------------------------------------------------------------------
     var salvando = false;
     var mostrarErros = function (erros) {

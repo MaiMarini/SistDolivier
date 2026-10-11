@@ -93,6 +93,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $responder(403, ['ok' => false, 'mensagem' => 'Sua sessão expirou. Recarregue a página.']);
         return;
     }
+    // E-mail de teste (SMTP do .env). Não grava nada.
+    if (($_POST['op'] ?? '') === 'email_teste') {
+        require_once APP_PATH . '/lib/email.php';
+        $para = trim((string) ($_POST['para'] ?? ''));
+        $quando = (new DateTime('now', new DateTimeZone('America/Porto_Velho')))->format('d/m/Y \à\s H:i');
+        $r = email_enviar($para, 'Teste de e-mail — ' . cfg('site_nome', 'Loja'), email_layout('O envio de e-mail funciona',
+            '<p>Este é um e-mail de teste enviado pelo painel da loja em ' . e($quando) . ' (horário de Rondônia).</p>'
+            . '<p>Se ele chegou na caixa de entrada, os e-mails de pedido também vão chegar. Se caiu no spam, '
+            . 'falta configurar SPF, DKIM e DMARC no domínio.</p>'));
+        $responder($r['ok'] ? 200 : 422, $r['ok']
+            ? ['ok' => true, 'mensagem' => 'E-mail enviado para ' . $para . '. Confira a caixa de entrada e o spam.']
+            : ['ok' => false, 'mensagem' => 'Não foi enviado. ' . $r['erro']]);
+        return;
+    }
     $in = fn ($k) => trim(str_replace("\r\n", "\n", (string) ($_POST[$k] ?? '')));
     $erros = [];
     $novo = [];
@@ -399,6 +413,21 @@ ob_start();
         <?= $area('regras_texto', 'Regras gerais', 'Aparecem em “Regras e prazos” na página de cada produto, depois das regras do próprio produto, e na página Regras.', 4) ?>
         <?= $area('sobre_texto', 'Sobre nós', 'Texto da página Sobre da loja.', 7) ?>
         <div class="cf-avisos" data-cf-avisos="textos"></div>
+
+        <!-- Teste do envio de e-mail: campos sem "name" (não entram no salvar nem no "Não salvo"). -->
+        <h3>E-mail da loja</h3>
+        <?php require_once APP_PATH . '/lib/email.php'; $falta_email = email_faltando(); $email_cfg = email_config(); ?>
+        <p class="cf-status<?= $falta_email ? ' is-alerta' : '' ?>"><?= $falta_email
+            ? e('Envio de e-mail não configurado: faltam no .env do servidor ' . implode(', ', $falta_email) . '.')
+            : e('Envio configurado: sai de ' . $email_cfg['de'] . ' por ' . $email_cfg['host'] . ':' . $email_cfg['porta'] . ' (' . $email_cfg['seg'] . ').') ?></p>
+        <div class="pe-campo">
+            <label for="cf-email-teste">Enviar um e-mail de teste para</label>
+            <span class="cf-cep">
+                <input id="cf-email-teste" type="email" value="contato.flordelizms@gmail.com" autocomplete="off" aria-describedby="cf-email-teste-msg">
+                <button type="button" class="ap-btn ap-btn-linha" data-cf-email-teste>Enviar teste</button>
+            </span>
+            <span class="pe-ajuda" id="cf-email-teste-msg" data-cf-email-msg role="status">Os dados do servidor de e-mail ficam no .env; a senha nunca aparece aqui.</span>
+        </div>
     </section>
 
     <div class="pe-barra" role="region" aria-label="Salvar configurações">
