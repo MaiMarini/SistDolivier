@@ -45,10 +45,10 @@ function data_dm(?string $ymd): string
 // Loja: situação de cada coleção (Pedidos abertos / Em breve / Encerrada)
 // =============================================================================
 
-/** "Hoje" para a situação das coleções na loja (horário de São Paulo). */
+/** "Hoje" da loja (Rondônia) para a situação das coleções; o admin usa o mesmo. */
 function colecao_hoje(): string
 {
-    return (new DateTime('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d');
+    return (new DateTime('now', new DateTimeZone('America/Porto_Velho')))->format('Y-m-d');
 }
 
 /**

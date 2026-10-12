@@ -86,7 +86,7 @@ function _col_renumerar(): void
 /** "Hoje" da loja (Rondônia). */
 function _col_hoje(): string
 {
-    return (new DateTime('now', new DateTimeZone('America/Porto_Velho')))->format('Y-m-d');
+    return colecao_hoje();
 }
 
 /** Uma linha da lista. */
