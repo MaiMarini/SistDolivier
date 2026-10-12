@@ -6731,6 +6731,36 @@ body.menu-aberto {
 }
 
 /* =============================================================================
+   Admin › Coleções — mesmo visual de Categorias (ct-), com uma coluna de datas.
+   ============================================================================= */
+.co-row { grid-template-columns: 34px 76px minmax(0, 1fr) 210px 120px 130px 96px; }
+.co-cat { display: block; margin-top: 2px; color: #6e5848; font-size: .8rem; font-weight: 600; }
+.co-datas { display: flex; flex-direction: column; gap: 2px; color: #6e5848; font-size: .84rem; }
+.co-datas b { color: var(--cor-texto); }
+.ct-tag.co-tag-encerrada { background: #fbead9; color: #8a4310; }
+.co-form .pe-campo input[type="date"],
+.co-form .pe-campo textarea {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid #d9cbb5;
+    border-radius: 10px;
+    background: var(--cor-superficie);
+    color: var(--cor-texto);
+    font: inherit;
+}
+.co-form .pe-campo textarea { padding: 10px 12px; min-height: 64px; resize: vertical; }
+.co-form .pe-campo select:disabled { opacity: .7; }
+
+@media (max-width: 760px) {
+    .co-row {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: "ar nm ed" "ar dt ed" "ar ct ed" "ar sw ed" "fm fm fm";
+    }
+    .co-datas { grid-area: dt; }
+}
+
+/* =============================================================================
    Admin › Configurações (abas) — prefixo cf-
    Reaproveita cartões, campos, chave, avisos, barra e toast do formulário de produto (pe-).
    ============================================================================= */

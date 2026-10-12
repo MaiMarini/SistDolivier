@@ -5,7 +5,7 @@
  * Barra de salvar fixa no rodapé. O comportamento fica em assets/js/admin-produto-form.js.
  *
  * Espera: $produto (linha de products ou padrão), $novo, $categorias [id, nome] na
- * ordem do menu, $tabelas [id, nome], $ligadas [ids], $fotos [{chave, url}],
+ * ordem do menu, $colecoes (colecoes_admin()), $tabelas [id, nome], $ligadas [ids], $fotos [{chave, url}],
  * $rascunho (token das fotos temporárias), $quando ("há 3 dias"), $voltar_url, $prefixo.
  */
 $pid = (int) $produto['id'];
@@ -24,6 +24,9 @@ $dados = [
     'csrf'       => csrf_token(),
     'rascunho'   => $rascunho,
     'categorias' => array_map(fn ($c) => ['id' => (int) $c['id'], 'nome' => $c['nome']], $categorias),
+    // Coleções por categoria: o campo "Coleção" só mostra as da categoria escolhida.
+    'colecoes'   => array_map(fn ($c) => ['id' => (int) $c['id'], 'cat' => (int) $c['category_id'], 'nome' => $c['nome'],
+        'ate' => data_br($c['encomendas_ate']), 'entrega' => data_br($c['entrega_em']), 'ativo' => (bool) $c['ativo']], $colecoes),
     'tabelas'    => array_map(fn ($t) => ['id' => (int) $t['id'], 'nome' => $t['nome']], $tabelas),
     'ligadas'    => $ligadas,
     'fotos'      => $fotos,
@@ -80,6 +83,18 @@ $chave = function (string $campo, string $titulo, string $ajuda, bool $ligado): 
                             <?php endforeach; ?>
                         </select>
                         <?= $erro('category_id') ?>
+                    </div>
+                    <?php $col_atual = (int) ($produto['colecao_id'] ?? 0); ?>
+                    <div class="pe-campo" data-pe-campo="colecao_id" data-pe-colecao <?= $colecoes ? '' : 'hidden' ?>>
+                        <label for="pe-col">Coleção</label>
+                        <select id="pe-col" name="colecao_id" aria-describedby="pe-col-ajuda pe-colecao_id-erro">
+                            <option value="">Sem coleção (usa o prazo de produção)</option>
+                            <?php foreach ($colecoes as $c): ?>
+                                <option value="<?= (int) $c['id'] ?>" <?= $col_atual === (int) $c['id'] ? 'selected' : '' ?>><?= e($c['nome']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <span class="pe-ajuda" id="pe-col-ajuda" data-pe-col-ajuda>Produtos de uma coleção têm a data limite e a data de entrega da coleção.</span>
+                        <?= $erro('colecao_id') ?>
                     </div>
                     <div class="pe-campo" data-pe-campo="preco">
                         <label for="pe-preco">Preço</label>

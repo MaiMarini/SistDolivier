@@ -68,6 +68,7 @@ $rotas_admin = [
     'sair'       => 'sair',        // /admin/sair       -> logout
     'pedidos'       => 'pedidos',       // /admin/pedidos       -> gestão de pedidos
     'categorias'    => 'categorias',    // /admin/categorias    -> CRUD de categorias
+    'colecoes'      => 'colecoes',      // /admin/colecoes      -> coleções (datas de encomenda e entrega)
     'produtos'      => 'produtos',      // /admin/produtos      -> CRUD de produtos + galeria
     'tabelas-nutricionais' => 'tabelas_nutricionais', // /admin/tabelas-nutricionais -> CRUD
     'banners'       => 'banners',       // /admin/banners       -> banners da home

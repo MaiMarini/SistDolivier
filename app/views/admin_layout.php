@@ -21,6 +21,7 @@ $menu = [
     'Produtos'      => ['produtos', 'admin/produtos'],
     'Tabelas nutricionais' => ['tabelas-nutricionais', 'admin/tabelas-nutricionais'],
     'Categorias'    => ['categorias', 'admin/categorias'],
+    'Coleções'      => ['colecoes', 'admin/colecoes'],
     'Home'          => ['banners', 'admin/banners'],
     'Configurações' => ['configuracoes', 'admin/configuracoes'],
 ];

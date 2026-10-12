@@ -16,15 +16,18 @@ Regras do servidor: o MySQL da HostGator não aceita *window functions* (`ROW_NU
 
 ## Pendentes no servidor
 
-Nenhuma. Em 12/10/2026 todas as migrações abaixo estavam rodadas no banco de produção (a última
-foi `migracao_recuperar_senha.sql`).
+| Migração | Para quê | O que acontece sem ela |
+|---|---|---|
+| `migracao_colecoes.sql` | Cria `colecoes` (Admin › Coleções: data limite para encomendar e data de entrega/retirada) e `products.colecao_id`. | Admin › Coleções pede para rodar a migração; o campo "Coleção" não aparece no produto. |
 
-Quando uma migração nova for criada, ela entra aqui até rodar no servidor, com o que acontece
-se ela não rodar e uma consulta para conferir, por exemplo:
+Para conferir se já rodou:
 
 ```sql
-SHOW TABLES LIKE 'senha_recuperacao';    -- 1 linha = migracao_recuperar_senha.sql já rodou
+SHOW TABLES LIKE 'colecoes';    -- 1 linha = migracao_colecoes.sql já rodou
 ```
+
+Quando rodar, tire-a desta lista. Até 12/10/2026, todas as anteriores estavam rodadas no banco de
+produção (a última foi `migracao_recuperar_senha.sql`).
 
 ## Todas as migrações, na ordem
 
@@ -66,6 +69,7 @@ SHOW TABLES LIKE 'senha_recuperacao';    -- 1 linha = migracao_recuperar_senha.s
 | 11/10 | `migracao_seguranca_login.sql` | Limite de tentativas de login; remove `maps_api_key`. | Sim |
 | 11/10 | `migracao_email_pedido.sql` | Controle dos e-mails de pedido. | Sim |
 | 12/10 | `migracao_recuperar_senha.sql` | Recuperação de senha e encerramento das outras sessões ao trocar a senha. | Sim |
+| 12/10 | `migracao_colecoes.sql` | Coleções (datas de encomenda e de entrega/retirada) e a coleção do produto. | Sim |
 
 ## Instalação nova
 

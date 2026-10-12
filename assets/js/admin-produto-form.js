@@ -16,7 +16,7 @@
 
     var campo = {
         nome: $('#pe-nome'), cat: $('#pe-cat'), preco: $('#pe-preco'), dias: $('#pe-dias'),
-        slug: $('#pe-slug'), desc: $('#pe-desc'), regras: $('#pe-regras')
+        slug: $('#pe-slug'), desc: $('#pe-desc'), regras: $('#pe-regras'), col: $('#pe-col')
     };
     var fotos = D.fotos.map(function (f) { return { chave: f.chave, url: f.url, estado: 'ok' }; });
     var ligadas = D.ligadas.slice();
@@ -75,7 +75,7 @@
     });
 
     // --- Erros por campo ----------------------------------------------------------------
-    var CAMPO_ERRO = { nome: campo.nome, category_id: campo.cat, preco: campo.preco, dias_producao: campo.dias,
+    var CAMPO_ERRO = { nome: campo.nome, category_id: campo.cat, colecao_id: campo.col, preco: campo.preco, dias_producao: campo.dias,
         descricao: campo.desc, regras_produto: campo.regras, fotos: null };
     var limparErro = function (nome) {
         var span = $('[data-pe-erro="' + nome + '"]');
@@ -109,8 +109,10 @@
         $('[data-pe-previa-preco]').textContent = c > 0 ? brl(c) : (chaveLigada('permite_personalizacao') ? 'Sob consulta' : '—');
         var cat = campo.cat.options[campo.cat.selectedIndex];
         var dias = campo.dias.value.trim();
+        var col = typeof colecaoEscolhida === 'function' ? colecaoEscolhida() : null;
         $('[data-pe-previa-linha]').textContent = (campo.cat.value ? cat.text : 'Sem categoria')
-            + ' · produção em ' + (dias === '' ? '0' : dias) + ' ' + (dias === '1' ? 'dia útil' : 'dias úteis');
+            + (col ? ' · ' + col.nome + ' · entrega/retirada em ' + col.entrega
+                : ' · produção em ' + (dias === '' ? '0' : dias) + ' ' + (dias === '1' ? 'dia útil' : 'dias úteis'));
         var capa = fotos.length ? fotos[0] : null;
         var img = prevImg.querySelector('img');
         if (capa && capa.estado !== 'erro') {
@@ -168,8 +170,34 @@
         if (ev.target.hasAttribute('data-pe-contar')) { contar(ev.target); }
     });
     form.addEventListener('change', function (ev) {
-        if (ev.target === campo.cat) { limparErro('category_id'); marcarSujo(); atualizarPrevia(); }
+        if (ev.target === campo.cat) { limparErro('category_id'); marcarSujo(); atualizarPrevia(); montarColecoes(); }
+        if (ev.target === campo.col) { limparErro('colecao_id'); marcarSujo(); explicarColecao(); atualizarPrevia(); }
     });
+
+    // --- Coleção: só as da categoria escolhida; com coleção, valem as datas dela ---------------
+    var blocoCol = $('[data-pe-colecao]'), ajudaCol = $('[data-pe-col-ajuda]'), ajudaDias = $('#pe-dias-ajuda');
+    var AJUDA_COL = ajudaCol ? ajudaCol.textContent : '', AJUDA_DIAS = ajudaDias ? ajudaDias.textContent : '';
+    var colecaoEscolhida = function () {
+        return (D.colecoes || []).filter(function (c) { return campo.col && String(c.id) === campo.col.value; })[0] || null;
+    };
+    var explicarColecao = function () {
+        var c = colecaoEscolhida();
+        if (ajudaCol) { ajudaCol.textContent = c ? 'Encomendas até ' + c.ate + ' · entrega/retirada em ' + c.entrega + '.' : AJUDA_COL; }
+        if (ajudaDias) { ajudaDias.textContent = c ? 'Na coleção “' + c.nome + '”, vale a data da coleção, não este prazo.' : AJUDA_DIAS; }
+    };
+    var montarColecoes = function () {
+        if (!campo.col || !blocoCol) { return; }
+        var cat = +campo.cat.value || 0, atual = campo.col.value;
+        var lista = (D.colecoes || []).filter(function (c) { return c.cat === cat; });
+        campo.col.innerHTML = '<option value="">Sem coleção (usa o prazo de produção)</option>' + lista.map(function (c) {
+            return '<option value="' + c.id + '">' + esc(c.nome) + (c.ativo ? '' : ' (desligada)') + '</option>';
+        }).join('');
+        campo.col.value = lista.some(function (c) { return String(c.id) === atual; }) ? atual : '';
+        blocoCol.hidden = !lista.length;
+        explicarColecao();
+        atualizarPrevia();
+    };
+    montarColecoes();
 
     // Contadores "N / máx".
     var contar = function (ta) {

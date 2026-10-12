@@ -499,6 +499,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($category_id <= 0) {
             $erros['category_id'] = 'Escolha a categoria.';
         }
+        // Coleção (opcional): precisa ser da categoria escolhida.
+        $colecao_id = (int) ($_POST['colecao_id'] ?? 0);
+        if ($colecao_id > 0 && $category_id > 0 && !colecao_valida($colecao_id, $category_id)) {
+            $erros['colecao_id'] = 'Essa coleção não é desta categoria. Escolha outra ou “Sem coleção”.';
+        }
         $preco = 0;
         if ($preco_tx === '') {
             if (!$pers) { $erros['preco'] = 'Informe o preço (ou ligue “Aceita personalização”).'; }
@@ -557,6 +562,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $id = (int) $pdo->lastInsertId();
             }
             _produto_tocar($id);
+
+            try {   // sem a migração de coleções, a coluna não existe: segue sem ela
+                $pdo->prepare('UPDATE products SET colecao_id = ? WHERE id = ?')->execute([$colecao_id > 0 ? $colecao_id : null, $id]);
+            } catch (PDOException $e) {
+                if ($e->getCode() !== '42S22') { throw $e; }
+            }
 
             try {
                 _produto_salvar_tabelas($id, $tabelas_in);
@@ -777,6 +788,7 @@ if ($acao === 'novo' || $acao === 'editar') {
         $tabelas = [];
     }
     $categorias = categorias_admin();
+    $colecoes = colecoes_admin();
     $voltar = (string) ($_GET['voltar'] ?? '');
     $voltar = preg_match('/^[\w%=&+.\-]*$/', $voltar) ? $voltar : '';
     $host = parse_url(url(), PHP_URL_HOST) ?: 'dolivier.com.br';
@@ -786,6 +798,7 @@ if ($acao === 'novo' || $acao === 'editar') {
         'produto'    => $produto,
         'novo'       => $novo,
         'categorias' => $categorias,
+        'colecoes'   => $colecoes,
         'tabelas'    => $tabelas,
         'ligadas'    => $ligadas,
         'fotos'      => $fotos,
