@@ -69,6 +69,11 @@ $imagens = array_values(array_unique(array_filter($imagens, 'strlen')));
 // Tabelas nutricionais ligadas (na ordem; sem as excluídas). Rótulo em app/lib/nutricao.php.
 $tabelas_nutri = nutri_tabelas_do_produto((int) $produto['id']);
 
+// Produto de coleção fora do prazo de pedidos (em breve / encerrada): botão de
+// compra desativado. O servidor também recusa (carrinho.php).
+$colecao = colecao_do_produto((int) $produto['id']);
+$compra_bloqueada = $colecao ? colecao_botao_bloqueado($colecao['sit']) : '';
+
 ob_start();
 ?>
 <div class="produto">
@@ -147,7 +152,12 @@ ob_start();
             <div class="produto-desc"><?= nl2br(e($produto['descricao'])) ?></div>
         <?php endif; ?>
 
-        <?php if ((int) $produto['preco_centavos'] > 0): ?>
+        <?php if ((int) $produto['preco_centavos'] > 0 && $compra_bloqueada !== ''): ?>
+            <div class="compra-form">
+                <button class="btn btn-carrinho is-bloqueado" type="button" disabled aria-describedby="compra-bloqueada"><?= e($compra_bloqueada) ?></button>
+                <p class="compra-bloqueada" id="compra-bloqueada"><?= e(colecao_recusa_carrinho((int) $produto['id'])) ?></p>
+            </div>
+        <?php elseif ((int) $produto['preco_centavos'] > 0): ?>
             <!-- Carrinho lateral: o app.js envia por AJAX e abre o painel; sem JS, segue para /carrinho -->
             <form method="post" action="<?= e(url('carrinho')) ?>" class="compra-form" data-carrinho-ajax>
                 <?= csrf_input() ?>

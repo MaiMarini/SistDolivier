@@ -92,6 +92,10 @@ if (isset($segmentos[0]) && $segmentos[0] === 'admin') {
     if (array_key_exists($chave, $rotas)) {
         $arquivo = APP_PATH . '/pages/' . $rotas[$chave] . '.php';
         $params  = array_slice($segmentos, 1);
+    } elseif (count($segmentos) === 2) {
+        // /{categoria}/{coleção} (ex.: /colecoes-sazonais/halloween); a página dá 404 se não existir.
+        $arquivo = APP_PATH . '/pages/colecao.php';
+        $params  = $segmentos;
     }
 }
 

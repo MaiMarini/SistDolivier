@@ -169,8 +169,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ok = false;
         $fora = 0;
         foreach ($linhas as $l) {
-            if ($l['ativo'] === null) {
-                $fora++;
+            if ($l['ativo'] === null || colecao_recusa_carrinho((int) $l['product_id']) !== '') {
+                $fora++;   // fora do catálogo ou de coleção fora do prazo de pedidos
                 continue;
             }
             carrinho_adicionar((int) $l['product_id'], (int) $l['quantidade']);
@@ -202,6 +202,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $msg = 'Este produto não está mais disponível.';
             } elseif ((int) $preco_p <= 0) {
                 $msg = 'Este produto é sob consulta: fale com a loja pelo WhatsApp.';
+            } elseif (($recusa = colecao_recusa_carrinho($pid)) !== '') {
+                $msg = $recusa;   // coleção em breve ou encerrada
             } else {
                 carrinho_adicionar($pid, $qtd);
                 $ok = true;

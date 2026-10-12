@@ -172,6 +172,7 @@
         campo('encomendas_ate').value = novo ? '' : linha.getAttribute('data-ate');
         campo('entrega_em').value = novo ? '' : linha.getAttribute('data-entrega');
         campo('observacao').value = novo ? '' : linha.getAttribute('data-obs');
+        if (campo('abre_em')) { campo('abre_em').value = novo ? '' : linha.getAttribute('data-abre'); }
         var n = novo ? 0 : +linha.getAttribute('data-n');
         if (n > 0) {
             // Com produtos, a categoria fica (os produtos são dela).
@@ -184,6 +185,68 @@
         salvar.textContent = novo ? 'Criar coleção' : 'Salvar';
         if (novo) { $('[data-ct-perigo]', f).remove(); }
 
+        // Capa: enviada na hora para uma pasta temporária; entra na coleção ao salvar.
+        var capa = { tmp: '', remover: false, url: novo ? '' : linha.getAttribute('data-capa'), enviando: false };
+        var cImg = $('[data-co-capa-img]', f);
+        var pintarNome = function () {};
+        if (cImg) {
+            var foto = $('[data-co-capa-foto]', f), arq = $('[data-co-capa-arq]', f), escolher = $('[data-co-capa-escolher]', f);
+            var rem = $('[data-co-capa-remover]', f), conf = $('[data-co-capa-conf]', f), cErro = $('[data-ct-erro="capa"]', f);
+            campo('capa_alt').value = novo ? '' : linha.getAttribute('data-capa-alt');
+            pintarNome = function () { $('[data-co-capa-nome]', f).textContent = campo('nome').value.trim() || 'Nome da coleção'; };
+            var pintarCapa = function () {
+                var u = capa.remover ? '' : capa.url;
+                if (u) { foto.src = u; } else { foto.removeAttribute('src'); }
+                foto.hidden = !u;
+                cImg.classList.toggle('is-vazia', !u);
+                escolher.textContent = u ? 'Trocar imagem' : 'Escolher imagem';
+                rem.hidden = !u;
+                conf.hidden = true;
+            };
+            var erroCapa = function (msg) { cErro.textContent = msg || ''; cErro.hidden = !msg; };
+            escolher.addEventListener('click', function () { arq.click(); });
+            arq.addEventListener('change', function () {
+                var file = arq.files && arq.files[0];
+                arq.value = '';
+                if (!file) { return; }
+                erroCapa('');
+                if (file.size > 5 * 1024 * 1024) { erroCapa('A imagem excede o tamanho máximo de 5 MB.'); return; }
+                var fd = new FormData();
+                fd.append('_csrf', CSRF);
+                fd.append('op', 'capa');
+                fd.append('arquivo', file);
+                capa.enviando = true;
+                escolher.disabled = true;
+                $('[data-co-capa-enviando]', f).hidden = false;
+                conferir();
+                fetch(URL_POST, { method: 'POST', credentials: 'same-origin', body: fd, headers: { 'X-Requested-With': 'fetch' } })
+                    .then(function (r) {
+                        return r.json().catch(function () { return { ok: false }; }).then(function (d) {
+                            if (!r.ok || !d.ok) { throw new Error(d.mensagem || 'Não foi possível enviar a imagem. Tente de novo.'); }
+                            return d;
+                        });
+                    })
+                    .then(function (d) { capa.tmp = d.tmp; capa.url = d.url; capa.remover = false; pintarCapa(); })
+                    .catch(function (e) { erroCapa(e.message); })
+                    .then(function () {
+                        capa.enviando = false;
+                        escolher.disabled = false;
+                        $('[data-co-capa-enviando]', f).hidden = true;
+                        conferir();
+                    });
+            });
+            rem.addEventListener('click', function () { rem.hidden = true; conf.hidden = false; $('[data-co-capa-remover-sim]', f).focus(); });
+            $('[data-co-capa-remover-nao]', f).addEventListener('click', function () { conf.hidden = true; rem.hidden = false; rem.focus(); });
+            $('[data-co-capa-remover-sim]', f).addEventListener('click', function () {
+                capa.tmp = '';
+                capa.remover = true;
+                pintarCapa();
+                escolher.focus();
+            });
+            pintarCapa();
+            pintarNome();
+        }
+
         var repetido = function () {
             var k = campo('nome').value.trim().toLocaleLowerCase('pt-BR');
             return !!k && linhas().some(function (l) { return l !== linha && nomeDe(l).trim().toLocaleLowerCase('pt-BR') === k; });
@@ -193,10 +256,10 @@
             $('[data-ct-dup]', f).hidden = !dup;
             var ate = campo('encomendas_ate').value, ent = campo('entrega_em').value;
             $('[data-co-passou]', f).hidden = !ate || ate >= HOJE;
-            salvar.disabled = !campo('nome').value.trim() || dup || !ate || !ent;
+            salvar.disabled = !campo('nome').value.trim() || dup || !ate || !ent || capa.enviando;
         };
         var limparErro = function (k) { var s = $('[data-ct-erro="' + k + '"]', f); if (s) { s.hidden = true; } };
-        f.addEventListener('input', function (ev) { if (ev.target.name) { limparErro(ev.target.name); } conferir(); });
+        f.addEventListener('input', function (ev) { if (ev.target.name) { limparErro(ev.target.name); } pintarNome(); conferir(); });
         f.addEventListener('change', function (ev) { if (ev.target.name) { limparErro(ev.target.name); } conferir(); });
         $('[data-ct-f-sw]', f).addEventListener('click', function () {
             var sw = $('[data-ct-f-sw]', f), v = sw.getAttribute('aria-checked') !== 'true';
@@ -215,12 +278,27 @@
                 campo('entrega_em').focus();
                 return;
             }
+            var abre = campo('abre_em') ? campo('abre_em').value : '';
+            if (abre && abre > ate) {
+                var sa = $('[data-ct-erro="abre_em"]', f);
+                sa.textContent = 'O início da campanha não pode ser depois da data limite para encomendar.';
+                sa.hidden = false;
+                campo('abre_em').focus();
+                return;
+            }
             salvar.disabled = true;
-            postar({
+            var dados = {
                 op: 'salvar', id: novo ? '0' : linha.getAttribute('data-id'), nome: campo('nome').value.trim(),
                 category_id: campo('category_id').value, encomendas_ate: ate, entrega_em: ent,
                 observacao: campo('observacao').value.trim(), ativo: $('[data-ct-f-ativo]', f).value
-            })
+            };
+            if (campo('abre_em')) { dados.abre_em = abre; }
+            if (cImg) {
+                dados.capa_tmp = capa.tmp;
+                dados.capa_remover = capa.remover ? '1' : '';
+                dados.capa_alt = campo('capa_alt').value.trim();
+            }
+            postar(dados)
                 .then(function (d) {
                     trocarLinhas(d.linhas);
                     avisar(d.mensagem);

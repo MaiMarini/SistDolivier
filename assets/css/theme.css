@@ -2091,6 +2091,104 @@ body.menu-aberto {
     margin-top: auto;
 }
 
+/* --- Coleções (categoria com coleções, ex.: Coleções Sazonais) ------------ */
+.cols { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.cols h1 { margin: 0; }
+.cols-intro { margin: -8px 0 0; color: #6e5848; }
+.cols-outros { margin: 10px 0 0; }
+
+.cc-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+
+.cc {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #eadfcd;
+    border-radius: 16px;
+    background: var(--cor-superficie);
+    color: var(--cor-texto);
+    text-decoration: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.cc:hover { border-color: var(--cor-pop); box-shadow: 0 6px 18px rgba(0, 0, 0, .08); text-decoration: none; }
+.cc:focus-visible { outline: 3px solid var(--cor-pop); outline-offset: 2px; }
+.cc.is-encerrada { opacity: .65; }
+
+.cc-capa {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    aspect-ratio: 12 / 5;
+    overflow: hidden;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #c98a5b, var(--cor-primaria));
+}
+.cc-capa.is-g2 { background: linear-gradient(135deg, #a9b27a, #4f5a24); }
+.cc-capa.is-g3 { background: linear-gradient(135deg, #e0b65f, var(--cor-pop)); }
+.cc-capa img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cc-capa::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(40, 24, 12, .55), rgba(40, 24, 12, 0) 60%); }
+.cc-capa .col-st { position: absolute; top: 12px; left: 12px; z-index: 1; background: rgba(255, 255, 255, .94); }
+.cc-nome {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    color: #fff;
+    font-size: 1.5rem;
+    line-height: 1.15;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, .25);
+    overflow-wrap: anywhere;
+}
+.cc-corpo { display: flex; flex: 1; flex-direction: column; gap: 8px; padding: 12px 14px 14px; }
+.cc-desc { margin: 0; color: #6e5848; font-size: .92rem; }
+.cc-ir { margin-top: auto; color: var(--cor-pop); font-weight: 800; }
+
+/* Situação: Pedidos abertos (verde) · Em breve (azul) · Encerrada (bege) */
+.col-st {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.col-st::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.col-st.is-aberta { background: #e4eee2; color: #2f6338; }
+.col-st.is-em_breve { background: #e8eef6; color: #2e5f8a; }
+.col-st.is-encerrada { background: #efe7da; color: #5c4636; }
+.cc-capa .col-st.is-aberta, .cc-capa .col-st.is-em_breve, .cc-capa .col-st.is-encerrada { background: rgba(255, 255, 255, .94); }
+
+.col-datas { display: flex; flex-wrap: wrap; gap: 8px; }
+.col-data { padding: 6px 12px; border-radius: 10px; background: #fbf4ea; color: #6e5848; font-size: .8rem; line-height: 1.25; }
+.col-data b { display: block; color: var(--cor-texto); font-size: .95rem; }
+.col-prazo { font-size: .85rem; font-weight: 800; color: #8a4310; }
+.col-prazo.is-em_breve { color: #2e5f8a; }
+.col-prazo.is-encerrada { color: #6e5848; }
+
+/* Página da coleção */
+.col-migalha { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: .92rem; color: #6e5848; }
+.col-migalha a { color: var(--cor-pop); font-weight: 800; }
+.col-faixa { overflow: hidden; border: 1px solid #eadfcd; border-radius: 12px; background: var(--cor-superficie); }
+.col-faixa-capa { display: block; width: 100%; aspect-ratio: 12 / 5; max-height: 280px; object-fit: cover; }
+.col-faixa-corpo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; padding: 14px 16px; }
+.col-faixa-txt { display: flex; flex: 1 1 240px; flex-direction: column; gap: 4px; min-width: 0; }
+.col-faixa-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.col-faixa-topo h1 { margin: 0; font-size: 1.75rem; overflow-wrap: anywhere; }
+
+/* Card de produto dentro da coleção */
+.card .card-entrega { display: flex; align-items: center; gap: 6px; color: #6e5848; font-size: .8rem; }
+.card .card-entrega::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--cor-acento); }
+.card.is-encerrada .card-img { filter: grayscale(.7); opacity: .6; }
+.btn.is-bloqueado, .btn.is-bloqueado:disabled { background: #d9cbb5; border-color: #d9cbb5; color: #5c4636; opacity: 1; }
+.compra-bloqueada { margin: 6px 0 0; color: #6e5848; font-size: .9rem; }
+
+@media (max-width: 640px) {
+    .cc-grade { grid-template-columns: minmax(0, 1fr); }
+    .col-faixa-topo h1 { font-size: 1.5rem; }
+}
+
 .etiqueta {
     display: inline-block;
     background: var(--cor-destaque);
@@ -6758,6 +6856,53 @@ body.menu-aberto {
 }
 .co-form .pe-campo textarea { padding: 10px 12px; min-height: 64px; resize: vertical; }
 .co-form .pe-campo select:disabled { opacity: .7; }
+.co-grid-datas { align-items: start; }
+
+/* Capa: prévia 12:5 com o nome por cima (como o cartão da loja) */
+.co-capa-rot { font-weight: 700; }
+.co-capa-linha { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px; }
+.co-capa-previa { display: flex; flex: 0 1 340px; flex-direction: column; gap: 6px; min-width: 0; }
+.co-capa-titulo { color: #6e5848; font-size: .8rem; font-weight: 800; }
+.co-capa-img {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    aspect-ratio: 12 / 5;
+    overflow: hidden;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #c98a5b, #6b4a2c);
+}
+.co-capa-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.co-capa-img::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(40, 24, 12, .55), rgba(40, 24, 12, 0) 60%); }
+.co-capa-nome {
+    position: relative;
+    z-index: 1;
+    color: #fff;
+    font-family: var(--fonte-titulo);
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1.15;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, .25);
+    overflow-wrap: anywhere;
+}
+.co-capa-img .hm-enviando { z-index: 2; }
+.co-capa-lado { display: flex; flex: 1 1 200px; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+.co-capa-remover {
+    min-height: 32px;
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    color: #9a3324;
+    font: inherit;
+    font-size: .88rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+.co-capa-conf { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 10px; background: #fbefec; font-size: .9rem; }
+.co-capa-conf-bt { display: flex; flex-wrap: wrap; gap: 8px; }
 
 @media (max-width: 760px) {
     .co-row {

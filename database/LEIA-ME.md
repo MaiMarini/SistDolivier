@@ -19,11 +19,13 @@ Regras do servidor: o MySQL da HostGator não aceita *window functions* (`ROW_NU
 | Migração | Para quê | O que acontece sem ela |
 |---|---|---|
 | `migracao_colecoes.sql` | Cria `colecoes` (Admin › Coleções: data limite para encomendar e data de entrega/retirada) e `products.colecao_id`. | Admin › Coleções pede para rodar a migração; o campo "Coleção" não aparece no produto. |
+| `migracao_colecoes_capa.sql` (depois da de cima) | Início da campanha (`colecoes.abre_em`), capa e texto alternativo da coleção (`colecoes.capa`, `capa_alt`) e o endereço próprio (`colecoes.slug`, ex.: `/colecoes-sazonais/halloween`). | A categoria continua como lista simples de produtos (sem cartões de coleção) e o formulário da coleção não mostra Início da campanha nem Capa (pede a migração). |
 
 Para conferir se já rodou:
 
 ```sql
 SHOW TABLES LIKE 'colecoes';    -- 1 linha = migracao_colecoes.sql já rodou
+SHOW COLUMNS FROM colecoes LIKE 'capa';   -- 1 linha = migracao_colecoes_capa.sql já rodou
 ```
 
 Quando rodar, tire-a desta lista. Até 12/10/2026, todas as anteriores estavam rodadas no banco de
@@ -70,6 +72,7 @@ produção (a última foi `migracao_recuperar_senha.sql`).
 | 11/10 | `migracao_email_pedido.sql` | Controle dos e-mails de pedido. | Sim |
 | 12/10 | `migracao_recuperar_senha.sql` | Recuperação de senha e encerramento das outras sessões ao trocar a senha. | Sim |
 | 12/10 | `migracao_colecoes.sql` | Coleções (datas de encomenda e de entrega/retirada) e a coleção do produto. | Sim |
+| 12/10 | `migracao_colecoes_capa.sql` | Início da campanha, capa da coleção e endereço próprio na loja. | Sim |
 
 ## Instalação nova
 
