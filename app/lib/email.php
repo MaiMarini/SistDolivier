@@ -132,15 +132,33 @@ function email_enviar(string $para, string $assunto, string $html, string $texto
         }
         // Autenticação: AUTH LOGIN e, se não der, AUTH PLAIN.
         $ok = false;
+        $resp = '';
         if ($cod($cmd('AUTH LOGIN')) === 334 && $cod($cmd(base64_encode($c['user']))) === 334) {
-            $ok = $cod($cmd(base64_encode($c['pass']))) === 235;
+            $resp = $cmd(base64_encode($c['pass']));
+            $ok = $cod($resp) === 235;
         }
         if (!$ok) {
             $r = $cmd('AUTH PLAIN ' . base64_encode("\0" . $c['user'] . "\0" . $c['pass']));
             $ok = $cod($r) === 235;
+            $resp = $resp !== '' ? $resp : $r;
         }
         if (!$ok) {
-            throw new RuntimeException('Usuário ou senha do e-mail recusados pelo servidor. Confira SMTP_USER (endereço completo) e SMTP_PASS no .env.');
+            // Diagnóstico sem expor a senha: usuário usado, tamanho da senha lida e sinais de aspas/espaços.
+            $p = $c['pass'];
+            $dicas = [];
+            if (!str_contains($c['user'], '@')) {
+                $dicas[] = 'SMTP_USER deve ser o endereço completo (ex.: ' . $c['de'] . ')';
+            }
+            if (preg_match('/^["\']|["\']$/', $p)) {
+                $dicas[] = 'a senha lida começa ou termina com aspas (confira se há aspas só de um lado)';
+            }
+            if ($p !== trim((string) $p) || preg_match('/\s/', $p)) {
+                $dicas[] = 'a senha lida tem espaço';
+            }
+            throw new RuntimeException('Usuário ou senha do e-mail recusados pelo servidor (resposta: ' . $curto($resp) . '). '
+                . 'Usuário usado: ' . $c['user'] . '; senha lida do .env com ' . mb_strlen($p) . ' caracteres.'
+                . ($dicas ? ' Atenção: ' . implode('; ', $dicas) . '.' : '')
+                . ' Confira se a mesma senha entra no webmail com esse usuário.');
         }
         $r = $cmd('MAIL FROM:<' . $c['de'] . '>');
         if ($cod($r) !== 250) {
