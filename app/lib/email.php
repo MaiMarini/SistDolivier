@@ -207,6 +207,29 @@ function email_enviar(string $para, string $assunto, string $html, string $texto
     return ['ok' => true, 'erro' => ''];
 }
 
+/**
+ * Roda $fn depois que a resposta já foi entregue ao navegador (quando a hospedagem
+ * permite): quem usa o site não espera o servidor de e-mail. Erros só vão para o log.
+ */
+function email_depois(callable $fn): void
+{
+    register_shutdown_function(function () use ($fn): void {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        } elseif (function_exists('litespeed_finish_request')) {
+            litespeed_finish_request();
+        }
+        try {
+            $fn();
+        } catch (Throwable $e) {
+            error_log('[email] ' . $e->getMessage());
+        }
+    });
+}
+
 /** Moldura simples nas cores da loja (estilos inline, que é o que os leitores de e-mail aceitam). */
 function email_layout(string $titulo, string $conteudo_html): string
 {

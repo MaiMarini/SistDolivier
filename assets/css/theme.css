@@ -1576,9 +1576,36 @@ body.ap-travado { overflow: hidden; }
     font-weight: 600;
 }
 
-.drawer-erro[hidden] {
+.drawer-erro[hidden],
+.drawer-ok[hidden] {
     display: none;
 }
+
+/* Aviso de sucesso no painel ("Esqueceu sua senha?": link enviado) */
+.drawer-ok {
+    margin: 0 0 1rem;
+    padding: .7rem .9rem;
+    border-radius: var(--raio);
+    background: #eef3e4;
+    color: #4f5a24;
+    font-size: .9rem;
+    font-weight: 600;
+}
+
+/* Página "Criar senha nova" (/recuperar-senha?token=...) */
+.rs {
+    display: flex;
+    flex-direction: column;
+    gap: .8rem;
+    max-width: 480px;
+    margin: 1.5rem auto 0;
+}
+
+.rs h1 { margin: 0; }
+.rs p { margin: 0; }
+.rs .formulario { max-width: none; }
+.rs-conta { color: #6e5848; }
+.rs-erro { padding: .7rem .9rem; border-radius: var(--raio); background: #fbead9; color: #a5561c; font-weight: 600; }
 
 /* --- Carrinho lateral (montado pelo app.js) -------------------------------- */
 .drawer-carrinho {

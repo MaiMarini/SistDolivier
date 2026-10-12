@@ -16,15 +16,14 @@ Regras do servidor: o MySQL da HostGator não aceita *window functions* (`ROW_NU
 
 ## Pendentes no servidor
 
-Nenhuma. Em 12/10/2026 todas as migrações abaixo estavam rodadas no banco de produção (as últimas
-foram `migracao_seguranca_login.sql` e `migracao_email_pedido.sql`).
+Nenhuma. Em 12/10/2026 todas as migrações abaixo estavam rodadas no banco de produção (a última
+foi `migracao_recuperar_senha.sql`).
 
 Quando uma migração nova for criada, ela entra aqui até rodar no servidor, com o que acontece
 se ela não rodar e uma consulta para conferir, por exemplo:
 
 ```sql
-SHOW TABLES LIKE 'login_tentativas';                -- 1 linha = migracao_seguranca_login.sql já rodou
-SHOW COLUMNS FROM orders LIKE 'email_pago_em';      -- 1 linha = migracao_email_pedido.sql já rodou
+SHOW TABLES LIKE 'senha_recuperacao';    -- 1 linha = migracao_recuperar_senha.sql já rodou
 ```
 
 ## Todas as migrações, na ordem
@@ -66,6 +65,7 @@ SHOW COLUMNS FROM orders LIKE 'email_pago_em';      -- 1 linha = migracao_email_
 | 10/10 | `migracao_home_editor.sql` | Home do admin: período dos banners e links por categoria. | Sim |
 | 11/10 | `migracao_seguranca_login.sql` | Limite de tentativas de login; remove `maps_api_key`. | Sim |
 | 11/10 | `migracao_email_pedido.sql` | Controle dos e-mails de pedido. | Sim |
+| 12/10 | `migracao_recuperar_senha.sql` | Recuperação de senha e encerramento das outras sessões ao trocar a senha. | Sim |
 
 ## Instalação nova
 

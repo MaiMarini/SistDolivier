@@ -137,6 +137,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'papel'    => 'cliente',
             'is_admin' => false,
         ];
+        if (is_int($v = senha_versao($id))) {
+            $_SESSION['usuario']['senha_versao'] = $v;
+        }
 
         $destino = destino_pos_login(false);   // ex.: voltar ao checkout
         _entrar_ok('Cadastro realizado. Boas-vindas!', $destino ?? ($ajax ? null : ''));
@@ -181,6 +184,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'papel'    => $usuario['papel'],
         'is_admin' => $is_admin,
     ];
+    // Versão da senha desta sessão: se a senha mudar depois, esta sessão sai da conta.
+    if (is_int($v = senha_versao((int) $usuario['id']))) {
+        $_SESSION['usuario']['senha_versao'] = $v;
+    }
 
     // Pelo painel, o cliente continua na página em que estava; o admin vai ao painel.
     // Volta à página que exigiu o login (ex.: checkout); sem ela, o cliente fica

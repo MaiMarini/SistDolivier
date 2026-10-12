@@ -54,6 +54,7 @@ $rotas = [
     'regras'       => 'regras',
     'politica-de-privacidade' => 'politica_privacidade',
     'entrar'       => 'entrar',
+    'recuperar-senha' => 'recuperar_senha',   // "Esqueceu sua senha?" e "Criar senha nova"
     'cadastrar'    => 'cadastrar',
     'sair'         => 'sair',
     'meus-pedidos' => 'meus_pedidos',

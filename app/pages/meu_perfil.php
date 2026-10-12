@@ -131,11 +131,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('erro', 'A confirmação não confere com a nova senha.');
         redirect('meu-perfil');
     }
-    db()->prepare('UPDATE users SET senha_hash = ? WHERE id = ?')
-        ->execute([password_hash($nova, PASSWORD_DEFAULT), $id]);
+    senha_gravar($id, $nova);   // os outros aparelhos saem da conta; este continua
     session_regenerate_id(true);
 
-    flash('sucesso', 'Senha alterada.');
+    flash('sucesso', 'Senha alterada. Se a sua conta estava aberta em outro aparelho, ele vai pedir para entrar de novo.');
     redirect('meu-perfil');
 }
 

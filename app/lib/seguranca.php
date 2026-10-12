@@ -178,22 +178,76 @@ function sessao_verificar_expiracao(): void
     $usuario = $_SESSION['usuario'] ?? null;
     $ultimo = (int) ($_SESSION['_ultimo_uso'] ?? 0);
     $_SESSION['_ultimo_uso'] = $agora;
-    if ($usuario === null || $ultimo === 0) {
+    if ($usuario === null) {
         return;
     }
     $limite = !empty($usuario['is_admin']) ? sessao_admin_seg() : SESSAO_CLIENTE_SEG;
-    if ($agora - $ultimo <= $limite) {
+    if ($ultimo !== 0 && $agora - $ultimo > $limite) {
+        sessao_sair_com_aviso('Sua sessão expirou. Entre de novo.');
         return;
     }
+    // Senha trocada (em outro aparelho, por "Esqueci a senha" ou em Meu perfil): esta
+    // sessão foi aberta com a senha antiga e deixa de valer.
+    $versao = senha_versao((int) $usuario['id']);
+    if ($versao === false) {
+        sessao_sair_com_aviso('Entre de novo na sua conta.');   // conta apagada
+    } elseif ($versao !== null) {
+        if (!array_key_exists('senha_versao', $usuario)) {
+            $_SESSION['usuario']['senha_versao'] = $versao;      // sessão anterior a este controle
+        } elseif ((int) $usuario['senha_versao'] !== $versao) {
+            sessao_sair_com_aviso('Sua senha foi alterada. Entre de novo.');
+        }
+    }
+}
+
+/** Tira o login da sessão; numa página (GET), volta para a home com o login aberto e o aviso. */
+function sessao_sair_com_aviso(string $aviso): void
+{
     unset($_SESSION['usuario']);
     session_regenerate_id(true);
     $pagina = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === '';
     if ($pagina) {
         lembrar_destino();
-        abrir_login('Sua sessão expirou. Entre de novo.');
+        abrir_login($aviso);
     }
-    flash('erro', 'Sua sessão expirou. Entre de novo.');
+    flash('erro', $aviso);
     flash('abrir_login', '1');
+}
+
+/**
+ * Versão da senha da conta (sobe a cada troca). null = migração ainda não rodada
+ * (o controle fica desligado); false = a conta não existe mais.
+ */
+function senha_versao(int $id)
+{
+    try {
+        $st = db()->prepare('SELECT senha_versao FROM users WHERE id = ?');
+        $st->execute([$id]);
+        $v = $st->fetchColumn();
+        return $v === false ? false : (int) $v;
+    } catch (PDOException $e) {
+        return null;
+    }
+}
+
+/**
+ * Grava uma senha nova: troca o hash e sobe a versão (as outras sessões da conta
+ * saem na próxima página). A sessão atual, se for da mesma conta, continua valendo.
+ */
+function senha_gravar(int $id, string $nova): void
+{
+    $hash = password_hash($nova, PASSWORD_DEFAULT);
+    try {
+        db()->prepare('UPDATE users SET senha_hash = ?, senha_versao = senha_versao + 1 WHERE id = ?')->execute([$hash, $id]);
+    } catch (PDOException $e) {
+        db()->prepare('UPDATE users SET senha_hash = ? WHERE id = ?')->execute([$hash, $id]);   // sem a migração
+    }
+    if ((int) ($_SESSION['usuario']['id'] ?? 0) === $id) {
+        $v = senha_versao($id);
+        if (is_int($v)) {
+            $_SESSION['usuario']['senha_versao'] = $v;
+        }
+    }
 }
 
 /**

@@ -123,8 +123,24 @@ $ico_usuario  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
                 </div>
                 <button class="btn" type="submit">Fazer login</button>
             </form>
-            <p class="mt-1"><a href="<?= e(url('entrar')) ?>">Esqueceu sua senha?</a></p>
+            <p class="mt-1"><a href="<?= e(url('recuperar-senha')) ?>" data-login-ir-recuperar>Esqueceu sua senha?</a></p>
             <p><button class="btn sec" type="button" data-login-ir-cadastro>Criar conta</button></p>
+        </div>
+
+        <!-- Painel: esqueceu a senha (o link chega por e-mail) -->
+        <div data-login-painel="recuperar" hidden>
+            <p><button class="btn sec" type="button" data-login-voltar>&larr; Voltar</button></p>
+            <h2>Esqueceu sua senha?</h2>
+            <p>Digite o e-mail da sua conta. Enviamos um link para você criar uma senha nova.</p>
+            <form class="formulario" method="post" action="<?= e(url('recuperar-senha')) ?>" data-login-fica>
+                <?= csrf_input() ?>
+                <input type="hidden" name="acao" value="pedir">
+                <div class="campo">
+                    <label for="dw-rec-email">E-mail</label>
+                    <input type="email" id="dw-rec-email" name="email" required autocomplete="email">
+                </div>
+                <button class="btn" type="submit">Enviar link</button>
+            </form>
         </div>
 
         <!-- Painel: cadastro -->

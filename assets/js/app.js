@@ -872,6 +872,16 @@
                     })
                         .then(function (r) { return r.json(); })
                         .then(function (d) {
+                            aviso.className = 'drawer-erro';
+                            if (d.ok && form.hasAttribute('data-login-fica')) {
+                                // "Esqueceu sua senha?": fica no painel e mostra o aviso (mesmo texto exista ou não a conta).
+                                aviso.className = 'drawer-ok';
+                                aviso.textContent = d.mensagem || '';
+                                aviso.hidden = false;
+                                form.reset();
+                                if (btn) { btn.disabled = false; }
+                                return;
+                            }
                             if (d.ok) {
                                 // Recarrega a página atual já logado (o admin vai ao painel).
                                 if (d.redirect) { window.location.href = d.redirect; } else { window.location.reload(); }
@@ -886,27 +896,37 @@
                 });
             });
 
-            // Alterna login <-> cadastro dentro do mesmo drawer.
-            if (irCadastro && painelLogin && painelCadastro) {
-                irCadastro.addEventListener('click', function () {
-                    painelLogin.hidden = true;
-                    painelCadastro.hidden = false;
-                    var c = painelCadastro.querySelector('input');
-                    if (c) { c.focus(); }
+            // Alterna entre login, cadastro e "Esqueceu sua senha?" dentro do mesmo drawer.
+            var mostrarPainel = function (nome) {
+                loginOverlay.querySelectorAll('[data-login-painel]').forEach(function (p) {
+                    p.hidden = p.getAttribute('data-login-painel') !== nome;
+                });
+                var c = loginOverlay.querySelector('[data-login-painel="' + nome + '"] input:not([type="hidden"])');
+                if (c) { c.focus(); }
+            };
+            if (irCadastro && painelCadastro) {
+                irCadastro.addEventListener('click', function () { mostrarPainel('cadastro'); });
+            }
+            var irRecuperar = loginOverlay.querySelector('[data-login-ir-recuperar]');
+            if (irRecuperar) {
+                irRecuperar.addEventListener('click', function (ev) {
+                    ev.preventDefault();
+                    // Leva o e-mail já digitado no login.
+                    var de = loginOverlay.querySelector('#dw-login-email'), para = loginOverlay.querySelector('#dw-rec-email');
+                    if (de && para && de.value && !para.value) { para.value = de.value; }
+                    mostrarPainel('recuperar');
                 });
             }
-            if (voltarLogin && painelLogin && painelCadastro) {
-                voltarLogin.addEventListener('click', function () {
-                    painelCadastro.hidden = true;
-                    painelLogin.hidden = false;
-                    var c = painelLogin.querySelector('input');
-                    if (c) { c.focus(); }
+            if (voltarLogin && painelLogin) {
+                loginOverlay.querySelectorAll('[data-login-voltar]').forEach(function (b) {
+                    b.addEventListener('click', function () { mostrarPainel('login'); });
                 });
             }
 
             if (abrirAoCarregar) {
                 abrirDrawer();
-                if (abrirAoCarregar === 'cadastro' && irCadastro) { irCadastro.click(); }
+                if (abrirAoCarregar === 'cadastro') { mostrarPainel('cadastro'); }
+                if (abrirAoCarregar === 'recuperar') { mostrarPainel('recuperar'); }
             }
         }
 

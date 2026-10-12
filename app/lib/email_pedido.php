@@ -24,22 +24,7 @@ function pedido_email_depois(int $pedido_id, string $tipo): void
         return;
     }
     $agendados[$chave] = true;
-    register_shutdown_function(function () use ($pedido_id, $tipo): void {
-        // Libera o navegador antes de falar com o servidor de e-mail, quando a hospedagem permite.
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        } elseif (function_exists('litespeed_finish_request')) {
-            litespeed_finish_request();
-        }
-        try {
-            pedido_email_enviar($pedido_id, $tipo);
-        } catch (Throwable $e) {
-            error_log('[email pedido] ' . $e->getMessage());
-        }
-    });
+    email_depois(fn () => pedido_email_enviar($pedido_id, $tipo));
 }
 
 /**
