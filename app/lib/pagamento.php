@@ -322,6 +322,7 @@ function pagamento_aplicar(array $pg): int
             ?? $pg['transaction_details']['external_resource_url'] ?? '');
     $ticket = preg_match('#^https://#i', $ticket) ? mb_substr($ticket, 0, 500) : '';
 
+    $liberou = false;   // o pedido saiu de "aguardando pagamento" para a produção agora
     $pdo = db();
     $pdo->beginTransaction();
     try {
@@ -369,6 +370,7 @@ function pagamento_aplicar(array $pg): int
             $pdo->prepare('UPDATE orders SET status = "realizado" WHERE id = ? AND status = "aguardando_pagamento"')
                 ->execute([$pedido_id]);
             pedido_historico_gravar($pedido_id, 'aguardando_pagamento', 'realizado', 'sistema', null, 'Pagamento aprovado');
+            $liberou = true;
         } elseif ($novo === 'aprovado' && $pedido['status'] === 'cancelado') {
             // Pago DEPOIS de cancelado: não reabre. Fica "estorno pendente" para a loja decidir.
             $pdo->prepare('UPDATE orders SET estorno_status = COALESCE(estorno_status, "pendente") WHERE id = ?')
@@ -387,6 +389,9 @@ function pagamento_aplicar(array $pg): int
     } catch (Throwable $e) {
         $pdo->rollBack();
         throw $e;
+    }
+    if ($liberou) {
+        pedido_email_depois($pedido_id, 'pago');   // depois da resposta ao Mercado Pago / ao cliente
     }
     return $pedido_id;
 }

@@ -14,6 +14,8 @@ require_once __DIR__ . '/lib/pagamento.php';
 require_once __DIR__ . '/lib/pedido_status.php';
 require_once __DIR__ . '/lib/nutricao.php';
 require_once __DIR__ . '/lib/categorias.php';
+require_once __DIR__ . '/lib/email.php';
+require_once __DIR__ . '/lib/email_pedido.php';
 
 // =============================================================================
 // Acesso ao banco

@@ -183,6 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     carrinho_limpar();
+    pedido_email_depois($order_id, 'recebido');   // sai depois da resposta; não atrasa o pagamento
     if ($online) {
         $link = pagamento_iniciar($order_id);
         if ($link !== null) {
