@@ -14,21 +14,18 @@ que já está no ar. A pasta é bloqueada na web (`database/.htaccess`).
 Regras do servidor: o MySQL da HostGator não aceita *window functions* (`ROW_NUMBER`, `OVER`,
 `PARTITION BY`), e nenhuma migração usa.
 
-## Pendentes no servidor (em 12/10/2026)
+## Pendentes no servidor
 
-| Migração | Para quê | O que acontece sem ela |
-|---|---|---|
-| `migracao_seguranca_login.sql` | Cria `login_tentativas` (limite de tentativas de login) e apaga a linha antiga `maps_api_key` de `settings`. Passos 4.3 e 4.5. | O login funciona, mas sem o limite de tentativas. |
-| `migracao_email_pedido.sql` | Cria `orders.email_recebido_em` e `orders.email_pago_em` (cada e-mail de pedido sai uma vez só). Passo 4.2. | Os e-mails "pedido recebido" e "pagamento aprovado" não saem. |
+Nenhuma. Em 12/10/2026 todas as migrações abaixo estavam rodadas no banco de produção (as últimas
+foram `migracao_seguranca_login.sql` e `migracao_email_pedido.sql`).
 
-Para conferir se já rodaram:
+Quando uma migração nova for criada, ela entra aqui até rodar no servidor, com o que acontece
+se ela não rodar e uma consulta para conferir, por exemplo:
 
 ```sql
 SHOW TABLES LIKE 'login_tentativas';                -- 1 linha = migracao_seguranca_login.sql já rodou
 SHOW COLUMNS FROM orders LIKE 'email_pago_em';      -- 1 linha = migracao_email_pedido.sql já rodou
 ```
-
-Quando rodar uma delas, tire-a desta lista.
 
 ## Todas as migrações, na ordem
 
