@@ -585,8 +585,9 @@ main {
     border-radius: 14px;
 }
 
-.mp-pagina-pedido {
-    max-width: 760px;
+/* "‹ Meus pedidos" de cima: só no celular, com um pedido aberto */
+.mp .mp-voltar-m {
+    display: none;
 }
 
 .mp-voltar {
@@ -842,6 +843,21 @@ main {
     .mp-busca,
     .mp-detalhe-col {
         display: none;
+    }
+
+    /* Pedido aberto (?pedido=N): só o detalhe, com o link de voltar à lista */
+    .mp.is-pedido-aberto .mp-voltar-m {
+        display: inline-flex;
+    }
+
+    .mp.is-pedido-aberto .mp-head,
+    .mp.is-pedido-aberto .mp-filtros-m,
+    .mp.is-pedido-aberto .mp-lista {
+        display: none;
+    }
+
+    .mp.is-pedido-aberto .mp-detalhe-col {
+        display: block;
     }
 
     .mp-filtros-m {

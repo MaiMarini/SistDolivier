@@ -3,7 +3,10 @@
  * "Meus pedidos": /meus-pedidos?status=apagar&periodo=30d&q=&pedido=12
  *   - Computador (>= 760px): lista à esquerda, detalhe do pedido à direita
  *     (trocado pelo app.js sem recarregar; os detalhes já vêm no HTML).
- *   - Celular: a lista ocupa a tela e cada linha abre /pedido/{id}.
+ *   - Celular: a lista ocupa a tela; tocar num pedido abre esta mesma página com
+ *     ?pedido=N, que mostra só o pedido, com "‹ Meus pedidos" para voltar.
+ * É o único lugar onde a cliente vê um pedido: e-mails, checkout e retorno do
+ * pagamento trazem para cá (pedido_caminho()); /pedido/{id} só redireciona.
  * Filtros na querystring (o Voltar do navegador funciona). Tudo restrito aos
  * pedidos da cliente logada.
  */
@@ -57,9 +60,26 @@ $st = db()->prepare("SELECT o.* FROM orders o WHERE $where_sql AND " . $GRUPOS[$
 $st->execute($args);
 $pedidos = $st->fetchAll();
 
-$comp = pedidos_complementos(array_column($pedidos, 'id'));
-$ids  = array_map('intval', array_column($pedidos, 'id'));
+$ids = array_map('intval', array_column($pedidos, 'id'));
+
+// Link para um pedido que os filtros atuais escondem (ex.: mais antigo que 30 dias):
+// abre com todos os períodos e status. Pedido de outra conta: aviso e lista normal.
+if ($f_pedido > 0 && !in_array($f_pedido, $ids, true)) {
+    $st = db()->prepare('SELECT 1 FROM orders WHERE id = ? AND user_id = ?');
+    $st->execute([$f_pedido, $uid]);
+    $meu = (bool) $st->fetchColumn();
+    if ($meu && ($f_periodo !== 'todos' || $f_status !== 'todos' || $f_q !== '')) {
+        redirect('meus-pedidos?' . http_build_query(['periodo' => 'todos', 'pedido' => $f_pedido]));
+    }
+    if (!$meu) {
+        flash('erro', 'Pedido não encontrado.');
+        redirect('meus-pedidos');
+    }
+}
+
+$comp = pedidos_complementos($ids);
 $sel  = in_array($f_pedido, $ids, true) ? $f_pedido : ($ids[0] ?? 0);
+$aberto = $f_pedido > 0 && $sel === $f_pedido;   // celular: mostra só o pedido
 
 // A cliente tem algum pedido? (para a mensagem de lista vazia)
 $st = db()->prepare('SELECT COUNT(*) FROM orders WHERE user_id = ?');
@@ -82,7 +102,11 @@ $chev = '<svg class="mp-chev" width="18" height="18" viewBox="0 0 24 24" fill="n
 
 ob_start();
 ?>
-<div class="mp" data-meus-pedidos>
+<div class="mp<?= $aberto ? ' is-pedido-aberto' : '' ?>" data-meus-pedidos>
+    <?php if ($aberto): ?>
+        <!-- Celular: volta para a lista (no computador a lista está ao lado) -->
+        <a class="mp-voltar mp-voltar-m" href="<?= e($link()) ?>"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg> Meus pedidos</a>
+    <?php endif; ?>
     <div class="mp-head">
         <h1>Meus pedidos</h1>
         <!-- Computador: busca + período -->
@@ -144,7 +168,7 @@ ob_start();
                 <?php endif; ?>
             <?php else: ?>
                 <?php foreach ($pedidos as $p): $pid = (int) $p['id']; $sit = pedido_situacao($p); ?>
-                    <a class="mp-row" href="<?= e(url('pedido/' . $pid)) ?>" data-mp-row="<?= $pid ?>"
+                    <a class="mp-row" href="<?= e($link(['pedido' => $pid])) ?>" data-mp-row="<?= $pid ?>"
                        aria-current="<?= $pid === $sel ? 'true' : 'false' ?>">
                         <span class="mp-row-main">
                             <span class="mp-row-top"><span>Pedido #<?= $pid ?></span>

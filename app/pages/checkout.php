@@ -191,10 +191,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         flash('erro', 'Seu pedido foi criado, mas não conseguimos abrir o pagamento agora. '
             . 'Use o botão "Pagar agora" abaixo para tentar de novo.');
-        redirect('pedido/' . $order_id);
+        redirect(pedido_caminho($order_id));
     }
     flash('sucesso', 'Pedido realizado! Veja os detalhes abaixo.');
-    redirect('pedido/' . $order_id);
+    redirect(pedido_caminho($order_id));
 }
 
 // -----------------------------------------------------------------------------

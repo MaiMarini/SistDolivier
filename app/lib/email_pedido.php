@@ -155,7 +155,7 @@ function pedido_email_recebido(array $p): array
             : 'Em breve entramos em contato pelo WhatsApp para combinar o pagamento e a entrega.')
         . '</p>'
         . _pedido_email_resumo($p)
-        . _pedido_email_botao($aguarda ? 'Ver o pedido e pagar' : 'Ver o pedido', url('pedido/' . $id));
+        . _pedido_email_botao($aguarda ? 'Ver o pedido e pagar' : 'Ver o pedido', url(pedido_caminho($id)));
     return ['Recebemos o seu pedido #' . $id . ' — ' . cfg('site_nome', 'Loja'), email_layout('Recebemos o seu pedido!', $corpo)];
 }
 
@@ -168,6 +168,6 @@ function pedido_email_pago(array $p): array
         . '<p>O pagamento do pedido <strong>#' . $id . '</strong> foi aprovado. Ele já entrou na nossa fila de produção.</p>'
         . '<p>Você pode acompanhar cada etapa em “Meus pedidos”.</p>'
         . _pedido_email_resumo($p)
-        . _pedido_email_botao('Acompanhar o pedido', url('pedido/' . $id));
+        . _pedido_email_botao('Acompanhar o pedido', url(pedido_caminho($id)));
     return ['Pagamento aprovado — pedido #' . $id, email_layout('Pagamento aprovado', $corpo)];
 }

@@ -65,6 +65,15 @@ function url(string $caminho = ''): string
 }
 
 /**
+ * Caminho de um pedido para a cliente: "Meus pedidos" com ele aberto. Serve para
+ * url() e redirect(). O antigo /pedido/{id} só redireciona para cá.
+ */
+function pedido_caminho(int $id): string
+{
+    return 'meus-pedidos?pedido=' . $id;
+}
+
+/**
  * URL de um arquivo estático com "cache-busting": acrescenta ?v=<mtime> para o
  * navegador buscar a versão nova sempre que o arquivo mudar (ex.: CSS/JS).
  */

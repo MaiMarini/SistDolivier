@@ -1,6 +1,7 @@
 <?php
 /**
- * Detalhe de um pedido — usado em "Meus pedidos" (painel à direita) e em /pedido/{id}.
+ * Detalhe de um pedido — usado em "Meus pedidos" (painel à direita no computador;
+ * a tela toda no celular, com ?pedido=N).
  * Espera: $pedido (linha de orders), $itens (order_items), $quando (status => data,
  * de pedido_historico) e $voltar (bool: mostra "← Meus pedidos").
  * Quem inclui já conferiu que o pedido é da cliente logada.

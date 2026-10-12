@@ -706,7 +706,7 @@
         // --- Meus pedidos ------------------------------------------------------
         // Selects de filtro aplicam ao mudar. No computador (>= 760px), clicar num
         // pedido troca o detalhe à direita sem recarregar; no celular o link abre
-        // /pedido/{id} normalmente.
+        // esta mesma página com ?pedido=N (só o pedido, com "‹ Meus pedidos").
         var mp = document.querySelector('[data-meus-pedidos]');
         if (mp) {
             mp.querySelectorAll('[data-mp-auto]').forEach(function (sel) {

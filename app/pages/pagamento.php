@@ -91,7 +91,7 @@ if ($acao === 'retorno') {
     } else {
         flash('erro', 'O pagamento não foi concluído. Você pode pagar pelo botão "Pagar agora".');
     }
-    redirect('pedido/' . $pedido_id);
+    redirect(pedido_caminho($pedido_id));
 }
 
 // -----------------------------------------------------------------------------
@@ -102,7 +102,7 @@ if ($acao === 'pagar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $pedido_id = (int) ($_POST['pedido_id'] ?? 0);
     if (!csrf_validar()) {
         flash('erro', 'Sua sessão expirou. Tente novamente.');
-        redirect('pedido/' . $pedido_id);
+        redirect(pedido_caminho($pedido_id));
     }
     $st = db()->prepare('SELECT user_id, status, pagamento_status, pagamento_tipo FROM orders WHERE id = ? LIMIT 1');
     $st->execute([$pedido_id]);
@@ -112,14 +112,14 @@ if ($acao === 'pagar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if ($p['status'] !== 'aguardando_pagamento') {
         flash('erro', 'Este pedido não está aguardando pagamento.');
-        redirect('pedido/' . $pedido_id);
+        redirect(pedido_caminho($pedido_id));
     }
     // Já existe um pagamento em curso: não gera outro (evita cobrar duas vezes).
     if (!pagamento_pode_pagar($p)) {
         flash('erro', pagamento_aguardando_pix_boleto($p)
             ? 'Já existe um Pix/boleto gerado para este pedido. Use o link do pagamento na página do pedido.'
             : 'Já existe um pagamento em análise para este pedido. Aguarde a confirmação.');
-        redirect('pedido/' . $pedido_id);
+        redirect(pedido_caminho($pedido_id));
     }
     $link = pagamento_iniciar($pedido_id);
     if ($link !== null) {
@@ -128,7 +128,7 @@ if ($acao === 'pagar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     flash('erro', pagamento_segundos_restantes($pedido_id) <= 60
         ? 'O prazo para pagar este pedido terminou.'
         : 'Não conseguimos abrir o pagamento agora. Tente novamente em instantes.');
-    redirect('pedido/' . $pedido_id);
+    redirect(pedido_caminho($pedido_id));
 }
 
 redirect('meus-pedidos');
