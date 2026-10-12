@@ -518,6 +518,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $erros['dias_producao'] = 'Use um número inteiro de dias (0 ou mais).';
         }
         $dias = (int) $dias_tx;
+        // Produto em coleção: o campo do prazo vem desativado (não é enviado); mantém o valor gravado.
+        if (!array_key_exists('dias_producao', $_POST)) {
+            $dias = $antes ? (int) $antes['dias_producao'] : 0;
+        }
         if (mb_strlen($descricao) > 1200) { $erros['descricao'] = 'Use no máximo 1200 caracteres.'; }
         if (mb_strlen($regras) > 600) { $erros['regras_produto'] = 'Use no máximo 600 caracteres.'; }
 

@@ -74,28 +74,6 @@ $chave = function (string $campo, string $titulo, string $ajuda, bool $ligado): 
                         <span class="pe-dica" id="pe-nome-dica" data-pe-nome-repetido hidden>Já existe outro produto com este nome.</span>
                         <?= $erro('nome') ?>
                     </div>
-                    <div class="pe-campo" data-pe-campo="category_id">
-                        <label for="pe-cat">Categoria</label>
-                        <select id="pe-cat" name="category_id" required aria-describedby="pe-category_id-erro">
-                            <option value="">Escolha…</option>
-                            <?php foreach ($categorias as $c): ?>
-                                <option value="<?= (int) $c['id'] ?>" <?= (int) $produto['category_id'] === (int) $c['id'] ? 'selected' : '' ?>><?= e($c['nome']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <?= $erro('category_id') ?>
-                    </div>
-                    <?php $col_atual = (int) ($produto['colecao_id'] ?? 0); ?>
-                    <div class="pe-campo" data-pe-campo="colecao_id" data-pe-colecao <?= $colecoes ? '' : 'hidden' ?>>
-                        <label for="pe-col">Coleção</label>
-                        <select id="pe-col" name="colecao_id" aria-describedby="pe-col-ajuda pe-colecao_id-erro">
-                            <option value="">Sem coleção (usa o prazo de produção)</option>
-                            <?php foreach ($colecoes as $c): ?>
-                                <option value="<?= (int) $c['id'] ?>" <?= $col_atual === (int) $c['id'] ? 'selected' : '' ?>><?= e($c['nome']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <span class="pe-ajuda" id="pe-col-ajuda" data-pe-col-ajuda>Produtos de uma coleção têm a data limite e a data de entrega da coleção.</span>
-                        <?= $erro('colecao_id') ?>
-                    </div>
                     <div class="pe-campo" data-pe-campo="preco">
                         <label for="pe-preco">Preço</label>
                         <span class="pe-affix"><span aria-hidden="true">R$</span>
@@ -108,12 +86,34 @@ $chave = function (string $campo, string $titulo, string $ajuda, bool $ligado): 
                             : 'Obrigatório para produtos que não aceitam personalização.' ?></span>
                         <?= $erro('preco') ?>
                     </div>
+                    <div class="pe-campo" data-pe-campo="category_id">
+                        <label for="pe-cat">Categoria</label>
+                        <select id="pe-cat" name="category_id" required aria-describedby="pe-category_id-erro">
+                            <option value="">Escolha…</option>
+                            <?php foreach ($categorias as $c): ?>
+                                <option value="<?= (int) $c['id'] ?>" <?= (int) $produto['category_id'] === (int) $c['id'] ? 'selected' : '' ?>><?= e($c['nome']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?= $erro('category_id') ?>
+                    </div>
                     <div class="pe-campo" data-pe-campo="dias_producao">
                         <label for="pe-dias">Prazo de produção</label>
                         <span class="pe-affix"><input id="pe-dias" name="dias_producao" type="text" inputmode="numeric" maxlength="4" class="ap-num"
                                    value="<?= (int) $produto['dias_producao'] ?>" aria-describedby="pe-dias-ajuda pe-dias_producao-erro"><span aria-hidden="true">dias úteis</span></span>
                         <span class="pe-ajuda" id="pe-dias-ajuda">Aparece para o cliente na página do produto e no checkout.</span>
                         <?= $erro('dias_producao') ?>
+                    </div>
+                    <?php $col_atual = (int) ($produto['colecao_id'] ?? 0); ?>
+                    <div class="pe-campo" data-pe-campo="colecao_id" data-pe-colecao>
+                        <label for="pe-col">Coleção</label>
+                        <select id="pe-col" name="colecao_id" aria-describedby="pe-col-ajuda pe-colecao_id-erro">
+                            <option value="">Sem coleção</option>
+                            <?php foreach ($colecoes as $c): ?>
+                                <option value="<?= (int) $c['id'] ?>" <?= $col_atual === (int) $c['id'] ? 'selected' : '' ?>><?= e($c['nome']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <span class="pe-ajuda" id="pe-col-ajuda" data-pe-col-ajuda>Produtos de uma coleção têm a data limite e a data de entrega da coleção.</span>
+                        <?= $erro('colecao_id') ?>
                     </div>
                 </div>
                 <details class="pe-avancado">

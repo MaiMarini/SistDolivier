@@ -5836,6 +5836,13 @@ body.menu-aberto {
 .pe-affix-longo > span { max-width: 55%; overflow: hidden; text-overflow: ellipsis; place-items: center start; }
 
 .pe-ajuda { color: #6e5848; font-size: .8rem; }
+
+/* Campo que não se aplica agora (ex.: prazo de produção num produto de coleção) */
+.pe-campo.is-inativo > label,
+.pe-campo.is-inativo .pe-affix,
+.pe-campo.is-inativo select { opacity: .55; }
+.pe-campo.is-inativo input:disabled,
+.pe-campo.is-inativo select:disabled { background: #f6f1e8; cursor: not-allowed; }
 .pe-dica { color: #8a4310; font-size: .8rem; font-weight: 700; }
 .pe-erro { color: #9a3324; font-size: .82rem; font-weight: 700; }
 .pe-contador { align-self: flex-end; color: #7a6555; font-size: .75rem; }

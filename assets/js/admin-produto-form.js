@@ -182,18 +182,27 @@
     };
     var explicarColecao = function () {
         var c = colecaoEscolhida();
-        if (ajudaCol) { ajudaCol.textContent = c ? 'Encomendas até ' + c.ate + ' · entrega/retirada em ' + c.entrega + '.' : AJUDA_COL; }
-        if (ajudaDias) { ajudaDias.textContent = c ? 'Na coleção “' + c.nome + '”, vale a data da coleção, não este prazo.' : AJUDA_DIAS; }
+        var semColecoes = campo.col && campo.col.disabled;
+        if (ajudaCol) {
+            ajudaCol.textContent = c ? 'Encomendas até ' + c.ate + ' · entrega/retirada em ' + c.entrega + '.'
+                : (semColecoes ? 'Só para categorias com coleções, como Coleções Sazonais.' : AJUDA_COL);
+        }
+        // Com coleção, o prazo de produção não vale: o campo fica inativo (o valor gravado é mantido).
+        campo.dias.disabled = !!c;
+        campo.dias.closest('.pe-campo').classList.toggle('is-inativo', !!c);
+        if (c) { limparErro('dias_producao'); }
+        if (ajudaDias) { ajudaDias.textContent = c ? 'Não se aplica: na coleção “' + c.nome + '”, vale a data da coleção.' : AJUDA_DIAS; }
     };
     var montarColecoes = function () {
         if (!campo.col || !blocoCol) { return; }
         var cat = +campo.cat.value || 0, atual = campo.col.value;
         var lista = (D.colecoes || []).filter(function (c) { return c.cat === cat; });
-        campo.col.innerHTML = '<option value="">Sem coleção (usa o prazo de produção)</option>' + lista.map(function (c) {
+        campo.col.innerHTML = '<option value="">Sem coleção</option>' + lista.map(function (c) {
             return '<option value="' + c.id + '">' + esc(c.nome) + (c.ativo ? '' : ' (desligada)') + '</option>';
         }).join('');
         campo.col.value = lista.some(function (c) { return String(c.id) === atual; }) ? atual : '';
-        blocoCol.hidden = !lista.length;
+        campo.col.disabled = !lista.length;   // categoria sem coleções: campo desativado
+        blocoCol.classList.toggle('is-inativo', !lista.length);
         explicarColecao();
         atualizarPrevia();
     };
@@ -438,7 +447,7 @@
         } else if (centavos(p) <= 0 || centavos(p) > 99999999) {
             e.preco = 'Preço inválido. Use, por exemplo, 35,90.';
         }
-        if (campo.dias.value.trim() !== '' && !/^\d{1,4}$/.test(campo.dias.value.trim())) { e.dias_producao = 'Use um número inteiro de dias (0 ou mais).'; }
+        if (!campo.dias.disabled && campo.dias.value.trim() !== '' && !/^\d{1,4}$/.test(campo.dias.value.trim())) { e.dias_producao = 'Use um número inteiro de dias (0 ou mais).'; }
         if (campo.desc.value.length > 1200) { e.descricao = 'Use no máximo 1200 caracteres.'; }
         if (campo.regras.value.length > 600) { e.regras_produto = 'Use no máximo 600 caracteres.'; }
         return e;
