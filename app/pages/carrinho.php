@@ -13,6 +13,7 @@
 /** Linhas do carrinho a partir do banco (só produtos ativos; os outros saem). */
 function _carrinho_montar(): array
 {
+    colecao_limpar_carrinho();   // produto de coleção fora do prazo sai, com aviso
     $itens = carrinho(); // [product_id => quantidade]
     $linhas = [];
     $subtotal_geral = 0;
@@ -43,7 +44,7 @@ function _carrinho_montar(): array
             $linhas[] = ['produto' => $por_id[$pid], 'qtd' => (int) $qtd, 'subtotal' => $subtotal];
         }
     }
-    return ['linhas' => $linhas, 'subtotal' => $subtotal_geral, 'removidos' => $removidos];
+    return ['linhas' => $linhas, 'subtotal' => $subtotal_geral, 'removidos' => $removidos, 'avisos' => colecao_avisos_carrinho()];
 }
 
 /** O carrinho no formato usado pelo painel lateral. */
@@ -68,6 +69,7 @@ function _carrinho_json(): array
         'subtotal'  => money($c['subtotal']),
         'qtd_total' => carrinho_quantidade(),
         'removidos' => $c['removidos'],
+        'avisos'    => $c['avisos'],      // itens de coleção fora do prazo que saíram
     ];
 }
 
@@ -105,6 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($pid > 0) {
             carrinho_atualizar($pid, $qtd); // teto 99; 0 remove
         }
+        colecao_limpar_carrinho();   // não deixa aumentar item de coleção que encerrou
         if ($ajax) {
             header('Content-Type: application/json; charset=utf-8');
             $itens = carrinho();
@@ -239,11 +242,15 @@ $montado        = _carrinho_montar();
 $linhas         = $montado['linhas'];
 $subtotal_geral = $montado['subtotal'];
 $removidos      = $montado['removidos']; // itens que saíram do catálogo
+$avisos_col     = $montado['avisos'];    // itens de coleção fora do prazo
 
 ob_start();
 ?>
 <h1>Seu carrinho</h1>
 
+<?php foreach ($avisos_col as $aviso): ?>
+    <div class="flash erro"><?= e($aviso) ?></div>
+<?php endforeach; ?>
 <?php if ($removidos > 0): ?>
     <div class="flash erro">
         <?= $removidos === 1

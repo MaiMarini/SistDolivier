@@ -13,6 +13,7 @@ $usuario = usuario_atual();
 /** Monta as linhas do carrinho a partir do banco (só produtos ativos). */
 function _checkout_carrinho(): array
 {
+    colecao_limpar_carrinho();   // produto de coleção fora do prazo sai, com aviso
     $itens = carrinho();
     $linhas = [];
     $subtotal = 0;
@@ -64,6 +65,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $c = _checkout_carrinho();
+    // Um item de coleção encerrou enquanto a pessoa preenchia: não fecha o pedido
+    // sem ele; volta para ela revisar o carrinho e os totais.
+    $avisos_col = colecao_avisos_carrinho();
+    if ($avisos_col) {
+        flash('erro', implode(' ', $avisos_col) . (empty($c['linhas']) ? '' : ' Confira o pedido antes de finalizar.'));
+        redirect(empty($c['linhas']) ? 'carrinho' : 'checkout');
+    }
     if (empty($c['linhas'])) {
         flash('erro', 'Seu carrinho está vazio.');
         redirect('carrinho');
@@ -201,6 +209,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // GET: exibe o checkout
 // -----------------------------------------------------------------------------
 $c = _checkout_carrinho();
+$avisos_col = colecao_avisos_carrinho();
+if ($avisos_col) {
+    flash('erro', implode(' ', $avisos_col));   // aparece nesta mesma página
+}
 
 if (empty($c['linhas'])) {
     ob_start();

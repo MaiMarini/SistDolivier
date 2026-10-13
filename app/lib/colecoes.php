@@ -184,8 +184,10 @@ function colecao_por_slug(int $category_id, string $slug): ?array
 function colecao_do_produto(int $product_id): ?array
 {
     try {
-        $st = db()->prepare('SELECT ' . COLECAO_COLUNAS_LOJA . ' FROM products p
+        colecoes_preencher_slugs();   // o link para a coleção precisa do slug
+        $st = db()->prepare('SELECT ' . COLECAO_COLUNAS_LOJA . ', c.slug AS cat_slug FROM products p
                                JOIN colecoes o ON o.id = p.colecao_id AND o.excluida_em IS NULL
+                               LEFT JOIN categories c ON c.id = o.category_id AND c.ativo = 1
                               WHERE p.id = ? LIMIT 1');
         $st->execute([$product_id]);
         $c = $st->fetch();
@@ -212,6 +214,71 @@ function colecao_recusa_carrinho(int $product_id): string
     return $c['sit']['st'] === 'em_breve'
         ? 'Os pedidos da coleção “' . $c['nome'] . '” abrem em ' . $c['sit']['abre'] . '.'
         : 'Os pedidos da coleção “' . $c['nome'] . '” estão encerrados.';
+}
+
+/**
+ * Tira do carrinho os produtos de coleção fora do prazo de pedidos (coleção que
+ * encerrou, foi desligada ou ainda não abriu depois que o item entrou). Os avisos
+ * ficam em $_SESSION['carrinho_avisos'] até alguém mostrá-los (colecao_avisos_carrinho).
+ */
+function colecao_limpar_carrinho(): void
+{
+    $itens = carrinho();
+    if (!$itens) {
+        return;
+    }
+    $ids = array_map('intval', array_keys($itens));
+    try {
+        $st = db()->prepare('SELECT p.id AS produto_id, p.nome AS produto, ' . COLECAO_COLUNAS_LOJA . '
+                               FROM products p JOIN colecoes o ON o.id = p.colecao_id AND o.excluida_em IS NULL
+                              WHERE p.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')');
+        $st->execute($ids);
+        $linhas = $st->fetchAll();
+    } catch (PDOException $e) {
+        return;   // migração ainda não rodou
+    }
+    $hoje = colecao_hoje();
+    foreach ($linhas as $c) {
+        $sit = colecao_situacao($c, $hoje);
+        if ($sit['st'] === 'aberta') {
+            continue;
+        }
+        carrinho_remover((int) $c['produto_id']);
+        $_SESSION['carrinho_avisos'][] = '“' . $c['produto'] . '” saiu do carrinho: os pedidos da coleção “' . $c['nome'] . '” '
+            . ($sit['st'] === 'em_breve' ? 'abrem em ' . $sit['abre'] . '.' : 'estão encerrados.');
+    }
+}
+
+/** Avisos de itens tirados do carrinho por colecao_limpar_carrinho (lê e apaga). */
+function colecao_avisos_carrinho(): array
+{
+    $a = $_SESSION['carrinho_avisos'] ?? [];
+    unset($_SESSION['carrinho_avisos']);
+    return array_values(array_unique($a));
+}
+
+/**
+ * Texto do prazo do produto para "Regras e prazos" (HTML escapado):
+ * coleção -> pedidos até / entrega a partir de; senão, o prazo de produção.
+ */
+function colecao_prazo_produto_html(?array $colecao, int $dias_producao): string
+{
+    if ($colecao) {
+        $h = '<p>Este produto faz parte da coleção <b>' . e($colecao['nome']) . '</b>.</p><ul>';
+        if ($colecao['sit']['st'] === 'em_breve') {
+            $h .= '<li>Pedidos a partir de <b>' . e(data_br($colecao['abre_em'] ?? $colecao['criado_em'])) . '</b>.</li>';
+        }
+        $h .= '<li>Pedidos até <b>' . e(data_br($colecao['encomendas_ate'])) . '</b>.</li>'
+            . '<li>Entrega ou retirada a partir de <b>' . e(data_br($colecao['entrega_em'])) . '</b>.</li></ul>';
+        if (trim((string) $colecao['observacao']) !== '') {
+            $h .= '<p>' . nl2br(e($colecao['observacao'])) . '</p>';
+        }
+        return $h;
+    }
+    if ($dias_producao > 0) {
+        return '<p>Tempo de produção: <b>' . $dias_producao . ' ' . ($dias_producao === 1 ? 'dia útil' : 'dias úteis') . '</b>.</p>';
+    }
+    return '';
 }
 
 // =============================================================================

@@ -966,6 +966,7 @@
                         ? 'Um item saiu do catálogo e foi removido do seu carrinho.'
                         : c.removidos + ' itens saíram do catálogo e foram removidos do seu carrinho.'));
                 }
+                (c.avisos || []).forEach(function (a) { cCorpo.appendChild(cMsg('cl-aviso is-erro', a)); });
                 if (!c.itens.length) {
                     cCorpo.appendChild(cMsg('cl-msg', 'Seu carrinho está vazio.'));
                     var ver = document.createElement('a');

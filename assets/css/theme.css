@@ -2184,6 +2184,13 @@ body.menu-aberto {
 .btn.is-bloqueado, .btn.is-bloqueado:disabled { background: #d9cbb5; border-color: #d9cbb5; color: #5c4636; opacity: 1; }
 .compra-bloqueada { margin: 6px 0 0; color: #6e5848; font-size: .9rem; }
 
+/* Página do produto de coleção: datas no lugar do tempo de produção */
+.produto-colecao { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; }
+.produto-colecao-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; color: #6e5848; }
+.produto-colecao-topo a, .produto-colecao-topo b { color: var(--cor-pop); font-weight: 800; }
+.destaque-regras ul { margin: .3em 0; padding-left: 1.2em; }
+.destaque-regras p { margin: 0 0 .3em; }
+
 @media (max-width: 640px) {
     .cc-grade { grid-template-columns: minmax(0, 1fr); }
     .col-faixa-topo h1 { font-size: 1.5rem; }

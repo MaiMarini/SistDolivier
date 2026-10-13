@@ -142,7 +142,20 @@ ob_start();
             <div class="produto-preco">Sob consulta</div>
         <?php endif; ?>
 
-        <?php if ((int) $produto['dias_producao'] > 0): ?>
+        <?php if ($colecao): ?>
+            <?php $sit = $colecao['sit']; ?>
+            <div class="produto-colecao">
+                <p class="produto-colecao-topo">
+                    Coleção <?php if ((string) $colecao['cat_slug'] !== '' && (int) $colecao['ativo'] === 1): ?><a href="<?= e(url($colecao['cat_slug'] . '/' . $colecao['slug'])) ?>"><?= e($colecao['nome']) ?></a><?php else: ?><b><?= e($colecao['nome']) ?></b><?php endif; ?>
+                    <span class="col-st is-<?= e($sit['st']) ?>"><?= e($sit['rotulo']) ?></span>
+                </p>
+                <div class="col-datas">
+                    <span class="col-data">Pedidos até<b><?= e(data_dm($colecao['encomendas_ate'])) ?></b></span>
+                    <span class="col-data">Entrega a partir de<b><?= e(data_dm($colecao['entrega_em'])) ?></b></span>
+                </div>
+                <span class="col-prazo is-<?= e($sit['st']) ?>"><?= e($sit['prazo']) ?></span>
+            </div>
+        <?php elseif ((int) $produto['dias_producao'] > 0): ?>
             <?php $dias = (int) $produto['dias_producao']; ?>
             <p>Tempo de produção: <strong><?= $dias ?></strong>
                <?= $dias === 1 ? 'dia útil' : 'dias úteis' ?>.</p>
@@ -254,6 +267,11 @@ ob_start();
 // Conteúdo do modal informativo: regras específicas (se houver, em destaque) +
 // regras gerais da loja. Tudo escapado com e().
 $regras_html = '';
+// Prazo deste produto (datas da coleção ou tempo de produção) junto das regras.
+$prazo_html = colecao_prazo_produto_html($colecao, (int) $produto['dias_producao']);
+if ($prazo_html !== '') {
+    $regras_html .= '<h3>Prazo deste produto</h3><div class="destaque-regras">' . $prazo_html . '</div>';
+}
 if (!empty($produto['regras_produto'])) {
     $regras_html .= '<h3>Sobre este produto</h3>';
     $regras_html .= '<div class="destaque-regras">'
