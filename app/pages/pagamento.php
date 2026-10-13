@@ -62,7 +62,8 @@ if ($acao === 'webhook') {
 // Retorno do Mercado Pago para o navegador da cliente.
 // -----------------------------------------------------------------------------
 if ($acao === 'retorno') {
-    $pedido_id = (int) ($_GET['external_reference'] ?? 0);
+    $ref       = (string) ($_GET['external_reference'] ?? '');
+    $pedido_id = (int) (str_starts_with($ref, 'G') ? explode('.', substr($ref, 1))[0] : $ref);   // "G12.13": pagos juntos
     $pay_id    = (string) ($_GET['payment_id'] ?? $_GET['collection_id'] ?? '');
 
     // Atualiza já, sem esperar o webhook (o status vem da API).
@@ -80,8 +81,11 @@ if ($acao === 'retorno') {
     $st->execute([$pedido_id]);
     $p  = $st->fetch() ?: [];
     $ps = (string) ($p['pagamento_status'] ?? '');
+    $grupo = pedido_grupo_ids($pedido_id);
     if ($ps === 'aprovado') {
-        flash('sucesso', 'Pagamento aprovado! Seu pedido entrou na fila de produção.');
+        flash('sucesso', count($grupo) > 1
+            ? 'Pagamento aprovado! Seus pedidos ' . pedidos_lista_texto($grupo) . ' entraram na fila de produção.'
+            : 'Pagamento aprovado! Seu pedido entrou na fila de produção.');
     } elseif ($ps === 'em_analise' && pagamento_aguardando_pix_boleto($p)) {
         flash('sucesso', 'Pedido recebido! Assim que o pagamento cair, o preparo começa.');
     } elseif ($ps === 'em_analise') {

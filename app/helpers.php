@@ -16,6 +16,7 @@ require_once __DIR__ . '/lib/nutricao.php';
 require_once __DIR__ . '/lib/categorias.php';
 require_once __DIR__ . '/lib/colecoes.php';
 require_once __DIR__ . '/lib/termos.php';
+require_once __DIR__ . '/lib/entregas.php';
 require_once __DIR__ . '/lib/email.php';
 require_once __DIR__ . '/lib/email_pedido.php';
 

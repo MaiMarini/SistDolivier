@@ -144,15 +144,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('checkout');
     }
 
-    $subtotal   = (int) $c['subtotal'];
-    $frete_cent = (int) $frete['frete_centavos'];
-    $total      = $subtotal + $frete_cent;
+    // Datas de entrega: carrinho com mais de uma data -> o cliente escolheu receber
+    // tudo junto (um pedido) ou separar por data (um pedido por data, pagos juntos).
+    $grupos   = entrega_grupos($c['linhas']);
+    $separado = count($grupos) > 1 && entrega_tem_colunas() && ($_POST['entrega_modo'] ?? '') === 'separado';
+    $partes   = $separado ? $grupos : [[
+        'data' => entrega_data_junto($grupos), 'linhas' => $c['linhas'], 'subtotal' => (int) $c['subtotal'],
+    ]];
+    $frete_cent = (int) $frete['frete_centavos'];   // por entrega: separado, cada pedido paga o seu
 
     // Pagamento online ligado (MP_ACCESS_TOKEN no .env): o pedido só entra na
     // produção depois de pago. Desligado: segue como antes (combinar no WhatsApp).
     $online        = mp_ativo();
     $status_inicial = $online ? 'aguardando_pagamento' : 'realizado';
 
+    $ids = [];
     $pdo = db();
     $pdo->beginTransaction();
     try {
@@ -164,60 +170,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  presente, presente_para, presente_telefone, presente_mensagem)
              VALUES (?, ?, ?, ?, ?, ?, "pendente", 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $ins->execute([
-            (int) $usuario['id'], $status_inicial, $entrega, $subtotal, $frete_cent, $total,
-            $observacoes !== '' ? $observacoes : null,
-            $endereco_entrega,
-            $contato_nome !== '' ? $contato_nome : null,
-            $contato_tel !== '' ? $contato_tel : null,
-            $distancia_km,
-            $presente,
-            $presente_para !== '' ? $presente_para : null,
-            $presente_tel !== '' ? $presente_tel : null,
-            $presente_msg !== '' ? $presente_msg : null,
-        ]);
-        $order_id = (int) $pdo->lastInsertId();
-
         $item = $pdo->prepare(
             'INSERT INTO order_items (order_id, product_id, nome, preco_centavos, quantidade)
              VALUES (?, ?, ?, ?, ?)'
         );
-        foreach ($c['linhas'] as $l) {
-            $item->execute([
-                $order_id, (int) $l['produto']['id'], $l['produto']['nome'],
-                (int) $l['produto']['preco_centavos'], (int) $l['qtd'],
+        foreach ($partes as $parte) {
+            $subtotal = (int) $parte['subtotal'];
+            $ins->execute([
+                (int) $usuario['id'], $status_inicial, $entrega, $subtotal, $frete_cent, $subtotal + $frete_cent,
+                $observacoes !== '' ? $observacoes : null,
+                $endereco_entrega,
+                $contato_nome !== '' ? $contato_nome : null,
+                $contato_tel !== '' ? $contato_tel : null,
+                $distancia_km,
+                $presente,
+                $presente_para !== '' ? $presente_para : null,
+                $presente_tel !== '' ? $presente_tel : null,
+                $presente_msg !== '' ? $presente_msg : null,
             ]);
+            $order_id = (int) $pdo->lastInsertId();
+            $ids[] = $order_id;
+            foreach ($parte['linhas'] as $l) {
+                $item->execute([
+                    $order_id, (int) $l['produto']['id'], $l['produto']['nome'],
+                    (int) $l['produto']['preco_centavos'], (int) $l['qtd'],
+                ]);
+            }
+            if (entrega_tem_colunas()) {
+                $pdo->prepare('UPDATE orders SET entrega_a_partir = ?, grupo_pagamento = ? WHERE id = ?')
+                    ->execute([$parte['data'], $separado ? $ids[0] : null, $order_id]);
+            }
         }
-        try {
-            // Cópia das regras e prazos aceitos (sem a migração, o pedido sai sem ela).
-            $pdo->prepare('UPDATE orders SET termos_texto = ?, termos_aceitos_em = NOW() WHERE id = ?')
-                ->execute([termos_texto($termos), $order_id]);
-        } catch (PDOException $e) {
-            error_log('[checkout] aceite sem migracao_aceite_termos.sql: ' . $e->getMessage());
+        // Cópia das regras e prazos aceitos, com a forma de entrega escolhida
+        // (sem a migração do aceite, o pedido sai sem ela).
+        $aceite = termos_texto($termos) . "\n\n" . entrega_texto_aceite($grupos, $separado, $ids);
+        foreach ($ids as $order_id) {
+            try {
+                $pdo->prepare('UPDATE orders SET termos_texto = ?, termos_aceitos_em = NOW() WHERE id = ?')
+                    ->execute([$aceite, $order_id]);
+            } catch (PDOException $e) {
+                error_log('[checkout] aceite sem migracao_aceite_termos.sql: ' . $e->getMessage());
+            }
+            pedido_historico_gravar($order_id, null, $status_inicial, 'cliente', (int) $usuario['id'],
+                $separado ? 'Pedido feito no site (separado por data, junto com ' . pedidos_lista_texto(array_diff($ids, [$order_id])) . ')' : 'Pedido feito no site');
         }
-        pedido_historico_gravar($order_id, null, $status_inicial, 'cliente', (int) $usuario['id'], 'Pedido feito no site');
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();
+        error_log('[checkout] criar pedido: ' . $e->getMessage());
         flash('erro', 'Não foi possível criar o pedido. Tente novamente.');
         redirect('checkout');
     }
 
     carrinho_limpar();
-    pedido_email_depois($order_id, 'recebido');   // sai depois da resposta; não atrasa o pagamento
+    foreach ($ids as $order_id) {
+        pedido_email_depois($order_id, 'recebido');   // sai depois da resposta; não atrasa o pagamento
+    }
+    $order_id = $ids[0];
+    $separados = $separado ? ' Seu pedido foi separado por data: ' . pedidos_lista_texto($ids) . '.' : '';
     if ($online) {
-        $link = pagamento_iniciar($order_id);
+        $link = pagamento_iniciar($order_id);   // separado: um pagamento só para todos
         if ($link !== null) {
             redirect($link);   // Mercado Pago (Pix ou cartão)
         }
         flash('erro', 'Seu pedido foi criado, mas não conseguimos abrir o pagamento agora. '
-            . 'Use o botão "Pagar agora" abaixo para tentar de novo.');
+            . 'Use o botão "Pagar agora" abaixo para tentar de novo.' . $separados);
         redirect(pedido_caminho($order_id));
     }
-    flash('sucesso', 'Pedido realizado! Veja os detalhes abaixo.');
+    flash('sucesso', 'Pedido realizado! Veja os detalhes abaixo.' . $separados);
     redirect(pedido_caminho($order_id));
 }
-
 // -----------------------------------------------------------------------------
 // GET: exibe o checkout
 // -----------------------------------------------------------------------------
@@ -240,6 +262,10 @@ if (empty($c['linhas'])) {
 
 $subtotal = (int) $c['subtotal'];
 $termos = termos_montar($c['linhas']);   // modal de aceite (o POST confere o hash)
+// Datas de entrega: mais de uma -> o cliente escolhe tudo junto ou separado por data.
+$grupos = entrega_grupos($c['linhas']);
+$mista  = count($grupos) > 1 && entrega_tem_colunas();
+$data_junto = entrega_data_junto($grupos);
 
 // Prévia do frete (app.js chama /frete/calcular). O POST acima recalcula sempre.
 $frete_ativo = cfg('frete_provedor', 'off') !== 'off';
@@ -263,11 +289,42 @@ ob_start();
 
 <form class="checkout" method="post" action="<?= e(url('checkout')) ?>" data-checkout
       data-subtotal="<?= $subtotal ?>" data-frete-url="<?= e(url('frete/calcular')) ?>"
-      data-csrf="<?= e(csrf_token()) ?>" data-frete-ativo="<?= $frete_ativo ? '1' : '0' ?>">
+      data-csrf="<?= e(csrf_token()) ?>" data-frete-ativo="<?= $frete_ativo ? '1' : '0' ?>"
+      data-entregas="<?= $mista ? count($grupos) : 1 ?>">
     <?= csrf_input() ?>
 
     <div class="checkout-grid">
         <div class="checkout-col">
+
+            <?php if ($mista): ?>
+            <!-- Datas diferentes: tudo junto ou um pedido por data -->
+            <section class="ck-card" aria-labelledby="ck-titulo-datas">
+                <h2 class="ck-titulo" id="ck-titulo-datas">Datas de entrega</h2>
+                <p class="ck-pequeno ck-datas-intro">Seu carrinho tem produtos com datas de entrega diferentes:</p>
+                <ul class="ck-datas">
+                    <?php foreach ($grupos as $g): ?>
+                        <li><b>A partir de <?= e(data_dm($g['data'])) ?></b>
+                            <span><?= e($g['rotulo']) ?>: <?= e(implode(', ', array_map(fn ($l) => $l['qtd'] . '× ' . $l['produto']['nome'], $g['linhas']))) ?></span></li>
+                    <?php endforeach; ?>
+                </ul>
+                <div class="ck-modos ck-modos--datas" role="radiogroup" aria-labelledby="ck-titulo-datas">
+                    <label class="ck-modo is-marcado">
+                        <input class="ck-sr" type="radio" name="entrega_modo" value="junto" data-entrega-modo checked>
+                        <span class="ck-dot" aria-hidden="true"></span>
+                        <span class="ck-modo-rotulo">Tudo junto</span>
+                        <span class="ck-modo-valor">1 entrega</span>
+                        <span class="ck-pequeno">Um pedido, entregue ou retirado a partir de <?= e(data_dm($data_junto)) ?> (data do último item).</span>
+                    </label>
+                    <label class="ck-modo">
+                        <input class="ck-sr" type="radio" name="entrega_modo" value="separado" data-entrega-modo>
+                        <span class="ck-dot" aria-hidden="true"></span>
+                        <span class="ck-modo-rotulo">Separar por data</span>
+                        <span class="ck-modo-valor"><?= count($grupos) ?> entregas</span>
+                        <span class="ck-pequeno"><?= count($grupos) ?> pedidos, cada um na sua data. Com motoboy, um frete por entrega. Você paga tudo de uma vez.</span>
+                    </label>
+                </div>
+            </section>
+            <?php endif; ?>
 
             <!-- 1. Entrega -->
             <section class="ck-card" aria-labelledby="ck-titulo-entrega">
@@ -453,6 +510,9 @@ ob_start();
                     <p class="ck-pequeno ck-nota" data-ck-nota hidden>Não conseguimos calcular o frete agora. Ele é confirmado ao finalizar o pedido.</p>
                     <div class="ck-soma-linha ck-total"><span class="ck-rot">Total</span><span class="ck-preco" data-ck-total><?= e(money($subtotal)) ?></span></div>
                 </div>
+                <p class="ck-pequeno ck-quando" data-ck-quando
+                   data-junto="<?= e('Entrega a partir de ' . data_dm($data_junto)) ?>"
+                   data-separado="<?= e('Entregas a partir de ' . preg_replace('/, ([^,]+)$/', ' e $1', implode(', ', array_map(fn ($g) => data_dm($g['data']), $grupos)))) ?>"><?= e('Entrega a partir de ' . data_dm($data_junto)) ?></p>
 
                 <input type="hidden" name="termos_hash" value="<?= e(termos_hash($termos)) ?>">
                 <div class="ck-termos">

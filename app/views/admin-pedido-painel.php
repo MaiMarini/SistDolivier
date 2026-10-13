@@ -115,6 +115,7 @@ $form = function (string $op, array $campos, string $rotulo, string $classe) use
         <b><?= $entrega === 'motoboy'
             ? 'Motoboy' . (!empty($p['entrega_distancia_km']) ? ' (' . e(number_format((float) $p['entrega_distancia_km'], 1, ',', '')) . ' km)' : '')
             : 'Retirada na loja' ?></b>
+        <?php if (!empty($p['entrega_a_partir'])): ?><span>A partir de <b><?= e(data_br($p['entrega_a_partir'])) ?></b></span><?php endif; ?>
         <?php if ($entrega === 'motoboy' && !empty($p['endereco_entrega'])): ?><span><?= e($p['endereco_entrega']) ?></span><?php endif; ?>
         <?php if (!empty($p['observacoes'])): ?><span class="ap-sub">Observações: <?= e($p['observacoes']) ?></span><?php endif; ?>
     </div>
@@ -136,6 +137,10 @@ $form = function (string $op, array $campos, string $rotulo, string $classe) use
         <p class="ap-eyebrow">Pagamento</p>
         <b><?= e(!empty($p['pagamento']) ? pagamento_forma_rotulo($p['pagamento']) : 'Sem pagamento online') ?> · <?= e($pag_rot) ?></b>
         <?php if ($p['status'] !== 'aguardando_pagamento' && !$pendente): ?><span class="ap-sub"><?= e($resumo['texto']) ?></span><?php endif; ?>
+        <?php $grupo = pedido_grupo_ids($pid); if (count($grupo) > 1): ?>
+            <span class="ap-sub">Separado por data e pago junto com <?= e(pedidos_lista_texto(array_diff($grupo, [$pid]))) ?> (um pagamento só).
+                Cancelar este pedido devolve só o valor dele.</span>
+        <?php endif; ?>
         <?php if (!empty($p['mp_payment_id'])): ?>
             <span class="ap-sub">Operação nº <?= e($p['mp_payment_id']) ?> ·
                 <a href="<?= e('https://www.mercadopago.com.br/activities/detail/' . rawurlencode((string) $p['mp_payment_id'])) ?>"

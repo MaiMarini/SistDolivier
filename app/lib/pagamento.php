@@ -270,40 +270,84 @@ function pagamento_iniciar(int $pedido_id): ?string
         return null;
     }
 
-    $st = db()->prepare('SELECT nome, preco_centavos, quantidade FROM order_items WHERE order_id = ? ORDER BY id');
-    $st->execute([$pedido_id]);
-    $itens = array_map(fn ($i) => [
-        'titulo' => $i['nome'], 'qtd' => (int) $i['quantidade'], 'preco_centavos' => (int) $i['preco_centavos'],
-    ], $st->fetchAll());
-
-    $pref = mp_criar_preferencia([
-        'itens'          => $itens,
-        'frete_centavos' => (int) $p['frete_centavos'],
-        'pedido_id'      => $pedido_id,
-        'nome'           => (string) $p['nome'],
-        'email'          => (string) $p['email'],
-        'parcelas'       => parcelamento_parcelas((int) $p['total_centavos']),
-        'expira_em'      => pagamento_prazo($pedido_id),
-    ]);
+    $dados = pagamento_dados_preferencia($pedido_id, $p);
+    $pref = mp_criar_preferencia($dados);
     if ($pref === null) {
         return null;
     }
-    db()->prepare('UPDATE orders SET mp_preference_id = ? WHERE id = ?')->execute([$pref['id'], $pedido_id]);
+    $ph = implode(',', array_fill(0, count($dados['ids']), '?'));
+    db()->prepare("UPDATE orders SET mp_preference_id = ? WHERE id IN ($ph)")->execute(array_merge([$pref['id']], $dados['ids']));
     return $pref['init_point'];
 }
 
 /**
- * Aplica ao pedido um pagamento lido na API do Mercado Pago. Idempotente: o
+ * Dados da preferência de pagamento de um pedido ($p: id, nome, email).
+ * Pedidos separados por data e pagos juntos: um pagamento só para os que ainda
+ * aguardam pagamento no grupo (external_reference "G12.13": os pedidos cobrados).
+ * 'ids' = pedidos cobrados.
+ */
+function pagamento_dados_preferencia(int $pedido_id, array $p): array
+{
+    $grupo = pedido_grupo_ids($pedido_id);
+    $ids = [$pedido_id];
+    if (count($grupo) > 1) {
+        $ph = implode(',', array_fill(0, count($grupo), '?'));
+        $st = db()->prepare("SELECT id, status, pagamento_status, pagamento_tipo FROM orders WHERE id IN ($ph) ORDER BY id");
+        $st->execute($grupo);
+        $ids = [];
+        foreach ($st->fetchAll() as $g) {
+            if ($g['status'] === 'aguardando_pagamento' && pagamento_pode_pagar($g)) {
+                $ids[] = (int) $g['id'];
+            }
+        }
+    }
+    $ph = implode(',', array_fill(0, count($ids), '?'));
+    $st = db()->prepare("SELECT order_id, nome, preco_centavos, quantidade FROM order_items WHERE order_id IN ($ph) ORDER BY order_id, id");
+    $st->execute($ids);
+    $varios = count($ids) > 1;
+    $itens = array_map(fn ($i) => [
+        'titulo' => ($varios ? 'Pedido #' . $i['order_id'] . ' · ' : '') . $i['nome'],
+        'qtd' => (int) $i['quantidade'], 'preco_centavos' => (int) $i['preco_centavos'],
+    ], $st->fetchAll());
+    $st = db()->prepare("SELECT id, frete_centavos, total_centavos FROM orders WHERE id IN ($ph) ORDER BY id");
+    $st->execute($ids);
+    $fretes = [];
+    $total = 0;
+    foreach ($st->fetchAll() as $o) {
+        $fretes[] = ['titulo' => 'Entrega por motoboy' . ($varios ? ' · pedido #' . $o['id'] : ''), 'centavos' => (int) $o['frete_centavos']];
+        $total += (int) $o['total_centavos'];
+    }
+
+    return [
+        'ids'        => $ids,
+        'itens'      => $itens,
+        'fretes'     => $fretes,
+        'pedido_id'  => $pedido_id,
+        'referencia' => count($grupo) > 1 ? 'G' . implode('.', $ids) : (string) $pedido_id,
+        'nome'       => (string) $p['nome'],
+        'email'      => (string) $p['email'],
+        'parcelas'   => parcelamento_parcelas($total),
+        'expira_em'  => pagamento_prazo($pedido_id),
+    ];
+}
+
+/**
+ * Aplica um pagamento lido na API do Mercado Pago aos pedidos dele. Idempotente: o
  * webhook e a página de retorno podem chamar várias vezes para o mesmo pagamento.
- * Devolve o id do pedido afetado, ou 0.
+ * external_reference: "12" (um pedido) ou "G12.13" (pedidos separados por data e
+ * pagos juntos). Devolve o id do (primeiro) pedido afetado, ou 0.
  */
 function pagamento_aplicar(array $pg): int
 {
-    $pedido_id = (int) ($pg['external_reference'] ?? 0);
-    $pay_id    = (string) ($pg['id'] ?? '');
-    if ($pedido_id <= 0 || $pay_id === '') {
+    $ref    = (string) ($pg['external_reference'] ?? '');
+    $pay_id = (string) ($pg['id'] ?? '');
+    $ids = str_starts_with($ref, 'G')
+        ? array_values(array_filter(array_map('intval', explode('.', substr($ref, 1)))))
+        : ((int) $ref > 0 ? [(int) $ref] : []);
+    if (!$ids || $pay_id === '') {
         return 0;
     }
+    $grupo = str_starts_with($ref, 'G');
 
     // "pending" (ex.: Pix gerado e ainda não pago) também conta como em análise:
     // já existe um pagamento em curso, então não se gera outro.
@@ -312,7 +356,7 @@ function pagamento_aplicar(array $pg): int
         'in_mediation' => 'em_analise', 'pending' => 'em_analise', 'rejected' => 'recusado',
         'cancelled' => 'cancelado', 'refunded' => 'estornado', 'charged_back' => 'estornado',
     ];
-    $novo  = $mapa[$pg['status'] ?? ''] ?? 'pendente';
+    $novo_pg = $mapa[$pg['status'] ?? ''] ?? 'pendente';
     $tipo  = (string) ($pg['payment_type_id'] ?? '');
     $forma = ($pg['payment_method_id'] ?? '') === 'pix' ? 'pix'
            : ($tipo === 'credit_card' ? 'credito' : ($tipo === 'debit_card' ? 'debito'
@@ -321,81 +365,91 @@ function pagamento_aplicar(array $pg): int
     $ticket = (string) ($pg['point_of_interaction']['transaction_data']['ticket_url']
             ?? $pg['transaction_details']['external_resource_url'] ?? '');
     $ticket = preg_match('#^https://#i', $ticket) ? mb_substr($ticket, 0, 500) : '';
+    $valor = isset($pg['transaction_amount']) ? (int) round(((float) $pg['transaction_amount']) * 100) : null;
 
-    $liberou = false;   // o pedido saiu de "aguardando pagamento" para a produção agora
+    $liberados = [];   // pedidos que saíram de "aguardando pagamento" para a produção agora
     $pdo = db();
     $pdo->beginTransaction();
     try {
-        $st = $pdo->prepare('SELECT status, total_centavos, pagamento_status, mp_payment_id FROM orders WHERE id = ? FOR UPDATE');
-        $st->execute([$pedido_id]);
-        $pedido = $st->fetch();
-        if (!$pedido) {
+        $ph = implode(',', array_fill(0, count($ids), '?'));
+        $st = $pdo->prepare("SELECT id, status, total_centavos, pagamento_status, mp_payment_id FROM orders WHERE id IN ($ph) ORDER BY id FOR UPDATE");
+        $st->execute($ids);
+        $pedidos = $st->fetchAll();
+        if (!$pedidos) {
             $pdo->rollBack();
             return 0;
         }
 
-        $valor = isset($pg['transaction_amount']) ? (int) round(((float) $pg['transaction_amount']) * 100) : null;
-
-        // Já pago por OUTRO pagamento (ex.: tentativa recusada antes): não volta atrás.
-        if ($pedido['pagamento_status'] === 'aprovado' && $pedido['mp_payment_id'] !== $pay_id && $novo !== 'aprovado') {
-            _pagamento_registrar_evento($pedido_id, $pay_id, $novo, $forma, $valor);
-            $pdo->commit();
-            return $pedido_id;
-        }
-
-        // Aprovado com valor diferente do pedido: não libera a produção, sinaliza no admin.
-        if ($novo === 'aprovado') {
-            $pago = (int) round(((float) ($pg['transaction_amount'] ?? 0)) * 100);
-            if (abs($pago - (int) $pedido['total_centavos']) > 1) {
-                $novo = 'divergente';
-                error_log('pagamento: pedido ' . $pedido_id . ' pago com valor diferente do total');
+        // Aprovado com valor diferente do(s) pedido(s): não libera a produção, sinaliza no admin.
+        if ($novo_pg === 'aprovado') {
+            $esperado = array_sum(array_map(fn ($o) => (int) $o['total_centavos'], $pedidos));
+            if (abs((int) $valor - $esperado) > 1) {
+                $novo_pg = 'divergente';
+                error_log('pagamento: ' . $ref . ' pago com valor diferente do total');
             }
         }
 
-        _pagamento_registrar_evento($pedido_id, $pay_id, $novo, $forma, $valor);
+        foreach ($pedidos as $pedido) {
+            $pedido_id = (int) $pedido['id'];
+            $novo = $novo_pg;
 
-        $pdo->prepare(
-            'UPDATE orders SET pagamento_status = ?, pagamento = ?, pagamento_tipo = ?,
-                    pagamento_ticket_url = ?, mp_payment_id = ?,
-                    pago_em = IF(? = "aprovado" AND pago_em IS NULL, NOW(), pago_em)
-              WHERE id = ?'
-        )->execute([
-            $novo, $forma !== '' ? $forma : null, $tipo !== '' ? $tipo : null,
-            ($novo === 'em_analise' && $ticket !== '') ? $ticket : null,
-            $pay_id, $novo, $pedido_id,
-        ]);
+            // Já pago por OUTRO pagamento (ex.: tentativa recusada antes): não volta atrás.
+            if ($pedido['pagamento_status'] === 'aprovado' && $pedido['mp_payment_id'] !== $pay_id && $novo !== 'aprovado') {
+                _pagamento_registrar_evento($pedido_id, $pay_id, $novo, $forma, $valor);
+                continue;
+            }
+            // Pedido do grupo estornado sozinho (estorno parcial): o pagamento continua
+            // "approved" no Mercado Pago por causa dos outros pedidos; este fica estornado.
+            if ($pedido['pagamento_status'] === 'estornado' && $novo === 'aprovado') {
+                continue;
+            }
 
-        if ($novo === 'aprovado' && $pedido['status'] === 'aguardando_pagamento') {
-            // Pago: o pedido entra na fila de produção ("Novo").
-            $pdo->prepare('UPDATE orders SET status = "realizado" WHERE id = ? AND status = "aguardando_pagamento"')
-                ->execute([$pedido_id]);
-            pedido_historico_gravar($pedido_id, 'aguardando_pagamento', 'realizado', 'sistema', null, 'Pagamento aprovado');
-            $liberou = true;
-        } elseif ($novo === 'aprovado' && $pedido['status'] === 'cancelado') {
-            // Pago DEPOIS de cancelado: não reabre. Fica "estorno pendente" para a loja decidir.
-            $pdo->prepare('UPDATE orders SET estorno_status = COALESCE(estorno_status, "pendente") WHERE id = ?')
-                ->execute([$pedido_id]);
-            pedido_historico_gravar($pedido_id, 'cancelado', 'cancelado', 'sistema', null,
-                'Pagamento aprovado depois do cancelamento: estorno pendente');
-        } elseif ($novo === 'estornado') {
-            // Estorno confirmado (pela loja ou pelo painel do Mercado Pago): só registra.
+            _pagamento_registrar_evento($pedido_id, $pay_id, $novo, $forma, $valor);
+
             $pdo->prepare(
-                'UPDATE orders SET estorno_status = "aprovado", estorno_em = COALESCE(estorno_em, NOW()),
-                        estorno_valor_centavos = COALESCE(estorno_valor_centavos, ?)
+                'UPDATE orders SET pagamento_status = ?, pagamento = ?, pagamento_tipo = ?,
+                        pagamento_ticket_url = ?, mp_payment_id = ?,
+                        pago_em = IF(? = "aprovado" AND pago_em IS NULL, NOW(), pago_em)
                   WHERE id = ?'
-            )->execute([$valor, $pedido_id]);
+            )->execute([
+                $novo, $forma !== '' ? $forma : null, $tipo !== '' ? $tipo : null,
+                ($novo === 'em_analise' && $ticket !== '') ? $ticket : null,
+                $pay_id, $novo, $pedido_id,
+            ]);
+
+            if ($novo === 'aprovado' && $pedido['status'] === 'aguardando_pagamento') {
+                // Pago: o pedido entra na fila de produção ("Novo").
+                $pdo->prepare('UPDATE orders SET status = "realizado" WHERE id = ? AND status = "aguardando_pagamento"')
+                    ->execute([$pedido_id]);
+                pedido_historico_gravar($pedido_id, 'aguardando_pagamento', 'realizado', 'sistema', null,
+                    'Pagamento aprovado' . (count($pedidos) > 1 ? ' (junto com ' . pedidos_lista_texto(array_diff($ids, [$pedido_id])) . ')' : ''));
+                $liberados[] = $pedido_id;
+            } elseif ($novo === 'aprovado' && $pedido['status'] === 'cancelado') {
+                // Pago DEPOIS de cancelado: não reabre. Fica "estorno pendente" para a loja decidir.
+                $pdo->prepare('UPDATE orders SET estorno_status = COALESCE(estorno_status, "pendente") WHERE id = ?')
+                    ->execute([$pedido_id]);
+                pedido_historico_gravar($pedido_id, 'cancelado', 'cancelado', 'sistema', null,
+                    'Pagamento aprovado depois do cancelamento: estorno pendente');
+            } elseif ($novo === 'estornado') {
+                // Estorno confirmado (pela loja ou pelo painel do Mercado Pago): só registra.
+                // Pagamento de vários pedidos: cada um conta o próprio valor.
+                $pdo->prepare(
+                    'UPDATE orders SET estorno_status = "aprovado", estorno_em = COALESCE(estorno_em, NOW()),
+                            estorno_valor_centavos = COALESCE(estorno_valor_centavos, ?)
+                      WHERE id = ?'
+                )->execute([$grupo ? (int) $pedido['total_centavos'] : $valor, $pedido_id]);
+            }
         }
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();
         throw $e;
     }
-    if ($liberou) {
+    foreach ($liberados as $pedido_id) {
         pedido_email_depois($pedido_id, 'pago');   // depois da resposta ao Mercado Pago / ao cliente
     }
-    return $pedido_id;
+    return (int) $pedidos[0]['id'];
 }
-
 /**
  * Guarda uma tentativa de pagamento no histórico (order_payment_events), só quando a
  * situação daquele pagamento muda — o webhook e o retorno repetem o mesmo aviso.

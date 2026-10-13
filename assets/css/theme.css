@@ -5250,6 +5250,16 @@ body.menu-aberto {
 .ck-termos-ver { flex-basis: 100%; margin-left: 24px; font-size: .88rem; text-align: left; }
 .ck-termos-ver:focus-visible { outline: 2px solid var(--cor-pop); outline-offset: 2px; }
 
+/* Checkout: datas de entrega diferentes */
+.ck-datas-intro { margin: 0 0 8px; }
+.ck-datas { display: grid; gap: 6px; margin: 0 0 12px; padding: 0; list-style: none; }
+.ck-datas li { display: grid; gap: 2px; padding: 8px 12px; border-radius: 8px; background: #fbf4ea; font-size: .92rem; }
+.ck-datas li span { color: #6e5848; overflow-wrap: anywhere; }
+.ck-quando { margin: 0 0 10px; font-weight: 700; color: var(--cor-texto); }
+.ck-modos--datas .ck-modo.is-marcado { border-color: var(--cor-pop); background: var(--ck-quente); }
+.ck-modos--datas .ck-modo.is-marcado .ck-dot { border-color: var(--cor-pop); background: var(--cor-pop); box-shadow: inset 0 0 0 3px #fff; }
+.ck-modos--datas .ck-modo-valor { font-size: 1.05rem; }
+
 .ap-termos-txt { max-height: 320px; overflow: auto; margin-top: 8px; padding: 10px 12px; border-radius: 8px; background: #fbf4ea; font-size: .86rem; overflow-wrap: anywhere; }
 
 .termos { max-width: 640px; }

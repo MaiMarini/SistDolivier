@@ -242,11 +242,15 @@ function pedido_estornar(int $id, ?int $usuario): array
             . ' Faça pelo painel do Mercado Pago.'];
     };
 
+    // Pedido separado por data e pago junto com outros: o pagamento é de todos, então
+    // devolve só o valor deste pedido (estorno parcial).
+    $parcial = count(pedido_grupo_ids($id)) > 1 ? (int) $p['total_centavos'] : null;
+
     // Antes de estornar: o pagamento é desta conta e ainda está aprovado?
     $c = mp_conferir_estorno((string) ($p['mp_payment_id'] ?? ''));
     if ($c['estornado']) {
         // Já foi devolvido (ex.: pelo painel do Mercado Pago): só atualiza o pedido.
-        $valor = $c['valor_centavos'] ?? (int) $p['total_centavos'];
+        $valor = $parcial ?? $c['valor_centavos'] ?? (int) $p['total_centavos'];
         db()->prepare('UPDATE orders SET estorno_status = "aprovado", estorno_valor_centavos = ?,
                               estorno_em = COALESCE(estorno_em, NOW()), pagamento_status = "estornado" WHERE id = ?')
             ->execute([$valor, $id]);
@@ -267,7 +271,7 @@ function pedido_estornar(int $id, ?int $usuario): array
         $chave = 'estorno-' . $id . '-' . bin2hex(random_bytes(6));   // sem a migração da tentativa
     }
 
-    $r = mp_estornar($p, $chave);
+    $r = mp_estornar($p, $chave, $parcial);
     if (!$r['ok']) {
         // Quem pagou ajuda a achar a causa (ex.: comprador real numa venda de vendedor de teste).
         $pagador = $c['pagador'] !== '' ? ' · comprador no MP: ' . $c['pagador'] : '';
@@ -322,7 +326,19 @@ function pedido_cancelar_loja(int $id, string $de, string $motivo, string $obs, 
         return ['ok' => true, 'conflito' => false, 'mensagem' => $msg . ' O pagamento continua aprovado: estorne quando decidir.'];
     }
     if (($p['pagamento_status'] ?? '') === 'em_analise' && !empty($p['mp_payment_id']) && mp_ativo()) {
-        mp_cancelar_pagamento((string) $p['mp_payment_id']);   // Pix/cartão pendente: não deixa ser pago depois
+        // Pix/cartão pendente: não deixa ser pago depois. Pago junto com outros pedidos
+        // ainda ativos: o pagamento é deles também, então fica (se cair, vira "estorno pendente").
+        $outros = 0;
+        $grupo = pedido_grupo_ids($id);
+        if (count($grupo) > 1) {
+            $ph = implode(',', array_fill(0, count($grupo), '?'));
+            $st = db()->prepare("SELECT COUNT(*) FROM orders WHERE id IN ($ph) AND id <> ? AND status <> 'cancelado'");
+            $st->execute(array_merge($grupo, [$id]));
+            $outros = (int) $st->fetchColumn();
+        }
+        if ($outros === 0) {
+            mp_cancelar_pagamento((string) $p['mp_payment_id']);
+        }
     }
     return ['ok' => true, 'conflito' => false, 'mensagem' => $msg];
 }

@@ -68,11 +68,23 @@ function mp_requisicao(string $metodo, string $caminho, ?array $corpo = null, ?s
 
 /**
  * Cria a preferência de pagamento (Checkout Pro).
- * $dados: itens [{titulo, qtd, preco_centavos}], frete_centavos, pedido_id,
- *         email, nome, parcelas, expira_em (DateTimeImmutable).
+ * $dados: itens [{titulo, qtd, preco_centavos}], frete_centavos (ou fretes [{titulo, centavos}]),
+ *         pedido_id, referencia, email, nome, parcelas, expira_em (DateTimeImmutable).
  * Devolve ['id' => ..., 'init_point' => ...] ou null.
  */
 function mp_criar_preferencia(array $dados): ?array
+{
+    $corpo = mp_corpo_preferencia($dados);
+    $r = mp_requisicao('POST', '/checkout/preferences', $corpo, 'pref-' . $corpo['external_reference'] . '-' . bin2hex(random_bytes(6)));
+    $j = $r['json'];
+    if ($r['http'] < 200 || $r['http'] >= 300 || empty($j['id']) || empty($j['init_point'])) {
+        return null;
+    }
+    return ['id' => (string) $j['id'], 'init_point' => (string) $j['init_point']];
+}
+
+/** Corpo da preferência (itens, fretes, referência, prazos e endereços de retorno). */
+function mp_corpo_preferencia(array $dados): array
 {
     $itens = [];
     foreach ($dados['itens'] as $i => $it) {
@@ -84,14 +96,19 @@ function mp_criar_preferencia(array $dados): ?array
             'currency_id' => 'BRL',
         ];
     }
-    if ((int) $dados['frete_centavos'] > 0) {
-        $itens[] = [
-            'id' => 'frete', 'title' => 'Entrega por motoboy', 'quantity' => 1,
-            'unit_price' => round($dados['frete_centavos'] / 100, 2), 'currency_id' => 'BRL',
-        ];
+    // Pedidos pagos juntos: um frete por entrega ('fretes' => [[titulo, centavos]]).
+    $fretes = $dados['fretes'] ?? [['titulo' => 'Entrega por motoboy', 'centavos' => (int) ($dados['frete_centavos'] ?? 0)]];
+    foreach ($fretes as $i => $fr) {
+        if ((int) $fr['centavos'] > 0) {
+            $itens[] = [
+                'id' => 'frete' . ($i ? '-' . ($i + 1) : ''), 'title' => mb_substr($fr['titulo'], 0, 250), 'quantity' => 1,
+                'unit_price' => round($fr['centavos'] / 100, 2), 'currency_id' => 'BRL',
+            ];
+        }
     }
 
-    $pedido_id = (string) $dados['pedido_id'];
+    // external_reference: id do pedido, ou "G12.13" para pedidos separados por data e pagos juntos.
+    $pedido_id = (string) ($dados['referencia'] ?? $dados['pedido_id']);
     $expira    = $dados['expira_em']->format('Y-m-d\TH:i:s.vP');
     $agora     = (new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d\TH:i:s.vP');
 
@@ -121,13 +138,7 @@ function mp_criar_preferencia(array $dados): ?array
         $corpo['auto_return']      = 'approved';
         $corpo['notification_url'] = url('pagamento/webhook');
     }
-
-    $r = mp_requisicao('POST', '/checkout/preferences', $corpo, 'pref-' . $pedido_id . '-' . bin2hex(random_bytes(6)));
-    $j = $r['json'];
-    if ($r['http'] < 200 || $r['http'] >= 300 || empty($j['id']) || empty($j['init_point'])) {
-        return null;
-    }
-    return ['id' => (string) $j['id'], 'init_point' => (string) $j['init_point']];
+    return $corpo;
 }
 
 /** Lê um pagamento na API (fonte da verdade). null em falha. */
@@ -190,19 +201,22 @@ function mp_conferir_estorno(string $payment_id): array
 }
 
 /**
- * Estorno TOTAL de um pagamento aprovado: POST /v1/payments/{id}/refunds sem corpo.
+ * Estorno de um pagamento aprovado: POST /v1/payments/{id}/refunds. Sem $valor_centavos,
+ * estorno TOTAL (sem corpo); com ele, PARCIAL (pedido de um grupo pago junto: devolve só
+ * o valor daquele pedido).
  * $chave: idempotência da tentativa ("estorno-{pedido}-{tentativa}"). Cada clique em
  * "Estornar" usa uma nova; com a mesma chave o Mercado Pago devolve a resposta guardada.
  * Devolve ['ok' => bool, 'id' => ?string, 'status' => ?string, 'valor_centavos' => ?int, 'erro' => ?string].
  */
-function mp_estornar(array $pedido, string $chave): array
+function mp_estornar(array $pedido, string $chave, ?int $valor_centavos = null): array
 {
     $pay = (string) ($pedido['mp_payment_id'] ?? '');
     if (!preg_match('/^\d+$/', $pay)) {
         return ['ok' => false, 'id' => null, 'status' => null, 'valor_centavos' => null,
                 'erro' => 'Pedido sem número de pagamento do Mercado Pago.'];
     }
-    $r = mp_requisicao('POST', '/v1/payments/' . $pay . '/refunds', null, $chave);
+    $corpo = $valor_centavos !== null ? ['amount' => round($valor_centavos / 100, 2)] : null;
+    $r = mp_requisicao('POST', '/v1/payments/' . $pay . '/refunds', $corpo, $chave);
     $j = $r['json'] ?? [];
     if ($r['http'] >= 200 && $r['http'] < 300 && !empty($j['id'])) {
         return [

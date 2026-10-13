@@ -496,6 +496,13 @@
             var ckNota = ckQ('[data-ck-nota]');
             var ckTotal = ckQ('[data-ck-total]');
             var ckCtaTotal = ckQ('[data-ck-cta-total]');
+            var ckEntregas = parseInt(ck.getAttribute('data-entregas'), 10) || 1;
+            var ckQuando = ckQ('[data-ck-quando]');
+            // Datas diferentes + "Separar por data": um frete por entrega.
+            var ckSeparado = function () {
+                var r = ckQ('[data-entrega-modo]:checked');
+                return !!r && r.value === 'separado';
+            };
 
             // status: 'off' | 'pendente' | 'calculando' | 'ok' | 'fora' | 'erro'
             var ckEstado = { status: ckFreteAtivo ? 'pendente' : 'off', centavos: null, km: null, autoRetirada: false };
@@ -560,20 +567,22 @@
                     val.classList.add('ck-gratis');
                     val.textContent = 'Grátis';
                 } else {
-                    ckFreteRot.textContent = 'Frete (motoboy)';
+                    var nEnt = ckSeparado() ? ckEntregas : 1;
+                    ckFreteRot.textContent = nEnt > 1 ? 'Frete (motoboy) × ' + nEnt + ' entregas' : 'Frete (motoboy)';
                     if (st === 'ok') {
                         var tag = document.createElement('span');
                         tag.className = 'ck-est-tag';
                         tag.textContent = 'estimado ';
                         ckFreteVal.appendChild(tag);
-                        val.textContent = ckBRL(ckEstado.centavos);
-                        frete = ckEstado.centavos;
+                        val.textContent = ckBRL(ckEstado.centavos * nEnt);
+                        frete = ckEstado.centavos * nEnt;
                     } else {
                         val.textContent = st === 'calculando' ? 'Calculando…' : 'A confirmar';
                     }
                 }
                 ckFreteVal.appendChild(val);
                 ckNota.hidden = !(moto && (st === 'erro' || st === 'pendente'));
+                if (ckQuando) { ckQuando.textContent = ckQuando.getAttribute(ckSeparado() ? 'data-separado' : 'data-junto'); }
                 ckTotal.textContent = ckBRL(ckSubtotal + frete);
                 ckCtaTotal.textContent = ckBRL(ckSubtotal + frete);
             };
@@ -631,6 +640,9 @@
             // Eventos.
             ck.querySelectorAll('[data-entrega]').forEach(function (r) {
                 r.addEventListener('change', function () { ckEstado.autoRetirada = false; ckAtualizar(); });
+            });
+            ck.querySelectorAll('[data-entrega-modo]').forEach(function (r) {
+                r.addEventListener('change', ckAtualizar);
             });
             ck.querySelectorAll('[data-endereco-opcao]').forEach(function (r) {
                 r.addEventListener('change', function () { ckAtualizar(); ckCalcular(); });

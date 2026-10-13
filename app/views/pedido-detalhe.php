@@ -39,6 +39,20 @@ if ($pedido['status'] === 'cancelado') {
 // Prazo para pagar (só enquanto aguarda pagamento).
 $prazo = $pedido['status'] === 'aguardando_pagamento' ? pagamento_prazo($pid) : null;
 
+// Separado por data e pago junto com outros pedidos: o botão paga todos os que faltam.
+$grupo = pedido_grupo_ids($pid);
+$outros = array_values(array_diff($grupo, [$pid]));
+$total_pagar = $total;
+$pagar_junto = [];
+if ($outros && $prazo) {
+    $ph = implode(',', array_fill(0, count($grupo), '?'));
+    $st = db()->prepare("SELECT id, total_centavos FROM orders WHERE id IN ($ph) AND status = 'aguardando_pagamento' ORDER BY id");
+    $st->execute($grupo);
+    $a_pagar = $st->fetchAll();
+    $total_pagar = money(array_sum(array_map(fn ($o) => (int) $o['total_centavos'], $a_pagar)));
+    $pagar_junto = array_values(array_diff(array_map(fn ($o) => (int) $o['id'], $a_pagar), [$pid]));
+}
+
 // WhatsApp da loja com o nº do pedido.
 $wpp = preg_replace('/\D+/', '', (string) cfg('whatsapp_numero', ''));
 $wpp_link = $wpp !== ''
@@ -72,9 +86,12 @@ $ico = fn ($d) => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" s
                     <?= csrf_input() ?>
                     <input type="hidden" name="pedido_id" value="<?= $pid ?>">
                     <button class="mp-btn mp-btn-primary" type="submit">
-                        <?= $sit['acao'] === 'pagar' ? 'Pagar agora' : 'Tentar novamente' ?> · <?= e($total) ?>
+                        <?= $sit['acao'] === 'pagar' ? 'Pagar agora' : 'Tentar novamente' ?> · <?= e($total_pagar) ?>
                     </button>
                 </form>
+                <?php if ($pagar_junto): ?>
+                    <small class="mp-prazo">Paga também <?= count($pagar_junto) === 1 ? 'o pedido' : 'os pedidos' ?> <?= e(pedidos_lista_texto($pagar_junto)) ?>, separado<?= count($pagar_junto) === 1 ? '' : 's' ?> por data.</small>
+                <?php endif; ?>
             <?php elseif ($sit['acao'] === 'ticket'): ?>
                 <a class="mp-btn mp-btn-primary" href="<?= e($pedido['pagamento_ticket_url']) ?>" target="_blank" rel="noopener">
                     <?= ($pedido['pagamento_tipo'] ?? '') === 'ticket' ? 'Ver boleto' : 'Ver código do Pix' ?></a>
@@ -112,6 +129,12 @@ $ico = fn ($d) => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" s
                 <b>Retirada na loja</b>
                 <span><?= !empty($pedido['endereco_entrega']) && $pedido['endereco_entrega'] !== 'Retirada no local'
                     ? e((string) $pedido['endereco_entrega']) : 'Avisamos quando estiver pronto para retirar.' ?></span>
+            <?php endif; ?>
+            <?php if (!empty($pedido['entrega_a_partir'])): ?>
+                <span class="mp-quando">A partir de <?= e(data_br($pedido['entrega_a_partir'])) ?></span>
+            <?php endif; ?>
+            <?php if ($outros): ?>
+                <span class="mp-quando">Separado por data: o restante da compra está no<?= count($outros) === 1 ? '' : 's' ?> pedido<?= count($outros) === 1 ? '' : 's' ?> <?= e(pedidos_lista_texto($outros)) ?>.</span>
             <?php endif; ?>
             <?php if (!empty($pedido['presente'])): ?>
                 <span class="mp-quando">Presente para <?= e((string) $pedido['presente_para']) ?></span>
