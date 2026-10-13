@@ -143,6 +143,13 @@ $form = function (string $op, array $campos, string $rotulo, string $classe) use
         <?php endif; ?>
     </div>
 
+    <?php if (!empty($p['termos_texto'])): ?>
+        <details class="ap-historico ap-termos">
+            <summary>Regras e prazos aceitos<?= !empty($p['termos_aceitos_em']) ? ' em ' . e(date('d/m/Y \à\s H:i', strtotime($p['termos_aceitos_em']))) : '' ?></summary>
+            <div class="ap-termos-txt"><?= nl2br(e($p['termos_texto'])) ?></div>
+        </details>
+    <?php endif; ?>
+
     <?php if (!empty($linha_tempo)): ?>
         <details class="ap-historico">
             <summary>Histórico</summary>

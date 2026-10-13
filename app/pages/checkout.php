@@ -81,6 +81,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('erro', 'É preciso aceitar as regras para finalizar.');
         redirect('checkout');
     }
+    // O texto aceito tem de ser o mesmo que estava na tela (regras, prazos e itens).
+    $termos = termos_montar($c['linhas']);
+    if (!hash_equals(termos_hash($termos), (string) ($_POST['termos_hash'] ?? ''))) {
+        flash('erro', 'As regras ou os prazos mudaram desde que você abriu esta página. Leia e aceite de novo.');
+        redirect('checkout');
+    }
 
     $entrega      = (($_POST['entrega'] ?? '') === 'motoboy') ? 'motoboy' : 'retirada';
     $observacoes  = trim($_POST['observacoes'] ?? '');
@@ -182,6 +188,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 (int) $l['produto']['preco_centavos'], (int) $l['qtd'],
             ]);
         }
+        try {
+            // Cópia das regras e prazos aceitos (sem a migração, o pedido sai sem ela).
+            $pdo->prepare('UPDATE orders SET termos_texto = ?, termos_aceitos_em = NOW() WHERE id = ?')
+                ->execute([termos_texto($termos), $order_id]);
+        } catch (PDOException $e) {
+            error_log('[checkout] aceite sem migracao_aceite_termos.sql: ' . $e->getMessage());
+        }
         pedido_historico_gravar($order_id, null, $status_inicial, 'cliente', (int) $usuario['id'], 'Pedido feito no site');
         $pdo->commit();
     } catch (Throwable $e) {
@@ -226,6 +239,7 @@ if (empty($c['linhas'])) {
 }
 
 $subtotal = (int) $c['subtotal'];
+$termos = termos_montar($c['linhas']);   // modal de aceite (o POST confere o hash)
 
 // Prévia do frete (app.js chama /frete/calcular). O POST acima recalcula sempre.
 $frete_ativo = cfg('frete_provedor', 'off') !== 'off';
@@ -440,11 +454,13 @@ ob_start();
                     <div class="ck-soma-linha ck-total"><span class="ck-rot">Total</span><span class="ck-preco" data-ck-total><?= e(money($subtotal)) ?></span></div>
                 </div>
 
-                <label class="ck-termos" for="checkout-aceite">
-                    <input type="checkbox" id="checkout-aceite" name="aceite" value="1" data-checkout-aceite>
-                    <span>Li e concordo com as
-                        <a href="<?= e(url('regras')) ?>" target="_blank" rel="noopener">regras e o prazo de produção</a>.</span>
-                </label>
+                <input type="hidden" name="termos_hash" value="<?= e(termos_hash($termos)) ?>">
+                <div class="ck-termos">
+                    <input type="checkbox" id="checkout-aceite" name="aceite" value="1" data-checkout-aceite
+                           aria-describedby="ck-termos-ajuda">
+                    <label for="checkout-aceite">Li e aceito as regras e os prazos.</label>
+                    <button type="button" class="ck-link ck-termos-ver" data-abrir-termos id="ck-termos-ajuda">Ver regras e prazos</button>
+                </div>
 
                 <button class="ck-cta" type="submit" data-checkout-confirmar>
                     <span><?= $pagamento_online ? 'Ir para o pagamento' : 'Confirmar pedido' ?></span>
@@ -456,5 +472,18 @@ ob_start();
         </aside>
     </div>
 </form>
+
+<!-- Aceite: o texto inteiro, e o botão de aceitar no fim dele -->
+<div class="modal" id="modal-termos" role="dialog" aria-modal="true" aria-labelledby="modal-termos-titulo">
+    <div class="modal-conteudo termos">
+        <button class="modal-fechar" type="button" data-fechar-modal aria-label="Fechar">&times;</button>
+        <h2 id="modal-termos-titulo" tabindex="-1">Regras e prazos</h2>
+        <div class="termos-corpo"><?= termos_html($termos) ?></div>
+        <div class="termos-acoes">
+            <button class="btn" type="button" data-termos-aceitar>Li e aceito as regras e os prazos</button>
+            <button class="btn sec" type="button" data-fechar-modal>Fechar</button>
+        </div>
+    </div>
+</div>
 <?php
 view('layout', ['titulo' => 'Checkout', 'conteudo' => ob_get_clean()]);

@@ -5244,6 +5244,23 @@ body.menu-aberto {
     color: var(--cor-pop);
 }
 
+/* Aceite: a caixa abre o modal; "Ver regras e prazos" fica embaixo do texto */
+.ck-termos { flex-wrap: wrap; cursor: default; }
+.ck-termos label { flex: 1; min-width: 0; cursor: pointer; }
+.ck-termos-ver { flex-basis: 100%; margin-left: 24px; font-size: .88rem; text-align: left; }
+.ck-termos-ver:focus-visible { outline: 2px solid var(--cor-pop); outline-offset: 2px; }
+
+.ap-termos-txt { max-height: 320px; overflow: auto; margin-top: 8px; padding: 10px 12px; border-radius: 8px; background: #fbf4ea; font-size: .86rem; overflow-wrap: anywhere; }
+
+.termos { max-width: 640px; }
+.termos h2 { margin-right: 32px; }
+.termos h2:focus { outline: none; }
+.termos-itens { display: grid; gap: 8px; margin: 0 0 1rem; padding: 0; list-style: none; }
+.termos-itens li { display: grid; gap: 2px; padding: 8px 12px; border-radius: 8px; background: #fbf4ea; }
+.termos-itens span { color: #6e5848; font-size: .92rem; }
+.termos-corpo .destaque-regras { margin-bottom: .6rem; }
+.termos-acoes { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid #eadfcd; }
+
 .ck-cta {
     width: 100%;
     display: flex;

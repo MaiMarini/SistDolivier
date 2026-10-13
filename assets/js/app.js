@@ -683,6 +683,28 @@
                 var ckSincronizar = function () { ckConfirmar.disabled = !ckAceite.checked; };
                 ckAceite.addEventListener('change', ckSincronizar);
                 ckSincronizar();
+
+                // Marcar o aceite abre o modal com as regras e os prazos; o aceite
+                // fica no fim do texto. Desmarcar continua direto.
+                var ckTermos = document.getElementById('modal-termos');
+                if (ckTermos) {
+                    var ckAbrirTermos = function () {
+                        abrirModal('modal-termos');
+                        var t = document.getElementById('modal-termos-titulo');
+                        if (t) { t.focus(); }
+                    };
+                    ckAceite.addEventListener('click', function (ev) {
+                        if (ckAceite.checked) { ev.preventDefault(); ckAbrirTermos(); }
+                    });
+                    var ckVer = ckQ('[data-abrir-termos]');
+                    if (ckVer) { ckVer.addEventListener('click', ckAbrirTermos); }
+                    ckTermos.querySelector('[data-termos-aceitar]').addEventListener('click', function () {
+                        ckAceite.checked = true;
+                        ckSincronizar();
+                        fecharModal(ckTermos);
+                        ckAceite.focus();
+                    });
+                }
             }
 
             // Resumo sticky: fica abaixo do cabeçalho fixo (no computador só a linha 2 gruda).
